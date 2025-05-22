@@ -89,7 +89,7 @@
     </script>
     
     <!-- Verificador de ícones -->
-    <script src="/check-icons.js" type="module"></script>
+    <script src="/check-icons.js"></script>
     
     
     <!-- Tailwind CSS -->
@@ -124,8 +124,29 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Supabase Config -->
-    <script type="module" src="/config/supabase.js"></script>
+    <!-- Supabase Config - Usando tipo module -->
+    <script type="module">
+        import { getSupabaseCredentials, getWhatsappCredentials, getWhatsappApiUrl, getWhatsappApiKey } from './config/supabase.js';
+        
+        try {
+            console.log('Iniciando carregamento do módulo config/supabase.js');
+            
+            console.log('Módulo carregado com sucesso');
+            console.log('Credenciais do Supabase:', getSupabaseCredentials());
+            
+            // Adiciona as funções ao escopo global para as outras partes do código acessarem
+            window.getWhatsappApiUrl = getWhatsappApiUrl;
+            window.getWhatsappApiKey = getWhatsappApiKey;
+            window.createSupabaseClient = function() {
+                const credentials = getSupabaseCredentials();
+                return window.supabase.createClient(credentials.url, credentials.key, credentials.options);
+            };
+            
+            console.log('Funções adicionadas ao escopo global');
+        } catch (error) {
+            console.error('Erro ao carregar módulo:', error);
+        }
+    </script>
     
     <style>
         body {
@@ -374,9 +395,24 @@
     </div>
 
     <script type="module">
-        import { createSupabaseClient, getWhatsappApiUrl, getWhatsappApiKey } from '/config/supabase.js';
+        // Verificar se as funções estão disponíveis
+        if (!window.createSupabaseClient) {
+            console.error('ERRO: A função createSupabaseClient não está disponível');
+            // Tentar carregar novamente de forma alternativa
+            try {
+                const module = await import('./config/supabase.js');
+                window.createSupabaseClient = function() {
+                    const credentials = module.getSupabaseCredentials();
+                    return window.supabase.createClient(credentials.url, credentials.key, credentials.options);
+                };
+                console.log('Função createSupabaseClient carregada através de caminho alternativo');
+            } catch (e) {
+                console.error('Erro ao carregar o módulo:', e);
+            }
+        }
+        
         // Inicialização do cliente Supabase usando a configuração padronizada
-        const supabase = createSupabaseClient();
+        const supabase = window.createSupabaseClient();
         
         /**
          * Verifica a sessão existente
@@ -868,7 +904,7 @@
                         console.error('Erro:', error);
                         Toast.error('Erro ao processar solicitação');
                     } finally {
-                        // Esconder spinner
+                        // Restaurar botão
                         const spinner = verifyLoginCodeBtn.querySelector('div');
                         const textSpan = verifyLoginCodeBtn.querySelector('span');
                         spinner.classList.add('hidden');
