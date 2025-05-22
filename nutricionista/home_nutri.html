@@ -20,33 +20,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web" type="module"></script>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'sans': ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        'primary': '#005ae2',
-                        'primary-light': '#E6F0FF',
-                        'primary-dark': '#004bc9',
-                        'logo-blue': '#005ae2'
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://cdn.tailwindcss.com" type="module"></script>
     
     <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" type="module"></script>
     
     <!-- Config -->
-    <script src="/config/supabase.js"></script>
+    <script src="/config/supabase.js" type="module"></script>
+    
+    <!-- Scripts locais -->
+    <script src="botoes_nutri.js" type="module"></script>
     
     <style>
         body {
@@ -352,9 +338,6 @@
     </div>
     
     <!-- Navbar JavaScript Alternativo -->
-    <script src="botoes_nutri.js"></script>
-    
-    <!-- Fallback: iframe com navbar (oculto se JS alternativo funcionar) -->
     <iframe id="navbar-iframe" src="navbar_nutri.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
     
     <!-- Modal de Stories -->
