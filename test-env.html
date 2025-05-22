@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Variáveis de Ambiente</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Variáveis de Ambiente</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function addStatus(message, isSuccess) {
+            const div = document.createElement('div');
+            div.className = `status ${isSuccess ? 'success' : 'error'}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        async function testSupabase() {
+            try {
+                const supabase = supabase.createClient(
+                    import.meta.env.VITE_SUPABASE_URL,
+                    import.meta.env.VITE_SUPABASE_ANON_KEY
+                );
+                
+                // Tenta fazer uma query simples
+                const { data, error } = await supabase
+                    .from('alunos')
+                    .select('id')
+                    .limit(1);
+
+                if (error) throw error;
+                
+                addStatus('✅ Conexão com Supabase estabelecida com sucesso!', true);
+            } catch (error) {
+                addStatus(`❌ Erro ao conectar com Supabase: ${error.message}`, false);
+                console.error('Erro Supabase:', error);
+            }
+        }
+
+        async function testWhatsApp() {
+            try {
+                const response = await fetch(import.meta.env.VITE_WHATSAPP_API_URL, {
+                    method: 'HEAD',
+                    headers: {
+                        'Authorization': import.meta.env.VITE_WHATSAPP_API_KEY
+                    }
+                });
+
+                if (response.ok) {
+                    addStatus('✅ API do WhatsApp está acessível!', true);
+                } else {
+                    throw new Error(`Status: ${response.status}`);
+                }
+            } catch (error) {
+                addStatus(`❌ Erro ao acessar API do WhatsApp: ${error.message}`, false);
+                console.error('Erro WhatsApp:', error);
+            }
+        }
+
+        // Exibir as variáveis de ambiente (mascaradas)
+        function showEnvVars() {
+            const vars = {
+                'VITE_SUPABASE_URL': import.meta.env.VITE_SUPABASE_URL,
+                'VITE_SUPABASE_ANON_KEY': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                'VITE_WHATSAPP_API_URL': import.meta.env.VITE_WHATSAPP_API_URL,
+                'VITE_WHATSAPP_API_KEY': import.meta.env.VITE_WHATSAPP_API_KEY
+            };
+
+            for (const [key, value] of Object.entries(vars)) {
+                if (value) {
+                    const maskedValue = value.length > 8 
+                        ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}`
+                        : '****';
+                    addStatus(`✅ ${key}: ${maskedValue}`, true);
+                } else {
+                    addStatus(`❌ ${key}: não encontrada`, false);
+                }
+            }
+        }
+
+        // Executar os testes
+        showEnvVars();
+        testSupabase();
+        testWhatsApp();
+    </script>
+</body>
+</html> 
