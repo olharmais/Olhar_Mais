@@ -1,7 +1,7 @@
 // Configurações do Supabase
 const supabaseConfig = {
-    url: import.meta.env.VITE_SUPABASE_URL,
-    key: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    url: 'https://ammtxituvicldtyoqmir.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbXR4aXR1dmljbGR0eW9xbWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDU0MTEsImV4cCI6MjA1OTg4MTQxMX0.K5cZh6KRxAGJDbU_ACE0MGFavPv5N0fL11KkCs0E9A8',
     options: {
         db: {
             schema: 'public'
@@ -16,8 +16,8 @@ const supabaseConfig = {
 
 // Configurações do WhatsApp
 const whatsappConfig = {
-    apiUrl: import.meta.env.VITE_WHATSAPP_API_URL,
-    apiKey: import.meta.env.VITE_WHATSAPP_API_KEY
+    apiUrl: 'https://7017.bubblewhats.com/send-message',
+    apiKey: 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx'
 };
 
 /**
@@ -90,7 +90,7 @@ function logout() {
  * Retorna as credenciais do Supabase
  * @returns {{url: string, key: string, options: object}} Credenciais do Supabase
  */
-export function getSupabaseCredentials() {
+function getSupabaseCredentials() {
     return {
         url: supabaseConfig.url,
         key: supabaseConfig.key,
@@ -102,7 +102,7 @@ export function getSupabaseCredentials() {
  * Retorna as credenciais do WhatsApp
  * @returns {{apiUrl: string, apiKey: string}} Credenciais do WhatsApp
  */
-export function getWhatsappCredentials() {
+function getWhatsappCredentials() {
     return {
         apiUrl: whatsappConfig.apiUrl,
         apiKey: whatsappConfig.apiKey
@@ -114,7 +114,7 @@ export function getWhatsappCredentials() {
  * @returns {object} Cliente do Supabase inicializado
  * @throws {Error} Se a biblioteca do Supabase não estiver carregada
  */
-export function createSupabaseClient() {
+function createSupabaseClient() {
     // Verifica se a biblioteca está carregada
     if (typeof window.supabase === 'undefined') {
         console.error('A biblioteca Supabase não está carregada.');
@@ -150,7 +150,7 @@ async function testSupabaseConnection() {
  * Retorna a URL da API do WhatsApp
  * @returns {string} URL completa da API do WhatsApp
  */
-export function getWhatsappApiUrl() {
+function getWhatsappApiUrl() {
     return whatsappConfig.apiUrl;
 }
 
@@ -158,7 +158,7 @@ export function getWhatsappApiUrl() {
  * Retorna a chave de API do WhatsApp
  * @returns {string} Chave de API do WhatsApp
  */
-export function getWhatsappApiKey() {
+function getWhatsappApiKey() {
     return whatsappConfig.apiKey;
 }
 
@@ -168,6 +168,32 @@ export function getWhatsappApiKey() {
  */
 function getWhatsappBaseUrl() {
     return whatsappConfig.apiUrl.split('/send-message')[0];
+}
+
+// Exportar para uso em módulos
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        getSupabaseCredentials,
+        getWhatsappCredentials,
+        createSupabaseClient,
+        testSupabaseConnection,
+        getWhatsappBaseUrl,
+        getWhatsappApiUrl,
+        getWhatsappApiKey,
+        limparSessaoEsair,
+        logout
+    };
+} else {
+    // Exportar para uso no navegador
+    window.getSupabaseCredentials = getSupabaseCredentials;
+    window.getWhatsappCredentials = getWhatsappCredentials;
+    window.createSupabaseClient = createSupabaseClient;
+    window.testSupabaseConnection = testSupabaseConnection;
+    window.getWhatsappBaseUrl = getWhatsappBaseUrl;
+    window.getWhatsappApiUrl = getWhatsappApiUrl;
+    window.getWhatsappApiKey = getWhatsappApiKey;
+    window.limparSessaoEsair = limparSessaoEsair;
+    window.logout = logout;
 }
 
 // Alertar no console se o arquivo for carregado corretamente
