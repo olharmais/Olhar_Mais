@@ -1,39 +1,38 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import fs from 'fs';
+import { readdirSync, statSync } from 'fs';
 
-// Encontrar todos os arquivos HTML na raiz e nas subpastas
+// Encontrar todos os arquivos HTML na raiz e nas subpastas (de forma mais simples)
 function findHtmlFiles(dir) {
-  let htmlFiles = [];
-  const files = fs.readdirSync(dir);
+  let htmlFiles = {};
   
-  for (const file of files) {
-    const filePath = resolve(dir, file);
-    const stat = fs.statSync(filePath);
+  function scanDir(directory, baseDir = '') {
+    const files = readdirSync(directory);
     
-    if (stat.isDirectory() && file !== 'node_modules' && file !== 'dist') {
-      // Recursivamente buscar em subpastas
-      htmlFiles = htmlFiles.concat(findHtmlFiles(filePath));
-    } else if (file.endsWith('.html')) {
-      // Caminho relativo à raiz do projeto
-      const relativePath = filePath.replace(process.cwd() + '/', '');
-      htmlFiles.push(relativePath);
+    for (const file of files) {
+      const filePath = resolve(directory, file);
+      const relativePath = baseDir ? `${baseDir}/${file}` : file;
+      
+      if (statSync(filePath).isDirectory() && 
+          file !== 'node_modules' && 
+          file !== 'dist' && 
+          file !== '.git') {
+        // Recursivamente procurar em subdiretórios
+        scanDir(filePath, relativePath);
+      } else if (file.endsWith('.html')) {
+        // Adicionar arquivo HTML encontrado
+        const entryName = relativePath.replace(/\.html$/, '');
+        htmlFiles[entryName] = filePath;
+      }
     }
   }
   
+  scanDir(dir);
   return htmlFiles;
 }
 
-// Encontrar todos os arquivos HTML
-const htmlFiles = findHtmlFiles('.');
-const htmlEntries = {};
-
-// Criar entradas para cada arquivo HTML
-htmlFiles.forEach(file => {
-  // Remover a extensão .html para o nome da entrada
-  const entryName = file.replace(/\.html$/, '');
-  htmlEntries[entryName] = resolve(__dirname, file);
-});
+// Encontrar arquivos HTML
+const htmlEntries = findHtmlFiles('.');
 
 export default defineConfig({
   // Diretório base para todos os caminhos relativos
@@ -41,23 +40,17 @@ export default defineConfig({
   
   // Configurações de build
   build: {
-    // Gera arquivos com caminhos relativos
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
         ...htmlEntries
-      },
-      output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
       }
     }
   },
   
-  // Configurações de servidor
+  // Configurações do servidor
   server: {
     port: 5173,
-    open: true // Abre o navegador automaticamente
+    open: true
   }
 }); 

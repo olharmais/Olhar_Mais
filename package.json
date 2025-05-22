@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --outDir dist",
     "preview": "vite preview",
-    "vercel-build": "vite build"
+    "vercel-build": "vite build --outDir dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7"
   },
   "devDependencies": {
     "vite": "^5.1.4"
-  }
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not op_mini all"
+  ]
 } 
