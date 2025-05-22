@@ -1,13 +1,13 @@
-const CACHE_NAME = 'olharmais-cache-v1';
+const CACHE_NAME = 'olharmais-v1';
 
 // Lista de recursos para cache
 const urlsToCache = [
   '/',
   '/index.html',
-  '/dashboard.html',
-  '/assets/css/style.css',
-  '/assets/js/main.js',
-  '/assets/img/logo.png',
+  '/auth.html',
+  '/assets/images/icons/icon-144x144.png',
+  '/assets/images/icons/icon-192x192.png',
+  '/assets/images/icons/icon-512x512.png',
   '/manifest.json'
 ];
 
@@ -66,53 +66,7 @@ self.addEventListener('fetch', event => {
   console.log('[Service Worker] Fetch:', event.request.url);
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        // Cache hit - retorna a resposta do cache
-        if (response) {
-          console.log('[Service Worker] Servindo do cache:', event.request.url);
-          return response;
-        }
-        
-        // Faz a requisição normalmente
-        return fetch(event.request)
-          .then(response => {
-            // Verifica se a resposta é válida
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              console.log('[Service Worker] Resposta não armazenável:', event.request.url);
-              return response;
-            }
-            
-            // Clona a resposta pois é um stream que só pode ser consumido uma vez
-            const responseToCache = response.clone();
-            
-            // Adiciona a resposta ao cache para uso futuro
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-                console.log('[Service Worker] Novo recurso armazenado em cache:', event.request.url);
-              });
-            
-            return response;
-          })
-          .catch((error) => {
-            console.log('[Service Worker] Erro de fetch, servindo página offline', error);
-            
-            // Verifica se a solicitação é de uma página HTML
-            if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
-            
-            // Para outros recursos, retorna erro
-            return new Response('Recurso não disponível offline', {
-              status: 503,
-              statusText: 'Serviço Indisponível'
-            });
-          });
-      })
-      .catch(err => {
-        console.error('[Service Worker] Erro ao verificar cache:', err);
-        return fetch(event.request);
-      })
+      .then(response => response || fetch(event.request))
   );
 });
 
