@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teste Variáveis de Ambiente</title>
+    <script>
+        // As variáveis de ambiente serão injetadas aqui pela Vercel
+        window.env = window.env || {};
+    </script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="config/supabase.js"></script>
     <style>
@@ -26,10 +30,22 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>Teste de Variáveis de Ambiente</h1>
+    
+    <div class="warning">
+        ⚠️ Esta página só funcionará corretamente se as variáveis de ambiente estiverem configuradas na Vercel.
+        <br>
+        Se você está vendo erros, verifique se todas as variáveis foram configuradas corretamente.
+    </div>
+
     <div id="results"></div>
 
     <script>
@@ -45,6 +61,11 @@
         async function testSupabase() {
             try {
                 const credentials = getSupabaseCredentials();
+                
+                if (!credentials.url || !credentials.key) {
+                    throw new Error('Credenciais do Supabase não configuradas');
+                }
+
                 const supabase = createSupabaseClient();
                 
                 // Tenta fazer uma query simples
@@ -65,6 +86,11 @@
         async function testWhatsApp() {
             try {
                 const credentials = getWhatsappCredentials();
+
+                if (!credentials.apiUrl || !credentials.apiKey) {
+                    throw new Error('Credenciais do WhatsApp não configuradas');
+                }
+
                 const response = await fetch(credentials.apiUrl, {
                     method: 'HEAD',
                     headers: {

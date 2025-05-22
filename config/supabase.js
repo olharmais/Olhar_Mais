@@ -2,26 +2,30 @@
 const env = require('./env');
 
 // Configurações do Supabase
-const supabaseConfig = {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY,
-    options: {
-        db: {
-            schema: 'public'
-        },
-        auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true
+function getSupabaseCredentials() {
+    return {
+        url: window.env?.SUPABASE_URL,
+        key: window.env?.SUPABASE_ANON_KEY,
+        options: {
+            db: {
+                schema: 'public'
+            },
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            }
         }
-    }
-};
+    };
+}
 
 // Configurações do WhatsApp
-const whatsappConfig = {
-    apiUrl: process.env.WHATSAPP_API_URL,
-    apiKey: process.env.WHATSAPP_API_KEY
-};
+function getWhatsappCredentials() {
+    return {
+        apiUrl: window.env?.WHATSAPP_API_URL,
+        apiKey: window.env?.WHATSAPP_API_KEY
+    };
+}
 
 /**
  * Função definitiva de logout - Limpa completamente a sessão e redireciona
@@ -90,38 +94,13 @@ function logout() {
 }
 
 /**
- * Retorna as credenciais do Supabase
- * @returns {{url: string, key: string, options: object}} Credenciais do Supabase
- */
-function getSupabaseCredentials() {
-    return {
-        url: supabaseConfig.url,
-        key: supabaseConfig.key,
-        options: supabaseConfig.options
-    };
-}
-
-/**
- * Retorna as credenciais do WhatsApp
- * @returns {{apiUrl: string, apiKey: string}} Credenciais do WhatsApp
- */
-function getWhatsappCredentials() {
-    return {
-        apiUrl: whatsappConfig.apiUrl,
-        apiKey: whatsappConfig.apiKey
-    };
-}
-
-/**
  * Cria e retorna um cliente do Supabase com as credenciais configuradas
  * @returns {object} Cliente do Supabase inicializado
  * @throws {Error} Se a biblioteca do Supabase não estiver carregada
  */
 function createSupabaseClient() {
-    return supabase.createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY
-    );
+    const credentials = getSupabaseCredentials();
+    return supabase.createClient(credentials.url, credentials.key, credentials.options);
 }
 
 /**
@@ -160,7 +139,7 @@ function getWhatsappApiKey() {
  * @returns {string} URL base da API do WhatsApp
  */
 function getWhatsappBaseUrl() {
-    return whatsappConfig.apiUrl.split('/send-message')[0];
+    return env.whatsappApiUrl.split('/send-message')[0];
 }
 
 // Exportar para uso em módulos
