@@ -90,7 +90,7 @@ function logout() {
  * Retorna as credenciais do Supabase
  * @returns {{url: string, key: string, options: object}} Credenciais do Supabase
  */
-function getSupabaseCredentials() {
+export function getSupabaseCredentials() {
     return {
         url: supabaseConfig.url,
         key: supabaseConfig.key,
@@ -102,7 +102,7 @@ function getSupabaseCredentials() {
  * Retorna as credenciais do WhatsApp
  * @returns {{apiUrl: string, apiKey: string}} Credenciais do WhatsApp
  */
-function getWhatsappCredentials() {
+export function getWhatsappCredentials() {
     return {
         apiUrl: whatsappConfig.apiUrl,
         apiKey: whatsappConfig.apiKey
@@ -114,7 +114,7 @@ function getWhatsappCredentials() {
  * @returns {object} Cliente do Supabase inicializado
  * @throws {Error} Se a biblioteca do Supabase não estiver carregada
  */
-function createSupabaseClient() {
+export function createSupabaseClient() {
     // Verifica se a biblioteca está carregada
     if (typeof window.supabase === 'undefined') {
         console.error('A biblioteca Supabase não está carregada.');
@@ -150,7 +150,7 @@ async function testSupabaseConnection() {
  * Retorna a URL da API do WhatsApp
  * @returns {string} URL completa da API do WhatsApp
  */
-function getWhatsappApiUrl() {
+export function getWhatsappApiUrl() {
     return whatsappConfig.apiUrl;
 }
 
@@ -158,7 +158,7 @@ function getWhatsappApiUrl() {
  * Retorna a chave de API do WhatsApp
  * @returns {string} Chave de API do WhatsApp
  */
-function getWhatsappApiKey() {
+export function getWhatsappApiKey() {
     return whatsappConfig.apiKey;
 }
 
@@ -168,32 +168,6 @@ function getWhatsappApiKey() {
  */
 function getWhatsappBaseUrl() {
     return whatsappConfig.apiUrl.split('/send-message')[0];
-}
-
-// Exportar para uso em módulos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        getSupabaseCredentials,
-        getWhatsappCredentials,
-        createSupabaseClient,
-        testSupabaseConnection,
-        getWhatsappBaseUrl,
-        getWhatsappApiUrl,
-        getWhatsappApiKey,
-        limparSessaoEsair,
-        logout
-    };
-} else {
-    // Exportar para uso no navegador
-    window.getSupabaseCredentials = getSupabaseCredentials;
-    window.getWhatsappCredentials = getWhatsappCredentials;
-    window.createSupabaseClient = createSupabaseClient;
-    window.testSupabaseConnection = testSupabaseConnection;
-    window.getWhatsappBaseUrl = getWhatsappBaseUrl;
-    window.getWhatsappApiUrl = getWhatsappApiUrl;
-    window.getWhatsappApiKey = getWhatsappApiKey;
-    window.limparSessaoEsair = limparSessaoEsair;
-    window.logout = logout;
 }
 
 // Alertar no console se o arquivo for carregado corretamente
