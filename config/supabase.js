@@ -1,6 +1,6 @@
 // Configurações do Supabase
 const supabaseConfig = {
-    url: 'https://ammtxituvicldtyoqmir.supabase.co',
+    url: '',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbXR4aXR1dmljbGR0eW9xbWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDU0MTEsImV4cCI6MjA1OTg4MTQxMX0.K5cZh6KRxAGJDbU_ACE0MGFavPv5N0fL11KkCs0E9A8',
     options: {
         db: {
@@ -16,7 +16,7 @@ const supabaseConfig = {
 
 // Configurações do WhatsApp
 const whatsappConfig = {
-    apiUrl: 'https://7017.bubblewhats.com/send-message',
+    apiUrl: '',
     apiKey: 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx'
 };
 

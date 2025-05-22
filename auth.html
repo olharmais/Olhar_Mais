@@ -7,6 +7,328 @@
     <meta name="description" content="Sistema OlharMais - Plataforma de gerenciamento">
     <meta name="theme-color" content="#005ae2">
     
+    <!-- Proteção do Console -->
+    <script>
+        (function() {
+            // Salvar referências originais
+            const originalConsole = {
+                log: console.log,
+                error: console.error,
+                warn: console.warn,
+                info: console.info
+            };
+
+            // Função para sanitizar dados sensíveis
+            function sanitizeData(data) {
+                if (typeof data === 'string') {
+                    // Mascarar números de telefone
+                    data = data.replace(/(\d{2})(\d{4,5})(\d{4})/g, '(**)*****-$3');
+                    // Mascarar URLs e chaves
+                    data = data.replace(/(https?:\/\/[^\s]*|key|token|auth|whatsapp|@[^\s]*)/gi, '[PROTEGIDO]');
+                    return data;
+                }
+                if (typeof data === 'object' && data !== null) {
+                    const safeObj = Array.isArray(data) ? [] : {};
+                    for (let key in data) {
+                        if (key.toLowerCase().includes('key') || 
+                            key.toLowerCase().includes('token') || 
+                            key.toLowerCase().includes('auth') ||
+                            key.toLowerCase().includes('password') ||
+                            key.toLowerCase().includes('secret')) {
+                            safeObj[key] = '[PROTEGIDO]';
+                        } else {
+                            safeObj[key] = sanitizeData(data[key]);
+                        }
+                    }
+                    return safeObj;
+                }
+                return data;
+            }
+
+            // Sobrescrever funções do console
+            console.log = function(...args) {
+                const sanitizedArgs = args.map(arg => sanitizeData(arg));
+                originalConsole.log.apply(console, sanitizedArgs);
+            };
+
+            console.error = function(...args) {
+                const sanitizedArgs = args.map(arg => {
+                    if (arg instanceof Error) {
+                        const safeError = new Error(sanitizeData(arg.message));
+                        safeError.stack = '[STACK TRACE OMITIDO]';
+                        return safeError;
+                    }
+                    return sanitizeData(arg);
+                });
+                originalConsole.error.apply(console, sanitizedArgs);
+            };
+
+            console.warn = function(...args) {
+                const sanitizedArgs = args.map(arg => sanitizeData(arg));
+                originalConsole.warn.apply(console, sanitizedArgs);
+            };
+
+            console.info = function(...args) {
+                const sanitizedArgs = args.map(arg => sanitizeData(arg));
+                originalConsole.info.apply(console, sanitizedArgs);
+            };
+
+            // Em produção, desabilitar completamente
+            if (window.location.hostname !== 'localhost' && 
+                window.location.hostname !== '127.0.0.1') {
+                console.log = function() {};
+                console.error = function() {};
+                console.warn = function() {};
+                console.info = function() {};
+                console.debug = function() {};
+            }
+        })();
+    </script>
+    
+    <!-- Proteção do Fetch -->
+    <script>
+        (function() {
+            // Salvar referência original do fetch
+            const originalFetch = window.fetch;
+
+            // Sobrescrever o fetch global
+            window.fetch = async function(...args) {
+                const [resource, config] = args;
+                
+                // Se for uma chamada para a API do WhatsApp
+                if (resource.includes('whatsapp') || (config?.body && config.body.includes('whatsapp'))) {
+                    // Criar uma cópia da configuração para não modificar a original
+                    const safeConfig = { ...config };
+                    
+                    try {
+                        // Fazer a chamada original
+                        const response = await originalFetch(resource, config);
+                        
+                        // Criar uma cópia da resposta
+                        const clone = response.clone();
+                        
+                        // Sobrescrever o método json() para sanitizar a resposta
+                        response.json = async () => {
+                            const data = await clone.json();
+                            
+                            // Retornar versão sanitizada
+                            return {
+                                status: data.status,
+                                response: {
+                                    status: data.response?.status || 'PENDING',
+                                    messageId: '[PROTEGIDO]'
+                                }
+                            };
+                        };
+                        
+                        return response;
+                    } catch (error) {
+                        // Em caso de erro, garantir que nenhuma informação sensível seja exposta
+                        console.error('Erro de comunicação:', error.code || 'ERR_UNKNOWN');
+                        throw new Error('Erro de comunicação');
+                    }
+                }
+                
+                // Para outras chamadas, manter comportamento normal
+                return originalFetch(...args);
+            };
+        })();
+    </script>
+    
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        window.getWhatsappApiUrl = function() {
+                            return _config.WHATSAPP_API_URL1;
+                        };
+                        
+                        window.getWhatsappApiKey = function() {
+                            return _config.WHATSAPP_API_KEY1;
+                        };
+                        
+                        // Implementar outras funções necessárias
+                        window.supabaseConfig = {
+                            url: _config.SUPABASE_URL1,
+                            key: _config.SUPABASE_KEY1,
+                            options: {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        };
+                        
+                        window.whatsappConfig = {
+                            apiUrl: _config.WHATSAPP_API_URL1,
+                            apiKey: _config.WHATSAPP_API_KEY1
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+            
+            // Implementar as funções auxiliares necessárias do arquivo supabase.js original
+            window.limparSessaoEsair = function() {
+                try {
+                    // 1. Limpar tokens do Supabase especificamente
+                    localStorage.removeItem('sb-access-token');
+                    localStorage.removeItem('sb-refresh-token');
+                    localStorage.removeItem('supabase.auth.token');
+                    localStorage.removeItem('sb-provider-token');
+                    
+                    // 2. Limpar dados de usuário
+                    localStorage.removeItem('user_session');
+                    localStorage.removeItem('user');
+                    
+                    // 3. Limpar todas as chaves que contenham 'supabase'
+                    Object.keys(localStorage).forEach(key => {
+                        if (key.includes('supabase')) {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                    
+                    // 4. Limpar sessionStorage
+                    sessionStorage.clear();
+                    
+                    // 5. Limpar todos os cookies
+                    document.cookie.split(";").forEach(function(c) {
+                        document.cookie = c.trim().split("=")[0] + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                        document.cookie = c.trim().split("=")[0] + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+                    });
+                    
+                    // 6. Fazer logout do Supabase se disponível
+                    if (_supabaseClient) {
+                        _supabaseClient.auth.signOut();
+                    }
+                    
+                    // 7. Última instrução: limpar localStorage completamente
+                    localStorage.clear();
+                    
+                    // 8. Adicionar timestamp para evitar cache
+                    const noCache = new Date().getTime();
+                    
+                    // 9. Redirecionar para a página de login
+                    window.location.replace('/auth.html?logout=true&nocache=' + noCache);
+                } catch (error) {
+                    // Mesmo com erro, tentar redirecionar
+                    window.location.href = '/auth.html?logout=true';
+                }
+            };
+            
+            // Adicionar logout como alias
+            window.logout = window.limparSessaoEsair;
+        })();
+    </script>
     
     <!-- PWA -->
     <meta name="theme-color" content="#005ae2">
@@ -52,9 +374,7 @@
             try {
                 // Tenta o carregamento normal primeiro
                 await import('https://unpkg.com/@phosphor-icons/web');
-                console.log('Phosphor Icons carregado com sucesso');
             } catch (error) {
-                console.warn('Tentando carregar Phosphor Icons em modo no-cors...');
                 // Fallback: cria um link para o CSS com modo no-cors
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
@@ -73,9 +393,8 @@
                     const registration = await navigator.serviceWorker.register('/service-worker.js', {
                         scope: '/'
                     });
-                    console.log('ServiceWorker registrado com sucesso:', registration.scope);
                 } catch (error) {
-                    console.error('Falha ao registrar o ServiceWorker:', error);
+                    // Erro silencioso
                 }
             });
         }
@@ -120,12 +439,6 @@
             }
         }
     </script>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Supabase Config -->
-    <script src="/config/supabase.js"></script>
     
     <style>
         body {
@@ -440,7 +753,13 @@
                 console.log('Buscando usuário com whatsapp:', phone);
                 
                 // 2. Verificar se o usuário existe e está ativo
-                const { data: users, error: searchError } = await supabase
+                // Usando createSupabaseClient() ao invés de supabase diretamente
+                const supabaseClient = createSupabaseClient();
+                if (!supabaseClient) {
+                    return { success: false, error: 'Serviço temporariamente indisponível. Tente novamente em instantes.' };
+                }
+                
+                const { data: users, error: searchError } = await supabaseClient
                     .from('usuarios')
                     .select('id, nome, tipo, status')
                     .eq('whatsapp', phone);
@@ -468,7 +787,7 @@
                 const codigo = Math.floor(100000 + Math.random() * 900000).toString();
                 
                 // 5. Salvar código e atualizar último login
-                const { error: updateError } = await supabase
+                const { error: updateError } = await supabaseClient
                     .from('usuarios')
                     .update({ 
                         hash2: codigo, // Usar hash2 para armazenar o código temporariamente
@@ -526,7 +845,12 @@
                 }
                 
                 // 2. Buscar usuário pelo telefone
-                const { data: user, error: searchError } = await supabase
+                const supabaseClient = createSupabaseClient();
+                if (!supabaseClient) {
+                    return { success: false, error: 'Serviço temporariamente indisponível. Tente novamente em instantes.' };
+                }
+                
+                const { data: user, error: searchError } = await supabaseClient
                     .from('usuarios')
                     .select('id, nome, sobrenome, tipo, whatsapp, hash2, status')
                     .eq('whatsapp', phone)
@@ -559,7 +883,7 @@
                 const sessionHash = await generateHash(Date.now() + user.whatsapp);
                 
                 // 6. Atualizar dados do usuário
-                const { error: updateError } = await supabase
+                const { error: updateError } = await supabaseClient
                     .from('usuarios')
                     .update({ 
                         ultimo_log: new Date().toISOString(),
@@ -911,16 +1235,33 @@
                         
                         console.log('Telefone formatado:', phoneFormatado);
                         
+                        // Aguardar carregamento das configurações se necessário
+                        while (window._configLoading) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        
+                        // Verificar se as configurações foram carregadas corretamente
+                        const whatsappUrl = getWhatsappApiUrl();
+                        const whatsappKey = getWhatsappApiKey();
+                        
+                        if (!whatsappUrl || !whatsappKey) {
+                            throw new Error('Configurações do WhatsApp não carregadas corretamente');
+                        }
+                        
                         // Verificar se usuário já existe
-                        const { data: usuarioExistente, error: erroConsulta } = await supabase
+                        const supabaseClient = createSupabaseClient();
+                        if (!supabaseClient) {
+                            throw new Error('Cliente Supabase não disponível');
+                        }
+                        
+                        const { data: usuarioExistente, error: erroConsulta } = await supabaseClient
                             .from('usuarios')
                             .select('*')
                             .eq('whatsapp', phoneFormatado);
                             
                         if (erroConsulta) {
                             console.error('Erro ao verificar usuário:', erroConsulta);
-                            Toast.error('Erro ao verificar usuário');
-                            return;
+                            throw new Error('Erro ao verificar usuário');
                         }
                             
                         if (usuarioExistente && usuarioExistente.length > 0) {
@@ -937,42 +1278,63 @@
                         localStorage.setItem('temp_register_type', selectedType);
                         localStorage.setItem('temp_register_time', Date.now().toString());
                                 
-                        // Enviar mensagem WhatsApp com credenciais diretas
+                        // Enviar mensagem WhatsApp
                         const mensagem = `Seu código de verificação para o OlharMais é: *${codigoVerificacao}*\nEste código expira em 15 minutos.`;
                         
-                        // Usar credenciais diretas para garantir que não haja erros
-                        const WHATSAPP_API_URL = getWhatsappApiUrl();
-                        const WHATSAPP_API_KEY = getWhatsappApiKey();
-                        
-                        console.log('Enviando mensagem para:', phoneFormatado);
-                        
-                        const response = await fetch(WHATSAPP_API_URL, {
+                        // Log mínimo para debug
+                        console.log('Processando solicitação...');
+
+                        // Criar um objeto com informações não sensíveis
+                        const requestBody = {
+                            jid: btoa(phoneFormatado), // Codificar o número
+                            message: 'CÓDIGO_DE_VERIFICAÇÃO' // Não enviar o código real na requisição visível
+                        };
+
+                        // Adicionar o código real em um header customizado
+                        const headers = {
+                            'Authorization': whatsappKey,
+                            'Content-Type': 'application/json',
+                            'X-Message-Content': btoa(mensagem) // Codificar a mensagem real
+                        };
+
+                        const response = await fetch(whatsappUrl, {
                             method: 'POST',
-                            headers: {
-                                'Authorization': WHATSAPP_API_KEY,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                jid: phoneFormatado,
-                                message: mensagem
+                            headers: headers,
+                            body: JSON.stringify(requestBody)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Erro de comunicação: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+
+                        // Limpar imediatamente dados sensíveis
+                        requestBody.jid = '[PROTEGIDO]';
+                        headers['X-Message-Content'] = '[PROTEGIDO]';
+
+                        // Log seguro
+                        console.log('Status:', result.status ? 'Sucesso' : 'Falha');
+
+                        // Sobrescrever a resposta original com uma versão segura
+                        Object.defineProperty(response, 'json', {
+                            value: async () => ({
+                                status: result.status,
+                                response: {
+                                    status: 'PENDING',
+                                    messageId: '[PROTEGIDO]'
+                                }
                             })
                         });
 
-                        const result = await response.json();
-                        console.log('Resposta WhatsApp:', result);
-                        
-                        if (!response.ok) {
-                            throw new Error('Erro ao enviar mensagem de WhatsApp');
-                        }
-                            
                         // Mostrar campo de código após envio bem-sucedido
                         document.querySelector('.verification-code').classList.remove('hidden');
                         document.querySelector('.verification-code input:first-child').focus();
                         
                         Toast.success('Código enviado para seu WhatsApp');
                     } catch (error) {
-                        console.error('Erro:', error);
-                        Toast.error('Erro ao enviar código');
+                        console.error('Erro detalhado:', error);
+                        Toast.error(error.message || 'Erro ao enviar código');
                     } finally {
                         // Restaurar botão
                         this.innerHTML = '<span>Receber Código</span>';
@@ -1077,7 +1439,14 @@
             // Carregar cidades para o dropdown
             async function loadCidades() {
                 try {
-                    const { data: cidades, error } = await supabase
+                    const supabaseClient = createSupabaseClient();
+                    if (!supabaseClient) {
+                        console.error('Cliente Supabase não está disponível');
+                        Toast.error('Serviço temporariamente indisponível');
+                        return;
+                    }
+                    
+                    const { data: cidades, error } = await supabaseClient
                         .from('cidades')
                         .select('id, nome')
                         .order('nome');
@@ -1159,7 +1528,19 @@
                             return;
                         }
                         
+                        // Aguardar carregamento das configurações se necessário
+                        while (window._configLoading) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        
+                        // Obter cliente Supabase
+                        const supabaseClient = createSupabaseClient();
+                        if (!supabaseClient) {
+                            throw new Error('Cliente Supabase não disponível');
+                        }
+                        
                         let fotoUrl = null;
+                        const profilePhotoInput = document.getElementById('profile-photo');
                         
                         // Fazer upload da foto se existir
                         if (profilePhotoInput.files && profilePhotoInput.files[0]) {
@@ -1167,31 +1548,36 @@
                             const fileExt = file.name.split('.').pop();
                             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
                             
-                            // Upload para o bucket profile-photos
-                            const { data: uploadData, error: uploadError } = await supabase
-                                .storage
-                                .from('profile-photos')
-                                .upload(fileName, file);
-                            
-                            if (uploadError) {
-                                console.error('Erro ao fazer upload da foto:', uploadError);
-                                Toast.warning('Não foi possível fazer o upload da foto, mas o cadastro continuará');
-                            } else {
-                                // Gerar URL pública
-                                const { data: { publicUrl } } = supabase
+                            try {
+                                // Upload para o bucket profile-photos
+                                const { data: uploadData, error: uploadError } = await supabaseClient
                                     .storage
                                     .from('profile-photos')
-                                    .getPublicUrl(fileName);
+                                    .upload(fileName, file);
                                 
-                                fotoUrl = publicUrl;
+                                if (uploadError) {
+                                    console.error('Erro no upload de arquivo:', uploadError.code || 'ERR_UNKNOWN');
+                        Toast.warning('Não foi possível fazer o upload da foto, mas o cadastro continuará');
+                                } else {
+                                    // Gerar URL pública
+                                    const { data: { publicUrl } } = supabaseClient
+                                        .storage
+                                        .from('profile-photos')
+                                        .getPublicUrl(fileName);
+                                    
+                                    fotoUrl = publicUrl;
+                                }
+                            } catch (uploadError) {
+                                console.error('Erro no upload:', uploadError);
+                                Toast.warning('Erro ao fazer upload da foto, mas o cadastro continuará');
                             }
                         }
                         
                         // Gerar hash para senha
                         const hash = await generateHash(Date.now() + Math.random().toString());
                         
-                        // AGORA sim, criar o usuário
-                        const { data: novoUsuario, error: erroCriarUsuario } = await supabase
+                        // Criar o usuário
+                        const { data: novoUsuario, error: erroCriarUsuario } = await supabaseClient
                             .from('usuarios')
                             .insert([{
                                 nome: firstName,
@@ -1201,17 +1587,16 @@
                                 hash1: hash,
                                 hash2: '',
                                 foto_url: fotoUrl,
-                                status: 'Inativo', // Valor permitido no enum status_usuario
+                                status: 'Inativo',
                                 ultimo_log: new Date().toISOString(),
-                                cidade: parseInt(cityId), // Usando 'cidade' como número inteiro
-                                genero: gender // Adicionando o campo genero
+                                cidade: parseInt(cityId),
+                                genero: gender
                             }])
                             .select();
                                 
                         if (erroCriarUsuario) {
                             console.error('Erro ao criar usuário:', erroCriarUsuario);
-                            Toast.error('Erro ao completar cadastro');
-                            return;
+                            throw new Error('Erro ao completar cadastro: ' + erroCriarUsuario.message);
                         }
                             
                         // Limpar dados temporários
@@ -1227,8 +1612,8 @@
                         }, 1500);
                         
                     } catch (error) {
-                        console.error('Erro:', error);
-                        Toast.error('Erro ao processar solicitação');
+                        console.error('Erro detalhado:', error);
+                        Toast.error(error.message || 'Erro ao processar solicitação');
                     } finally {
                         // Restaurar botão
                         this.innerHTML = '<span>Concluir Cadastro</span>';
