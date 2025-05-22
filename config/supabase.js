@@ -1,7 +1,7 @@
 // Configurações do Supabase
 const supabaseConfig = {
-    url: 'https://ammtxituvicldtyoqmir.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbXR4aXR1dmljbGR0eW9xbWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDU0MTEsImV4cCI6MjA1OTg4MTQxMX0.K5cZh6KRxAGJDbU_ACE0MGFavPv5N0fL11KkCs0E9A8',
+    url: import.meta.env.VITE_SUPABASE_URL,
+    key: import.meta.env.VITE_SUPABASE_ANON_KEY,
     options: {
         db: {
             schema: 'public'
@@ -16,8 +16,8 @@ const supabaseConfig = {
 
 // Configurações do WhatsApp
 const whatsappConfig = {
-    apiUrl: 'https://7017.bubblewhats.com/send-message',
-    apiKey: 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx'
+    apiUrl: import.meta.env.VITE_WHATSAPP_API_URL,
+    apiKey: import.meta.env.VITE_WHATSAPP_API_KEY
 };
 
 /**
