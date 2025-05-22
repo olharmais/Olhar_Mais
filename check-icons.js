@@ -46,18 +46,4 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => div.remove(), 10000);
       }
     });
-});
-
-// Função para verificar se os ícones estão carregados corretamente
-window.addEventListener('load', function() {
-    const icons = document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]');
-    
-    icons.forEach(icon => {
-        const img = new Image();
-        img.src = icon.href;
-        
-        img.onerror = () => {
-            console.warn(`Ícone não encontrado: ${icon.href}`);
-        };
-    });
 }); 
