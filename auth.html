@@ -7,130 +7,6 @@
     <meta name="description" content="Sistema OlharMais - Plataforma de gerenciamento">
     <meta name="theme-color" content="#005ae2">
     
-    <!-- Proteção do Console -->
-    <script>
-        (function() {
-            // Salvar referências originais
-            const originalConsole = {
-                log: console.log,
-                error: console.error,
-                warn: console.warn,
-                info: console.info
-            };
-
-            // Função para sanitizar dados sensíveis
-            function sanitizeData(data) {
-                if (typeof data === 'string') {
-                    // Mascarar números de telefone
-                    data = data.replace(/(\d{2})(\d{4,5})(\d{4})/g, '(**)*****-$3');
-                    // Mascarar URLs e chaves
-                    data = data.replace(/(https?:\/\/[^\s]*|key|token|auth|whatsapp|@[^\s]*)/gi, '[PROTEGIDO]');
-                    return data;
-                }
-                if (typeof data === 'object' && data !== null) {
-                    const safeObj = Array.isArray(data) ? [] : {};
-                    for (let key in data) {
-                        if (key.toLowerCase().includes('key') || 
-                            key.toLowerCase().includes('token') || 
-                            key.toLowerCase().includes('auth') ||
-                            key.toLowerCase().includes('password') ||
-                            key.toLowerCase().includes('secret')) {
-                            safeObj[key] = '[PROTEGIDO]';
-                        } else {
-                            safeObj[key] = sanitizeData(data[key]);
-                        }
-                    }
-                    return safeObj;
-                }
-                return data;
-            }
-
-            // Sobrescrever funções do console
-            console.log = function(...args) {
-                const sanitizedArgs = args.map(arg => sanitizeData(arg));
-                originalConsole.log.apply(console, sanitizedArgs);
-            };
-
-            console.error = function(...args) {
-                const sanitizedArgs = args.map(arg => {
-                    if (arg instanceof Error) {
-                        const safeError = new Error(sanitizeData(arg.message));
-                        safeError.stack = '[STACK TRACE OMITIDO]';
-                        return safeError;
-                    }
-                    return sanitizeData(arg);
-                });
-                originalConsole.error.apply(console, sanitizedArgs);
-            };
-
-            console.warn = function(...args) {
-                const sanitizedArgs = args.map(arg => sanitizeData(arg));
-                originalConsole.warn.apply(console, sanitizedArgs);
-            };
-
-            console.info = function(...args) {
-                const sanitizedArgs = args.map(arg => sanitizeData(arg));
-                originalConsole.info.apply(console, sanitizedArgs);
-            };
-
-            // Em produção, desabilitar completamente
-            if (window.location.hostname !== 'localhost' && 
-                window.location.hostname !== '127.0.0.1') {
-                console.log = function() {};
-                console.error = function() {};
-                console.warn = function() {};
-                console.info = function() {};
-                console.debug = function() {};
-            }
-        })();
-    </script>
-    
-    <!-- Proteção do Fetch -->
-<script>
-    (function() {
-        // Interceptar XMLHttpRequest para proteger dados sensíveis
-        const XHR = XMLHttpRequest.prototype;
-        const send = XHR.send;
-        const open = XHR.open;
-
-        // Interceptar apenas a exibição no DevTools
-        XHR.open = function(method, url) {
-            this._url = url;
-            return open.apply(this, arguments);
-        };
-
-        XHR.send = function() {
-            this.addEventListener('load', function() {
-                try {
-                    // Se for uma resposta da API do WhatsApp, proteger os dados
-                    if (this._url.includes('whatsapp')) {
-                        const responseBody = JSON.parse(this.response);
-                        
-                        // Criar uma versão protegida da resposta
-                        const safeResponse = {
-                            status: responseBody.status,
-                            response: {
-                                status: 'PENDING',
-                                messageId: '[PROTEGIDO]'
-                            }
-                        };
-
-                        // Sobrescrever a resposta apenas para o DevTools
-                        Object.defineProperty(this, 'response', {
-                            get: function() {
-                                return JSON.stringify(safeResponse);
-                            }
-                        });
-                    }
-                } catch (e) {
-                    // Ignorar erros de parsing
-                }
-            });
-            return send.apply(this, arguments);
-        };
-    })();
-</script>
-    
     <!-- Definições preliminares para evitar erros antes do carregamento -->
     <script>
         // Definir funções básicas para evitar erros de "is not defined"
@@ -1277,46 +1153,28 @@
                         // Enviar mensagem WhatsApp
                         const mensagem = `Seu código de verificação para o OlharMais é: *${codigoVerificacao}*\nEste código expira em 15 minutos.`;
                         
-                        // Log mínimo para debug
-                        console.log('Processando solicitação...');
-
-                        // Fazer a requisição no formato original que a API espera
-const response = await fetch(whatsappUrl, {
-    method: 'POST',
-    headers: {
-        'Authorization': whatsappKey,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        jid: phoneFormatado,
-        message: mensagem
-    })
-});
-
-                        if (!response.ok) {
-                            throw new Error(`Erro de comunicação: ${response.status}`);
-                        }
-
-                        const result = await response.json();
-
-                        // Limpar imediatamente dados sensíveis
-                        requestBody.jid = '[PROTEGIDO]';
-                        headers['X-Message-Content'] = '[PROTEGIDO]';
-
-                        // Log seguro
-                        console.log('Status:', result.status ? 'Sucesso' : 'Falha');
-
-                        // Sobrescrever a resposta original com uma versão segura
-                        Object.defineProperty(response, 'json', {
-                            value: async () => ({
-                                status: result.status,
-                                response: {
-                                    status: 'PENDING',
-                                    messageId: '[PROTEGIDO]'
-                                }
+                        console.log('Enviando mensagem para:', phoneFormatado);
+                        console.log('URL da API:', whatsappUrl);
+                        
+                        const response = await fetch(whatsappUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': whatsappKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                jid: phoneFormatado,
+                                message: mensagem
                             })
                         });
 
+                        if (!response.ok) {
+                            throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        console.log('Resposta WhatsApp:', result);
+                            
                         // Mostrar campo de código após envio bem-sucedido
                         document.querySelector('.verification-code').classList.remove('hidden');
                         document.querySelector('.verification-code input:first-child').focus();
@@ -1546,8 +1404,8 @@ const response = await fetch(whatsappUrl, {
                                     .upload(fileName, file);
                                 
                                 if (uploadError) {
-                                    console.error('Erro no upload de arquivo:', uploadError.code || 'ERR_UNKNOWN');
-                        Toast.warning('Não foi possível fazer o upload da foto, mas o cadastro continuará');
+                                    console.error('Erro ao fazer upload da foto:', uploadError);
+                                    Toast.warning('Não foi possível fazer o upload da foto, mas o cadastro continuará');
                                 } else {
                                     // Gerar URL pública
                                     const { data: { publicUrl } } = supabaseClient
