@@ -534,10 +534,10 @@
                 estadoApp.codigoAntigo = Math.random().toString().substr(2, 6);
                 
                 // Enviar código via WhatsApp
-                const response = await fetch('https://7017.bubblewhats.com/send-message', {
+                const response = await fetch(getWhatsappApiUrl(), {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx',
+                        'Authorization': getWhatsappApiKey(),
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -601,10 +601,10 @@
                 estadoApp.whatsappNovo = novoNumero;
                 
                 // Enviar código para o novo número
-                const response = await fetch('https://7017.bubblewhats.com/send-message', {
+                const response = await fetch(getWhatsappApiUrl(), {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx',
+                        'Authorization': getWhatsappApiKey(),
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
