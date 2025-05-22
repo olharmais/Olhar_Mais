@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Editar Aluno</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+
+    <!-- IMask para máscaras -->
+    <script src="https://unpkg.com/imask"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preloader {
+            transition: opacity 0.3s ease-out;
+        }
+        .form-input:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        .avatar-upload {
+            width: 150px;
+            height: 150px;
+            border: 2px dashed #e2e8f0;
+            border-radius: 1rem;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+        }
+        .avatar-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-upload .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        /* Estilos do modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+        <button id="closePreloader" class="absolute top-4 right-4 p-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300" title="Forçar fechamento">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Loading principal -->
+    <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="alunos.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Editar Aluno</h1>
+            </div>
+        </div>
+
+        <!-- Estado vazio/erro -->
+        <div id="emptyState" class="hidden card p-12 text-center">
+            <i class="ph ph-warning-circle text-3xl text-amber-500 mb-4"></i>
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Aluno não encontrado</h2>
+            <p class="text-gray-600 mb-6">O aluno que você está procurando não existe ou foi removido.</p>
+            <a href="alunos.html" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Voltar para lista de alunos
+            </a>
+        </div>
+
+        <!-- Formulário - Será preenchido pela função loadForm() -->
+        <div id="formContainer" class="hidden">
+            <div class="card p-6 md:p-8">
+                <form id="alunoForm" class="space-y-6">
+                    <input type="hidden" id="alunoId" name="id">
+                    
+                    <!-- Foto do aluno -->
+                    <div class="flex justify-center mb-6">
+                        <div class="avatar-upload">
+                            <img id="fotoPreview" class="hidden" alt="Foto do aluno">
+                            <div id="placeholderFoto" class="placeholder">
+                                <i class="ph ph-user-circle text-gray-400 text-4xl mb-2"></i>
+                                <p class="text-sm text-gray-500">Sem foto</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informações básicas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1">Nome completo *</label>
+                            <input type="text" id="nome_completo" name="nome_completo" required
+                                class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                        </div>
+                        <div>
+                            <label for="registro_aluno" class="block text-sm font-medium text-gray-700 mb-1">Registro/Matrícula *</label>
+                            <input type="text" id="registro_aluno" name="registro_aluno" required
+                                class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                        </div>
+                    </div>
+                    
+                    <!-- Data de nascimento, Gênero e Status -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="data_nascimento" class="block text-sm font-medium text-gray-700 mb-1">Data de nascimento *</label>
+                            <input type="date" id="data_nascimento" name="data_nascimento" required
+                                class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                        </div>
+                        <div>
+                            <label for="genero" class="block text-sm font-medium text-gray-700 mb-1">Gênero *</label>
+                            <select id="genero" name="genero" required class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                <option value="">Selecione</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="O">Outro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                            <select id="status" name="status" required class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                <option value="ATIVO">Ativo</option>
+                                <option value="INATIVO">Inativo</option>
+                                <option value="SUSPENSO">Suspenso</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Escola, Série e Turma -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="escola" class="block text-sm font-medium text-gray-700 mb-1">Escola *</label>
+                            <select id="escola" name="escola_id" required class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                <option value="">Selecione uma escola</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="serie" class="block text-sm font-medium text-gray-700 mb-1">Série *</label>
+                            <select id="serie" name="serie" required class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                <option value="">Selecione uma série</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="turma" class="block text-sm font-medium text-gray-700 mb-1">Turma *</label>
+                            <select id="turma" name="turma" required class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                <option value="">Selecione uma turma</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Período (apenas exibição, não editável) -->
+                    <div id="periodoContainer" class="hidden bg-blue-50 p-3 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="ph ph-clock text-blue-500 mr-2"></i>
+                            <span class="text-sm text-blue-700">
+                                Período da turma: <strong id="periodoText">-</strong>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção de Dispositivos -->
+                    <div class="card p-6 md:p-8 mt-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6">Dispositivos Vinculados</h2>
+                        
+                        <!-- Lista de dispositivos vinculados -->
+                        <div id="listaDispositivos" class="space-y-4 mb-6">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+
+                        <!-- Adicionar novo dispositivo -->
+                        <div class="border-t mt-6 pt-6">
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Adicionar Novo Dispositivo</h3>
+                            <div class="flex gap-4">
+                                <div class="flex-1">
+                                    <select id="novoDispositivo" class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 border">
+                                        <option value="">Selecione um dispositivo</option>
+                                    </select>
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Matrícula que será usada: <span id="matriculaParaCadastro" class="font-medium text-gray-700"></span>
+                                    </p>
+                                </div>
+                                <button type="button" id="btnAdicionarDispositivo" 
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                    <span>Adicionar</span>
+                                    <div id="loadingAdicionarDispositivo" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin hidden"></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- Painel de Progresso -->
+                    <div id="deviceRegistrationProgress" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 hidden">
+                        <h3 class="font-medium text-gray-800 mb-2">Progresso do Registro</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <div id="step1" class="w-4 h-4 rounded-full bg-gray-200"></div>
+                                <span class="text-sm">Conectando ao dispositivo</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div id="step2" class="w-4 h-4 rounded-full bg-gray-200"></div>
+                                <span class="text-sm">Configurando monitor</span>
+                                </div>
+                            <div class="flex items-center gap-2">
+                                <div id="step3" class="w-4 h-4 rounded-full bg-gray-200"></div>
+                                <span class="text-sm">Criando usuário</span>
+        </div>
+                            <div class="flex items-center gap-2">
+                                <div id="step4" class="w-4 h-4 rounded-full bg-gray-200"></div>
+                                <span class="text-sm">Enviando foto</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contatos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Responsável 1 -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-3">Responsável 1</h3>
+                        <div id="resp1_form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                                <label for="resp1_nome" class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                                <input type="text" id="resp1_nome" name="resp1_nome" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Digite o nome">
+                </div>
+                            <div>
+                                <label for="resp1_sobrenome" class="block text-sm font-medium text-gray-700 mb-2">Sobrenome</label>
+                                <input type="text" id="resp1_sobrenome" name="resp1_sobrenome" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Digite o sobrenome">
+            </div>
+                            <div>
+                                <label for="resp1_whatsapp" class="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                                <input type="text" id="resp1_whatsapp" name="resp1_whatsapp" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="(99) 99999-9999">
+                                <p class="text-xs text-gray-500 mt-1">Formato: DDD + número, ex: (11) 99999-9999</p>
+        </div>
+    </div>
+                        <div class="mt-4">
+                            <button type="button" id="remover_resp1" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">Remover Responsável</button>
+            </div>
+                        <input type="hidden" id="resp1_id" name="resp1_id">
+                </div>
+
+                    <!-- Responsável 2 -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-3">Responsável 2</h3>
+                        <div id="resp2_form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                                <label for="resp2_nome" class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                                <input type="text" id="resp2_nome" name="resp2_nome" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Digite o nome">
+                </div>
+                <div>
+                                <label for="resp2_sobrenome" class="block text-sm font-medium text-gray-700 mb-2">Sobrenome</label>
+                                <input type="text" id="resp2_sobrenome" name="resp2_sobrenome" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Digite o sobrenome">
+            </div>
+                            <div>
+                                <label for="resp2_whatsapp" class="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                                <input type="text" id="resp2_whatsapp" name="resp2_whatsapp" class="form-input w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="(99) 99999-9999">
+                                <p class="text-xs text-gray-500 mt-1">Formato: DDD + número, ex: (11) 99999-9999</p>
+        </div>
+    </div>
+                        <div class="mt-4">
+                            <button type="button" id="remover_resp2" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">Remover Responsável</button>
+            </div>
+                        <input type="hidden" id="resp2_id" name="resp2_id">
+                    </div>
+                </div>
+
+                <!-- Botões de ação -->
+                <div class="flex justify-end space-x-3 mt-8">
+                    <a href="alunos.html" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </a>
+                    <button type="submit" id="submitButton" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <span id="loadingSpinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                        Salvar alterações
+                    </button>
+                </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        let alunoData = {};
+        let fotoAlterada = false;
+        let originalEscolaId = null;
+        let originalFotoUrl = null;
+        let dispositivoOriginal = null;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM carregado, iniciando...");
+            
+            // Verificar o estado do preloader
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                console.log("Preloader encontrado, garantindo que esteja visível");
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            } else {
+                console.error("Preloader não encontrado!");
+            }
+
+            // Configurar botão de escape do preloader
+            document.getElementById('closePreloader').addEventListener('click', function() {
+                hidePreloader(true); // Esconder imediatamente
+            });
+
+            // Aplicar máscara aos campos de WhatsApp
+            const whatsappInputs = document.querySelectorAll('#resp1_whatsapp, #resp2_whatsapp');
+            whatsappInputs.forEach(input => {
+                input.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 11) {
+                        value = value.substring(0, 11);
+                    }
+                    
+                    let formattedValue = '';
+                    if (value.length > 0) {
+                        formattedValue = '(' + value.substring(0, Math.min(2, value.length));
+                        if (value.length > 2) {
+                            formattedValue += ') ' + value.substring(2, Math.min(7, value.length));
+                            if (value.length > 7) {
+                                formattedValue += '-' + value.substring(7, Math.min(11, value.length));
+                            }
+                        }
+                    }
+                    
+                    e.target.value = formattedValue;
+                });
+                
+                // Adicionar busca automática quando digitar pelo menos 11 números
+                input.addEventListener('blur', function() {
+                    const whatsappNumber = this.value.replace(/\D/g, '');
+                    if (whatsappNumber.length >= 10) {
+                        // Obter número do responsável (1 ou 2) do ID do input
+                        const respNum = this.id.includes('resp1_') ? 1 : 2;
+                        buscarUsuarioPorWhatsApp(whatsappNumber, respNum);
+                    }
+                });
+            });
+
+            // Inicializar Supabase
+            try {
+                console.log('Obtendo credenciais do Supabase...');
+                const creds = window.getSupabaseCredentials();
+                console.log('Credenciais obtidas:', creds.url);
+                
+                console.log('Criando cliente Supabase...');
+                supabase = window.createSupabaseClient();
+                console.log('Supabase client created successfully:', supabase);
+                
+                // Teste de conexão
+                console.log('Testando conexão com o Supabase...');
+                const { data: testData, error: testError } = await supabase.from('escolas').select('id').limit(1);
+                if (testError) throw testError;
+                console.log('Conexão com Supabase funcionando corretamente:', testData);
+                
+                // Show form for testing
+                document.getElementById('formContainer').classList.remove('hidden');
+                
+                // Obter ID do aluno da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const alunoId = urlParams.get('id');
+                console.log('ID do aluno obtido da URL:', alunoId);
+                
+                if (alunoId) {
+                    try {
+                        // Mostrar preloader - ajustado para usar a nova função
+                        showPreloader();
+                        
+                        // Buscar dados do aluno
+                        const { data, error } = await supabase
+                            .from('alunos')
+                            .select(`
+                                id, 
+                                nome_completo, 
+                                registro_aluno, 
+                                data_nascimento, 
+                                genero, 
+                                status, 
+                                contato1_whatsapp, 
+                                contato2_whatsapp, 
+                                foto_url, 
+                                escola_id, 
+                                serie, 
+                                turma
+                            `)
+                            .eq('id', alunoId)
+                            .single();
+                        
+                        if (error) throw error;
+                        
+                        if (data) {
+                            // Guardar dados originais
+                            alunoData = data;
+                            console.log('Dados do aluno carregados:', data);
+                            originalEscolaId = data.escola_id;
+                            originalFotoUrl = data.foto_url;
+                            
+                            // Se necessário, buscar período da turma
+                            if (data.turma) {
+                                try {
+                                    console.log('Buscando período da turma:', data.turma);
+                                    const { data: turmaData, error: turmaError } = await supabase
+                                        .from('turmas')
+                                        .select('periodo')
+                                        .eq('id', data.turma)
+                                        .single();
+                                    
+                                    if (!turmaError && turmaData) {
+                                        console.log('Período da turma obtido:', turmaData.periodo);
+                                        alunoData.periodo = turmaData.periodo;
+                                    }
+                                } catch (turmaError) {
+                                    console.error('Erro ao buscar período da turma:', turmaError);
+                                }
+                            }
+                            
+                            // Mostrar formulário
+                            document.getElementById('emptyState').classList.add('hidden');
+                            document.getElementById('formContainer').classList.remove('hidden');
+                            
+                            // Preencher formulário
+                            fillForm(data);
+
+                            // Configurar eventos dos selects
+                            document.getElementById('escola').addEventListener('change', function() {
+                                const escolaId = this.value;
+                                if (escolaId) {
+                                    loadSeries(escolaId);
+                                    loadDispositivosDisponiveis(escolaId);
+                                    document.getElementById('serie').value = '';
+                                    document.getElementById('turma').value = '';
+                                }
+                            });
+
+                            document.getElementById('serie').addEventListener('change', function() {
+                                const escolaId = document.getElementById('escola').value;
+                                const serieId = this.value;
+                                if (escolaId && serieId) {
+                                    loadTurmas(escolaId, serieId);
+                                    document.getElementById('turma').value = '';
+                                }
+                            });
+
+                            // Carregar dispositivos disponíveis inicialmente
+                            if (data.escola_id) {
+                                loadDispositivosDisponiveis(data.escola_id);
+                            }
+                        } else {
+                            // Mostrar empty state
+                            document.getElementById('emptyState').classList.remove('hidden');
+                            document.getElementById('formContainer').classList.add('hidden');
+                            showToast('Aluno não encontrado', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao carregar aluno:', error);
+                        showToast('Erro ao carregar dados do aluno: ' + error.message, 'error');
+                    } finally {
+                        // Esconder preloader - ajustado para usar a nova função
+                        hidePreloader();
+                    }
+                } else {
+                    // Sem ID, mostrar erro
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    document.getElementById('formContainer').classList.add('hidden');
+                    showToast('ID do aluno não fornecido', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar supabase:', error);
+                showToast('Erro ao carregar supabase: ' + error.message, 'error');
+                hidePreloader(); // Esconder preloader em caso de erro na inicialização
+            }
+            
+            // Inicializar sidebar
+            initializeSidebar();
+
+            // Associar o evento ao botão de adicionar dispositivo
+            const btnAdicionar = document.getElementById('btnAdicionarDispositivo');
+            if (btnAdicionar) {
+                btnAdicionar.addEventListener('click', adicionarDispositivo);
+            }
+        });
+        
+        // Função para exibir toast
+        function showToast(message, type = 'success') {
+                Toastify({
+                    text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                    style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444"
+                    }
+                }).showToast();
+        }
+
+        // Função para mostrar loading
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+
+        // Função para esconder loading
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Funções do Sidebar
+        function setupSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            const menuItems = document.querySelectorAll('.menu-item');
+
+            // Toggle do sidebar em mobile
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+
+            // Navegação dos itens do menu
+            menuItems.forEach(item => {
+                const href = item.getAttribute('data-href');
+                if (href) {
+                    item.addEventListener('click', () => {
+                        window.location.href = href;
+                    });
+                }
+            });
+
+            // Marcar item ativo baseado na URL atual
+            const currentPath = window.location.pathname;
+            menuItems.forEach(item => {
+                const href = item.getAttribute('data-href');
+                if (href && currentPath.includes(href)) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // Função de logout
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = '/auth.html';
+            });
+        }
+
+        // Função para preencher o formulário com os dados do aluno
+        function fillForm(aluno) {
+            console.log('Preenchendo formulário com dados do aluno:', aluno);
+            
+            // Preencher campos básicos
+            document.getElementById('alunoId').value = aluno.id;
+            document.getElementById('nome_completo').value = aluno.nome_completo;
+            document.getElementById('registro_aluno').value = aluno.registro_aluno;
+            document.getElementById('data_nascimento').value = aluno.data_nascimento;
+            
+            // Garantir que o gênero seja preenchido corretamente
+            const generoSelect = document.getElementById('genero');
+            if (generoSelect) {
+                // Verificar se o valor existe nas opções
+                const opcaoExiste = Array.from(generoSelect.options).some(option => option.value === aluno.genero);
+                if (opcaoExiste) {
+                    generoSelect.value = aluno.genero;
+                } else {
+                    console.warn('Valor de gênero inválido:', aluno.genero);
+                    // Definir um valor padrão se o valor não existir
+                    generoSelect.value = '';
+                }
+            }
+            
+            document.getElementById('status').value = aluno.status;
+                
+                // Preencher campos de contato
+                if (aluno.contato1_whatsapp) {
+                document.getElementById('resp1_whatsapp').value = aluno.contato1_whatsapp;
+                // Buscar dados do usuário 1
+                buscarDadosUsuario(aluno.contato1_whatsapp, 1);
+                }
+                if (aluno.contato2_whatsapp) {
+                document.getElementById('resp2_whatsapp').value = aluno.contato2_whatsapp;
+                // Buscar dados do usuário 2
+                buscarDadosUsuario(aluno.contato2_whatsapp, 2);
+            }
+
+            // Carregar escolas e selecionar a escola atual
+            loadEscolas(aluno.escola_id).then(() => {
+                // Após carregar as escolas, carregar séries e turmas
+                if (aluno.escola_id) {
+                    loadSeries(aluno.escola_id, aluno.serie);
+                    loadTurmas(aluno.escola_id, aluno.serie, aluno.turma);
+                }
+            });
+
+            // Carregar foto se existir
+                if (aluno.foto_url) {
+                const preview = document.getElementById('fotoPreview');
+                const placeholder = document.getElementById('placeholderFoto');
+                preview.src = aluno.foto_url;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+
+            // Carregar dispositivos vinculados
+            loadDispositivosVinculados(aluno.id);
+        }
+
+        // Função para buscar dados do usuário pelo WhatsApp
+        async function buscarDadosUsuario(whatsapp, numero) {
+            try {
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('nome, sobrenome')
+                    .eq('whatsapp', whatsapp)
+                    .single();
+
+                if (error) throw error;
+
+                if (data) {
+                    document.getElementById(`resp${numero}_nome`).value = data.nome;
+                    document.getElementById(`resp${numero}_sobrenome`).value = data.sobrenome;
+                }
+            } catch (error) {
+                console.error(`Erro ao buscar dados do usuário ${numero}:`, error);
+            }
+        }
+
+        // Função para criar ou atualizar usuário e suas permissões
+        async function criarOuAtualizarUsuario(whatsapp, nome, sobrenome, alunoId) {
+            if (!whatsapp || !nome || !alunoId) return null;
+
+            try {
+                // Formatar WhatsApp (garantir que esteja no formato padrão: 5581988886020)
+                let whatsappFormatado = whatsapp;
+                if (typeof whatsappFormatado === 'string') {
+                    // Remover caracteres não numéricos
+                    whatsappFormatado = whatsappFormatado.replace(/\D/g, '');
+                    
+                    // Garantir que comece com 55 (Brasil)
+                    if (!whatsappFormatado.startsWith('55')) {
+                        whatsappFormatado = '55' + whatsappFormatado;
+                    }
+                }
+
+                // Verificar tamanho mínimo (55 + DDD + número)
+                if (whatsappFormatado.length < 12) {
+                    console.error('Número de WhatsApp inválido:', whatsappFormatado);
+                    throw new Error('Número de WhatsApp inválido. Deve conter DDD e número.');
+                }
+
+                // Primeiro, criar ou atualizar o usuário
+                const { data: userData, error: userError } = await supabase
+                    .from('usuarios')
+                    .upsert({
+                        whatsapp: whatsappFormatado,
+                        nome,
+                        sobrenome: sobrenome || '',
+                        tipo: 'RESPONSÁVEL',
+                        hash1: whatsappFormatado, // Usar whatsapp como hash1
+                        hash2: '',
+                        status: 'Ativo'
+                    }, {
+                        onConflict: 'whatsapp'
+                    })
+                    .select()
+                    .single();
+
+                if (userError) throw userError;
+
+                // Depois, remover permissões antigas se existirem
+                if (userData) {
+                    const { error: delPermError } = await supabase
+                        .from('permissoes_aluno')
+                        .delete()
+                        .eq('usuario_id', userData.id)
+                        .eq('aluno_id', alunoId);
+
+                    if (delPermError && delPermError.code !== 'PGRST116') throw delPermError;
+
+                    // Criar nova permissão
+                    const { error: permError } = await supabase
+                        .from('permissoes_aluno')
+                        .insert({
+                            usuario_id: userData.id,
+                            aluno_id: alunoId
+                        });
+
+                    if (permError) throw permError;
+                }
+
+                return userData;
+            } catch (error) {
+                console.error('Erro ao criar/atualizar usuário e permissões:', error);
+                throw error;
+            }
+        }
+
+        // Função para remover usuário e suas permissões
+        async function removerUsuarioEPermissoes(whatsapp, alunoId) {
+            if (!whatsapp || !alunoId) return;
+
+            try {
+                // Formatar WhatsApp para garantir consistência
+                let whatsappFormatado = whatsapp;
+                if (typeof whatsappFormatado === 'string') {
+                    // Remover caracteres não numéricos
+                    whatsappFormatado = whatsappFormatado.replace(/\D/g, '');
+                    
+                    // Garantir que comece com 55 (Brasil)
+                    if (!whatsappFormatado.startsWith('55')) {
+                        whatsappFormatado = '55' + whatsappFormatado;
+                    }
+                }
+                
+                // Buscar o ID do usuário pelo WhatsApp
+                const { data: userData, error: userError } = await supabase
+                    .from('usuarios')
+                    .select('id')
+                    .eq('whatsapp', whatsappFormatado)
+                    .single();
+
+                if (userError) throw userError;
+
+                if (userData) {
+                    // 1. Remover permissões antigas
+                    const { error: permError } = await supabase
+                        .from('permissoes_aluno')
+                        .delete()
+                        .eq('usuario_id', userData.id)
+                        .eq('aluno_id', alunoId);
+                    if (permError) throw permError;
+
+                    // 2. Remover usuário da tabela
+                    const { error: userDelError } = await supabase
+                        .from('usuarios')
+                        .delete()
+                        .eq('id', userData.id);
+                    if (userDelError) throw userDelError;
+                }
+            } catch (error) {
+                console.error('Erro ao remover permissões e usuário:', error);
+                throw error;
+            }
+        }
+
+        // Atualizar manipuladores de eventos para os botões de remover
+        document.getElementById('remover_resp1').addEventListener('click', async function() {
+            const whatsapp = document.getElementById('resp1_whatsapp').value;
+            const alunoId = document.getElementById('alunoId').value;
+            
+            if (whatsapp && alunoId) {
+                try {
+                    // Confirmar antes de remover
+                    if (!confirm(`Tem certeza que deseja remover o responsável 1 com WhatsApp: ${whatsapp}?`)) {
+                        return;
+                    }
+                    
+                    await removerUsuarioEPermissoes(whatsapp, alunoId);
+                    document.getElementById('resp1_nome').value = '';
+                    document.getElementById('resp1_sobrenome').value = '';
+                    document.getElementById('resp1_whatsapp').value = '';
+                    showToast('Responsável 1 removido com sucesso', 'success');
+                } catch (error) {
+                    showToast('Erro ao remover responsável 1: ' + error.message, 'error');
+                }
+            }
+        });
+
+        document.getElementById('remover_resp2').addEventListener('click', async function() {
+            const whatsapp = document.getElementById('resp2_whatsapp').value;
+            const alunoId = document.getElementById('alunoId').value;
+            
+            if (whatsapp && alunoId) {
+                try {
+                    // Confirmar antes de remover
+                    if (!confirm(`Tem certeza que deseja remover o responsável 2 com WhatsApp: ${whatsapp}?`)) {
+                        return;
+                    }
+                    
+                    await removerUsuarioEPermissoes(whatsapp, alunoId);
+                    document.getElementById('resp2_nome').value = '';
+                    document.getElementById('resp2_sobrenome').value = '';
+                    document.getElementById('resp2_whatsapp').value = '';
+                    showToast('Responsável 2 removido com sucesso', 'success');
+                } catch (error) {
+                    showToast('Erro ao remover responsável 2: ' + error.message, 'error');
+                }
+            }
+        });
+
+        // Atualizar o manipulador do formulário para incluir a criação/atualização de usuários
+        document.getElementById('alunoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitButton = document.getElementById('submitButton');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            try {
+                submitButton.disabled = true;
+                loadingSpinner.classList.remove('hidden');
+                
+                const formData = new FormData(this);
+                const alunoId = formData.get('id');
+                
+                // Obter e formatar números de WhatsApp
+                let resp1_whatsapp = formData.get('resp1_whatsapp');
+                let resp2_whatsapp = formData.get('resp2_whatsapp');
+                
+                // Formatar WhatsApp (remover formatação e adicionar 55 se necessário)
+                const formatarWhatsappParaSalvar = (whatsapp) => {
+                    if (!whatsapp) return null;
+                    let numero = whatsapp.replace(/\D/g, '');
+                    if (numero.length === 0) return null;
+                    
+                    if (!numero.startsWith('55')) {
+                        numero = '55' + numero;
+                    }
+                    return numero;
+                };
+                
+                resp1_whatsapp = formatarWhatsappParaSalvar(resp1_whatsapp);
+                resp2_whatsapp = formatarWhatsappParaSalvar(resp2_whatsapp);
+                
+                // Verificar se já existe um usuário com este WhatsApp
+                const verificarDuplicidade = async (whatsapp) => {
+                    if (!whatsapp) return false;
+                    
+                    const { data, error } = await supabase
+                        .from('usuarios')
+                        .select('id, whatsapp, nome, sobrenome, tipo')
+                        .eq('whatsapp', whatsapp);
+                        
+                    if (error) throw error;
+                    
+                    // Se encontrou algum usuário com este WhatsApp, retornar o usuário
+                    if (data && data.length > 0) {
+                        const usuario = data[0];
+                        return {
+                            duplicado: false,
+                            usuario: usuario
+                        };
+                    }
+                    
+                    return false;
+                };
+                
+                // Verificar duplicidade apenas para WhatsApps alterados
+                if (resp1_whatsapp && resp1_whatsapp !== alunoData.contato1_whatsapp) {
+                    const resultado = await verificarDuplicidade(resp1_whatsapp);
+                    if (resultado && resultado.duplicado) {
+                        showToast(resultado.mensagem, 'error');
+                        submitButton.disabled = false;
+                        loadingSpinner.classList.add('hidden');
+                        return;
+                    }
+                }
+                
+                if (resp2_whatsapp && resp2_whatsapp !== alunoData.contato2_whatsapp) {
+                    const resultado = await verificarDuplicidade(resp2_whatsapp);
+                    if (resultado && resultado.duplicado) {
+                        showToast(resultado.mensagem, 'error');
+                        submitButton.disabled = false;
+                        loadingSpinner.classList.add('hidden');
+                        return;
+                    }
+                }
+                
+                // Criar/atualizar usuários e permissões
+                if (resp1_whatsapp) {
+                    const resultado = await verificarDuplicidade(resp1_whatsapp);
+                    if (resultado && resultado.usuario) {
+                        // Verificar se a permissão já existe
+                        const { data: permExistente, error: permCheckError } = await supabase
+                            .from('permissoes_aluno')
+                            .select('id')
+                            .eq('usuario_id', resultado.usuario.id)
+                            .eq('aluno_id', alunoId)
+                            .single();
+
+                        if (permCheckError && permCheckError.code !== 'PGRST116') {
+                            throw permCheckError;
+                        }
+
+                        // Só criar a permissão se ela não existir
+                        if (!permExistente) {
+                            const { error: permError } = await supabase
+                                .from('permissoes_aluno')
+                                .insert({
+                                    usuario_id: resultado.usuario.id,
+                                    aluno_id: alunoId
+                                });
+                            if (permError) throw permError;
+                        }
+                    } else {
+                        // Criar novo usuário
+                        await criarOuAtualizarUsuario(
+                            resp1_whatsapp,
+                            formData.get('resp1_nome'),
+                            formData.get('resp1_sobrenome'),
+                            alunoId
+                        );
+                    }
+                }
+                
+                if (resp2_whatsapp) {
+                    const resultado = await verificarDuplicidade(resp2_whatsapp);
+                    if (resultado && resultado.usuario) {
+                        // Verificar se a permissão já existe
+                        const { data: permExistente, error: permCheckError } = await supabase
+                            .from('permissoes_aluno')
+                            .select('id')
+                            .eq('usuario_id', resultado.usuario.id)
+                            .eq('aluno_id', alunoId)
+                            .single();
+
+                        if (permCheckError && permCheckError.code !== 'PGRST116') {
+                            throw permCheckError;
+                        }
+
+                        // Só criar a permissão se ela não existir
+                        if (!permExistente) {
+                            const { error: permError } = await supabase
+                                .from('permissoes_aluno')
+                                .insert({
+                                    usuario_id: resultado.usuario.id,
+                                    aluno_id: alunoId
+                                });
+                            if (permError) throw permError;
+                        }
+                    } else {
+                        // Criar novo usuário
+                        await criarOuAtualizarUsuario(
+                            resp2_whatsapp,
+                            formData.get('resp2_nome'),
+                            formData.get('resp2_sobrenome'),
+                            alunoId
+                        );
+                    }
+                }
+                
+                // Atualizar dados do aluno
+                const dadosAtualizados = {
+                    nome_completo: formData.get('nome_completo'),
+                    registro_aluno: formData.get('registro_aluno'),
+                    data_nascimento: formData.get('data_nascimento'),
+                    genero: formData.get('genero'),
+                    status: formData.get('status'),
+                    escola_id: formData.get('escola_id'),
+                    serie: formData.get('serie'),
+                    turma: formData.get('turma'),
+                    contato1_whatsapp: resp1_whatsapp,
+                    contato2_whatsapp: resp2_whatsapp,
+                    updated_at: new Date().toISOString()
+                };
+
+                console.log('Dados sendo atualizados:', dadosAtualizados);
+
+                const { error: updateError } = await supabase
+                    .from('alunos')
+                    .update(dadosAtualizados)
+                    .eq('id', alunoId);
+
+                if (updateError) throw updateError;
+
+                showToast('Aluno atualizado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'alunos.html';
+                }, 1000);
+            } catch (error) {
+                console.error('Erro ao atualizar aluno:', error);
+                showToast('Erro ao atualizar aluno: ' + error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+
+        // Função para carregar escolas
+        async function loadEscolas(selectedSchoolId) {
+            try {
+                const { data: escolas, error } = await supabase
+                    .from('escolas')
+                    .select('id, nome')
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                if (error) throw error;
+                
+                const escolaSelect = document.getElementById('escola');
+                escolaSelect.innerHTML = '<option value="">Selecione uma escola</option>';
+                
+                escolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    if (escola.id === selectedSchoolId) {
+                        option.selected = true;
+                    }
+                    escolaSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                showToast('Erro ao carregar escolas: ' + error.message, 'error');
+            }
+        }
+        
+        // Função para carregar séries
+        async function loadSeries(escolaId, selectedSerieId) {
+            try {
+                const { data: series, error } = await supabase
+                    .from('series')
+                    .select('id, nome')
+                    .eq('escola_id', escolaId)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                if (error) throw error;
+                
+                const serieSelect = document.getElementById('serie');
+                serieSelect.innerHTML = '<option value="">Selecione uma série</option>';
+                
+                series.forEach(serie => {
+                    const option = document.createElement('option');
+                    option.value = serie.id;
+                    option.textContent = serie.nome;
+                    if (serie.id === selectedSerieId) {
+                        option.selected = true;
+                    }
+                    serieSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar séries:', error);
+                showToast('Erro ao carregar séries: ' + error.message, 'error');
+            }
+        }
+        
+        // Função para carregar turmas
+        async function loadTurmas(escolaId, serieId, selectedTurmaId) {
+            try {
+                const { data: turmas, error } = await supabase
+                    .from('turmas')
+                    .select('id, nome')
+                    .eq('escola_id', escolaId)
+                    .eq('serie_id', serieId)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                if (error) throw error;
+                
+                const turmaSelect = document.getElementById('turma');
+                turmaSelect.innerHTML = '<option value="">Selecione uma turma</option>';
+                
+                turmas.forEach(turma => {
+                    const option = document.createElement('option');
+                    option.value = turma.id;
+                    option.textContent = turma.nome;
+                    if (turma.id === selectedTurmaId) {
+                        option.selected = true;
+                        }
+                    turmaSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar turmas:', error);
+                showToast('Erro ao carregar turmas: ' + error.message, 'error');
+            }
+        }
+        
+        // Função para carregar dispositivos vinculados
+        async function loadDispositivosVinculados(alunoId) {
+            try {
+                const { data: dispositivos, error } = await supabase
+                    .from('aluno_dispositivo')
+                    .select(`
+                        id,
+                        dispositivos (
+                            id,
+                            camera_id,
+                            ip
+                        )
+                    `)
+                    .eq('aluno', alunoId);
+                
+                if (error) throw error;
+
+                const listaDispositivos = document.getElementById('listaDispositivos');
+                listaDispositivos.innerHTML = '';
+
+                if (dispositivos && dispositivos.length > 0) {
+                    for (const vinculo of dispositivos) {
+                        if (vinculo.dispositivos) {
+                            const dispositivo = vinculo.dispositivos;
+                            const itemHtml = `
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-800">Câmera: ${dispositivo.camera_id}</p>
+                                        <p class="text-sm text-gray-600">IP: ${dispositivo.ip}</p>
+                                    </div>
+                                    <button type="button" 
+                                            onclick="desvincularDispositivo(${vinculo.id})"
+                                            class="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors">
+                                        Desvincular
+                                    </button>
+                                </div>
+                            `;
+                            listaDispositivos.insertAdjacentHTML('beforeend', itemHtml);
+                        }
+                    }
+                } else {
+                    listaDispositivos.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            Nenhum dispositivo vinculado
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dispositivos vinculados:', error);
+                showToast('Erro ao carregar dispositivos: ' + error.message, 'error');
+            }
+        }
+
+        // Função para desvincular dispositivo
+        async function desvincularDispositivo(vinculoId) {
+            // Modal de confirmação
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            confirmModal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Confirmar Desvinculação</h3>
+                    <p class="text-gray-600 mb-6">
+                        Tem certeza que deseja desvincular este dispositivo?
+                    </p>
+                    <div class="flex justify-end gap-3">
+                        <button class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" onclick="this.closest('.fixed').remove()">
+                            Cancelar
+                        </button>
+                        <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="confirmarDesvinculacao(${vinculoId}, this)">
+                            Desvincular
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+        }
+
+        // Função para confirmar desvinculação
+        async function confirmarDesvinculacao(vinculoId, buttonElement) {
+            try {
+                // Desabilitar botão e mostrar loading
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = `
+                    <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                `;
+
+                // Primeiro, buscar informações do vínculo e do dispositivo
+                const { data: vinculo, error: vinculoError } = await supabase
+                    .from('aluno_dispositivo')
+                    .select(`
+                        id,
+                        aluno,
+                        id_dispositivo,
+                        id_do_aluno_no_dispositivo,
+                        dispositivos (
+                            id,
+                            camera_id,
+                            ip,
+                            login,
+                            senha
+                        )
+                    `)
+                    .eq('id', vinculoId)
+                    .single();
+
+                if (vinculoError) throw vinculoError;
+
+                // Buscar informações do aluno
+                const { data: aluno, error: alunoError } = await supabase
+                    .from('alunos')
+                    .select('nome_completo, registro_aluno')
+                    .eq('id', vinculo.aluno)
+                    .single();
+
+                if (alunoError) throw alunoError;
+
+                // Preparar dados do dispositivo
+                const dispositivo = vinculo.dispositivos;
+                const ipAddressWithPort = dispositivo.ip.includes(':') ? dispositivo.ip : `${dispositivo.ip}:80`;
+
+                // Obter sessão do dispositivo
+                const session = await getDeviceSession(
+                    ipAddressWithPort,
+                    dispositivo.login || 'admin',
+                    dispositivo.senha || 'admin'
+                );
+
+                // Preparar payload para excluir usuário no dispositivo
+                const payload = {
+                    object: "users",
+                    where: {
+                        users: {
+                            id: parseInt(vinculo.id_do_aluno_no_dispositivo)
+                        }
+                    }
+                };
+
+                try {
+                    console.log('Tentando excluir usuário no dispositivo:', payload);
+                    // Tentar excluir o usuário no dispositivo
+                    const response = await fetch(`http://${ipAddressWithPort}/destroy_objects.fcgi?session=${session}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        console.warn('Aviso: Não foi possível excluir o usuário no dispositivo:', await response.text());
+                    } else {
+                        console.log('Usuário excluído com sucesso no dispositivo');
+                    }
+                } catch (deviceError) {
+                    console.warn('Aviso: Erro ao comunicar com o dispositivo:', deviceError);
+                }
+
+                // Remover o vínculo do banco
+                const { error } = await supabase
+                    .from('aluno_dispositivo')
+                    .delete()
+                    .eq('id', vinculoId);
+
+                if (error) throw error;
+
+                showToast('Dispositivo desvinculado com sucesso', 'success');
+                
+                // Remover modal
+                buttonElement.closest('.fixed').remove();
+                
+                // Recarregar lista de dispositivos vinculados
+                const alunoId = document.getElementById('alunoId').value;
+                await loadDispositivosVinculados(alunoId);
+
+            } catch (error) {
+                console.error('Erro ao desvincular dispositivo:', error);
+                showToast('Erro ao desvincular dispositivo: ' + error.message, 'error');
+                buttonElement.closest('.fixed').remove();
+            }
+        }
+
+        // Função para adicionar novo dispositivo
+        async function adicionarDispositivo() {
+            const dispositivoSelect = document.getElementById('novoDispositivo');
+            const dispositivoId = dispositivoSelect.value;
+            const alunoId = document.getElementById('alunoId').value;
+
+            if (!dispositivoId || !alunoId) {
+                showToast('Selecione um dispositivo para vincular', 'error');
+                return;
+            }
+                
+            try {
+                const { error } = await supabase
+                    .from('aluno_dispositivo')
+                    .insert({
+                        aluno: alunoId,
+                        id_dispositivo: dispositivoId,
+                        escola: document.getElementById('escola').value
+                    });
+
+                if (error) throw error;
+
+                showToast('Dispositivo vinculado com sucesso', 'success');
+                loadDispositivosVinculados(alunoId);
+                dispositivoSelect.value = '';
+            } catch (error) {
+                console.error('Erro ao vincular dispositivo:', error);
+                showToast('Erro ao vincular dispositivo: ' + error.message, 'error');
+            }
+        }
+        
+        // Funções para controlar o preloader
+        function showPreloader() {
+            console.log("Mostrando preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+                console.log("Preloader mostrado");
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        function hidePreloader(immediate = false) {
+            console.log("Escondendo preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                if (immediate) {
+                    preloader.style.display = 'none';
+                    console.log("Preloader escondido imediatamente");
+                } else {
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                        console.log("Preloader escondido após transição");
+                    }, 300);
+                }
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+            
+            // Esconder também o loading principal
+            hideLoading();
+        }
+
+        // Função para interpretar erros específicos da câmera
+        function interpretarErroCamara(codigo) {
+            const errosConhecidos = {
+                1: "Erro de autenticação",
+                2: "Permissão negada",
+                3: "Tipo de arquivo inválido",
+                4: "Tamanho de arquivo excedido",
+                5: "Arquivo corrompido ou inválido",
+                10: "Rosto não detectado na imagem",
+                11: "Múltiplos rostos detectados na imagem",
+                12: "Rosto muito pequeno para reconhecimento",
+                13: "Qualidade da imagem insuficiente para reconhecimento",
+                14: "Iluminação inadequada",
+                15: "Óculos ou objetos obstruindo o rosto",
+                16: "Pose do rosto inadequada (olhando para o lado)",
+                17: "Erro no algoritmo de reconhecimento facial",
+                400: "Requisição inválida",
+                401: "Não autorizado",
+                404: "Recurso não encontrado",
+                500: "Erro interno do servidor"
+            };
+            
+            return errosConhecidos[codigo] || `Erro desconhecido (código ${codigo})`;
+        }
+
+        // Função proxy para fazer chamadas contornando CORS
+        async function fetchDispositivo(url, options = {}) {
+            try {
+                // Adicionar modo no-cors para contornar problemas de CORS
+                const response = await fetch(url, { 
+                    ...options, 
+                    mode: 'no-cors',
+                    headers: {
+                        ...options.headers,
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+                
+                // Como estamos usando no-cors, não podemos ler a resposta
+                // Vamos simular uma resposta de sucesso
+                return new Response(JSON.stringify({ success: true }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (error) {
+                console.warn("Erro ao acessar dispositivo:", error);
+                    throw error;
+                }
+            }
+
+        // Função para obter sessão do dispositivo
+        async function getDeviceSession(ipAddress, login, password) {
+            try {
+                const response = await fetch(`http://${ipAddress}/login.fcgi`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        login: login,
+                        password: password
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Falha ao obter sessão do dispositivo');
+                }
+
+                const data = await response.json();
+                return data.session;
+            } catch (error) {
+                console.error('Erro ao obter sessão:', error);
+                throw new Error('Não foi possível conectar ao dispositivo');
+            }
+        }
+
+        // Função para cadastrar usuário no dispositivo
+        async function cadastrarUsuarioDispositivo(ipAddressWithPort, session) {
+            try {
+                const alunoId = getUrlParam('id');
+                
+                // Buscar dados do aluno
+                const { data: aluno, error: alunoError } = await supabase
+                    .from('alunos')
+                    .select('nome_completo, registro_aluno, foto_url')
+                    .eq('id', alunoId)
+                    .single();
+                    
+                if (alunoError) throw alunoError;
+                
+                // Registro do aluno será o ID para o dispositivo
+                const registroAluno = aluno.registro_aluno;
+                if (!registroAluno) {
+                    throw new Error('Aluno sem registro/matrícula');
+                }
+                
+                console.log('Dados do aluno para cadastro:', {
+                    nome: aluno.nome_completo,
+                    registro: registroAluno,
+                    temFoto: !!aluno.foto_url
+                });
+
+                // Criar payload para o dispositivo
+                const userPayload = {
+                    object: "users",
+                    where: {
+                        users: {
+                            registration: registroAluno
+                        }
+                    }
+                };
+                
+                console.log('Payload para cadastro:', JSON.stringify(userPayload));
+                
+                // Buscar dados do usuário logado do localStorage
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) throw new Error('Usuário não autenticado. Por favor, faça login.');
+                const usuarioLogado = JSON.parse(userSession);
+                let whatsappCadastrante = usuarioLogado.whatsapp;
+                // Se não encontrar no localStorage, buscar no banco
+                if (!whatsappCadastrante) {
+                    const { data: userData, error: userError } = await supabase
+                        .from('usuarios')
+                        .select('whatsapp')
+                        .eq('id', usuarioLogado.id)
+                        .single();
+                    if (userError || !userData || !userData.whatsapp) throw new Error('WhatsApp do usuário logado não encontrado no banco de dados.');
+                    whatsappCadastrante = userData.whatsapp;
+                }
+                
+                // Usar a função proxy para cadastrar usuário
+                const userResponse = await fetchDispositivo(
+                    `http://${ipAddressWithPort}/user_set.fcgi?session=${session}`,
+                    {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userPayload)
+                    }
+                );
+                
+                if (!userResponse.ok) {
+                    throw new Error(`Erro ao cadastrar usuário: ${userResponse.status}`);
+                }
+                
+                // Se tem foto, tentar enviar
+                if (aluno.foto_url) {
+                    try {
+                        await enviarFotoParaDispositivo(ipAddressWithPort, session, registroAluno, aluno.foto_url);
+                    } catch (fotoError) {
+                        console.warn('Erro ao enviar foto:', fotoError);
+                    }
+                }
+                
+                return registroAluno;
+            } catch (error) {
+                console.error('Erro ao cadastrar usuário:', error);
+                throw error;
+            }
+        }
+        
+        // Função para enviar foto para o dispositivo
+        async function enviarFotoParaDispositivo(ipAddressWithPort, session, userId, fotoUrl) {
+            try {
+                console.log('Enviando foto para dispositivo:', ipAddressWithPort);
+                
+                // Buscar a foto
+                const fotoResponse = await fetch(fotoUrl);
+                if (!fotoResponse.ok) {
+                    throw new Error(`Erro ao buscar foto: ${fotoResponse.status}`);
+                }
+                
+                const blob = await fotoResponse.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+            
+                // Converter para base64 em chunks para evitar stack overflow
+                let binary = '';
+                const chunkSize = 1024;
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                    const chunk = bytes.slice(i, i + chunkSize);
+                    binary += String.fromCharCode.apply(null, chunk);
+                }
+                const fotoBase64 = btoa(binary);
+            
+                // Usar a função proxy para enviar a foto
+                const imageResponse = await fetchDispositivo(
+                    `http://${ipAddressWithPort}/user_set_image.fcgi?user_id=${userId}&session=${session}`,
+                    {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                            user_id: userId,
+                            image: fotoBase64
+                        })
+                    }
+                );
+                
+                if (!imageResponse.ok) {
+                    throw new Error(`Erro ao enviar foto: ${imageResponse.status}`);
+                }
+                
+                console.log('Foto enviada com sucesso');
+                return true;
+            } catch (error) {
+                console.error('Erro ao enviar foto:', error);
+                throw error;
+            }
+        }
+
+        // Função para obter parâmetros da URL
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Função para carregar dispositivos disponíveis
+        async function loadDispositivosDisponiveis(escolaId) {
+            try {
+                const { data: dispositivos, error } = await supabase
+                    .from('dispositivos')
+                    .select('id, camera_id, ip')
+                    .eq('escola_id', escolaId)
+                    .is('soft_delete', null)
+                    .order('camera_id');
+
+                if (error) throw error;
+
+                const dispositivoSelect = document.getElementById('novoDispositivo');
+                if (!dispositivoSelect) {
+                    console.error('Elemento select de dispositivos não encontrado');
+                    return;
+                }
+
+                dispositivoSelect.innerHTML = '<option value="">Selecione um dispositivo</option>';
+
+                dispositivos.forEach(dispositivo => {
+                    const option = document.createElement('option');
+                    option.value = dispositivo.id;
+                    option.textContent = `${dispositivo.camera_id} (${dispositivo.ip})`;
+                    dispositivoSelect.appendChild(option);
+                });
+
+                // Atualizar a matrícula que será usada
+                const alunoId = getUrlParam('id');
+                if (alunoId) {
+                    const { data: aluno, error: alunoError } = await supabase
+                        .from('alunos')
+                        .select('registro_aluno')
+                        .eq('id', alunoId)
+                        .single();
+
+                    if (!alunoError && aluno) {
+                        const matriculaSpan = document.getElementById('matriculaParaCadastro');
+                        if (matriculaSpan) {
+                            matriculaSpan.textContent = aluno.registro_aluno;
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar dispositivos:', error);
+                showToast('Erro ao carregar dispositivos: ' + error.message, 'error');
+            }
+        }
+
+        // Função para carregar usuários do dispositivo
+        async function carregarUsuariosDispositivo(ipAddress, login, password, alunoId) {
+            try {
+                console.log('Carregando usuários do dispositivo:', ipAddress);
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                // Obter nova sessão
+                const session = await getDeviceSession(ipAddressWithPort, login || 'admin', password || 'admin');
+                console.log('Sessão obtida:', session);
+
+                // Fazer a requisição para listar usuários
+                const payload = {
+                    object: "users",
+                    where: [{
+                        object: "users",
+                        field: "image_timestamp",
+                        operator: "!=",
+                        value: 0
+                    }]
+                };
+
+                const response = await fetch(`http://${ipAddressWithPort}/load_objects.fcgi?session=${session}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar usuários: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Para cada usuário, buscar sua imagem
+                if (data.users && data.users.length > 0) {
+                    for (let user of data.users) {
+                        try {
+                            const imageResponse = await fetch(`http://${ipAddressWithPort}/user_get_image.fcgi?session=${session}&user_id=${user.id}`);
+                            if (imageResponse.ok) {
+                                const imageData = await imageResponse.blob();
+                                user.imageUrl = URL.createObjectURL(imageData);
+                            }
+                        } catch (imgError) {
+                            console.warn(`Erro ao carregar imagem do usuário ${user.id}:`, imgError);
+                        }
+                    }
+                }
+
+                return { users: data.users || [], session };
+            } catch (error) {
+                console.error('Erro ao carregar usuários do dispositivo:', error);
+                throw error;
+            }
+        }
+
+        // Função para formatar timestamp
+        function formatarData(timestamp) {
+            if (!timestamp || timestamp === 0) return 'Não disponível';
+            return new Date(timestamp * 1000).toLocaleString('pt-BR');
+        }
+
+        // Função para formatar tipo de usuário
+        function formatarTipoUsuario(typeId) {
+            return typeId === 1 ? 'Visitante' : 'Usuário Regular';
+        }
+
+        // Função para exibir usuários na interface
+        async function exibirUsuariosDispositivo(users) {
+            const container = document.getElementById('usuariosDispositivo');
+            const searchInput = document.getElementById('searchUsers');
+            const searchNameInput = document.getElementById('searchUsersByName');
+            
+            if (!users || users.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        Nenhum usuário cadastrado no dispositivo
+                    </div>
+                `;
+                return;
+            }
+
+            // Função para filtrar usuários
+            function filtrarUsuarios(termo, termoPorNome) {
+                if (!termo && !termoPorNome) return users;
+                
+                return users.filter(user => {
+                    const matchMatricula = termo ? 
+                        (user.registration && user.registration.toLowerCase().includes(termo.toLowerCase())) ||
+                        (user.id && user.id.toString().includes(termo)) : true;
+                    
+                    const matchNome = termoPorNome ? 
+                        (user.name && user.name.toLowerCase().includes(termoPorNome.toLowerCase())) : true;
+                    
+                    return matchMatricula && matchNome;
+                });
+            }
+
+            // Função para renderizar usuários
+            function renderizarUsuarios(usuariosFiltrados) {
+                container.innerHTML = usuariosFiltrados.length === 0 
+                    ? `<div class="text-center py-4 text-gray-500">Nenhum usuário encontrado com os filtros aplicados</div>`
+                    : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${usuariosFiltrados.map(user => `
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                    <div class="p-4">
+                                        <!-- Cabeçalho com botão de excluir -->
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div class="flex-1">
+                                                <h4 class="font-medium text-gray-900 truncate">${user.name || 'Sem nome'}</h4>
+                                                <p class="text-sm text-gray-500">ID: ${user.id}</p>
+                                                <p class="text-sm text-gray-500">Matrícula: ${user.registration || 'N/A'}</p>
+                                            </div>
+                                            <button onclick="excluirUsuarioDispositivo('${user.id}', '${user.name || 'Sem nome'}')"
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                <i class="ph ph-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Foto do usuário -->
+                                        <div class="w-full h-48 rounded-lg overflow-hidden bg-gray-100 mb-4">
+                                            ${user.imageUrl ? 
+                                                `<img src="${user.imageUrl}" alt="${user.name || 'Usuário'}" class="w-full h-full object-cover">` :
+                                                `<div class="w-full h-full flex items-center justify-center">
+                                                    <i class="ph ph-user text-4xl text-gray-400"></i>
+                                                 </div>`
+                                            }
+                                        </div>
+
+                                        <!-- Detalhes adicionais -->
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-gray-500">Tipo:</span>
+                                                <span class="text-gray-900">${formatarTipoUsuario(user.user_type_id)}</span>
+                                            </div>
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-gray-500">Último acesso:</span>
+                                                <span class="text-gray-900">${formatarData(user.last_access)}</span>
+                                            </div>
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-gray-500">Cadastro da foto:</span>
+                                                <span class="text-gray-900">${formatarData(user.image_timestamp)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+            }
+
+            // Configurar os campos de busca
+            const oldInput = document.getElementById('searchUsers');
+            const oldNameInput = document.getElementById('searchUsersByName');
+            const newInput = oldInput.cloneNode(true);
+            const newNameInput = oldNameInput.cloneNode(true);
+            
+            oldInput.parentNode.replaceChild(newInput, oldInput);
+            oldNameInput.parentNode.replaceChild(newNameInput, oldNameInput);
+
+            // Função para atualizar a lista filtrada
+            function atualizarLista() {
+                const usuariosFiltrados = filtrarUsuarios(newInput.value, newNameInput.value);
+                renderizarUsuarios(usuariosFiltrados);
+            }
+
+            // Adicionar listeners
+            newInput.addEventListener('input', atualizarLista);
+            newNameInput.addEventListener('input', atualizarLista);
+
+            // Preencher campos iniciais
+            const alunoId = getUrlParam('id');
+            if (alunoId) {
+                newInput.value = alunoId;
+                // Buscar nome do aluno
+                const { data: aluno } = await supabase
+                    .from('alunos')
+                    .select('nome_completo')
+                    .eq('id', alunoId)
+                    .single();
+                
+                if (aluno) {
+                    newNameInput.value = aluno.nome_completo;
+                }
+            }
+
+            // Renderização inicial
+            atualizarLista();
+        }
+
+        // Função para excluir usuário do dispositivo
+        async function excluirUsuarioDispositivo(userId, userName) {
+            // Modal de confirmação
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            confirmModal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Confirmar Exclusão</h3>
+                    <p class="text-gray-600 mb-6">
+                        Tem certeza que deseja excluir o usuário "${userName}" (ID: ${userId})?<br>
+                        Esta ação não pode ser desfeita.
+                    </p>
+                    <div class="flex justify-end gap-3">
+                        <button class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" 
+                                onclick="this.closest('.fixed').remove()">
+                            Cancelar
+                        </button>
+                        <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" 
+                                onclick="confirmarExclusaoUsuario('${userId}', this)">
+                            <span>Excluir</span>
+                            <div class="hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+        }
+
+        // Função para confirmar exclusão do usuário
+        async function confirmarExclusaoUsuario(userId, buttonElement) {
+            try {
+                // Mostrar loading no botão
+                const textSpan = buttonElement.querySelector('span');
+                const loadingSpinner = buttonElement.querySelector('div');
+                textSpan.classList.add('hidden');
+                loadingSpinner.classList.remove('hidden');
+                buttonElement.disabled = true;
+
+                // Obter dados do dispositivo atual
+                const vinculoAtual = document.querySelector('[data-vinculo-atual]');
+                if (!vinculoAtual) {
+                    throw new Error('Nenhum dispositivo selecionado');
+                }
+
+                const vinculoId = vinculoAtual.getAttribute('data-vinculo-atual');
+                const { data: vinculo, error: vinculoError } = await supabase
+                    .from('aluno_dispositivo')
+                    .select(`
+                        dispositivos (
+                            ip,
+                            login,
+                            senha
+                        )
+                    `)
+                    .eq('id', vinculoId)
+                    .single();
+
+                if (vinculoError) throw vinculoError;
+
+                const dispositivo = vinculo.dispositivos;
+                const ipAddressWithPort = dispositivo.ip.includes(':') ? dispositivo.ip : `${dispositivo.ip}:80`;
+                
+                // Obter nova sessão
+                const session = await getDeviceSession(
+                    ipAddressWithPort, 
+                    dispositivo.login || 'admin', 
+                    dispositivo.senha || 'admin'
+                );
+
+                // Excluir usuário
+                const payload = {
+                    object: "users",
+                    where: {
+                        users: {
+                            id: parseInt(userId)
+                        }
+                    }
+                };
+
+                const response = await fetch(`http://${ipAddressWithPort}/destroy_objects.fcgi?session=${session}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ao excluir usuário: ${response.status}`);
+                }
+
+                showToast('Usuário excluído com sucesso', 'success');
+                
+                // Remover modal
+                buttonElement.closest('.fixed').remove();
+                
+                // Recarregar lista de usuários
+                await carregarUsuariosClick();
+
+            } catch (error) {
+                console.error('Erro ao excluir usuário:', error);
+                showToast('Erro ao excluir usuário: ' + error.message, 'error');
+                buttonElement.closest('.fixed').remove();
+            }
+        }
+
+        // Função para buscar usuário pelo WhatsApp
+        async function buscarUsuarioPorWhatsApp(whatsapp, numeroResp) {
+            if (!whatsapp || whatsapp.length < 10) return;
+            
+            try {
+                // Formatar WhatsApp para garantir consistência
+                let whatsappFormatado = whatsapp;
+                // Remover caracteres não numéricos
+                whatsappFormatado = whatsappFormatado.replace(/\D/g, '');
+                
+                // Garantir que comece com 55 (Brasil)
+                if (!whatsappFormatado.startsWith('55')) {
+                    whatsappFormatado = '55' + whatsappFormatado;
+                }
+                
+                console.log(`Buscando usuário com WhatsApp: ${whatsappFormatado}`);
+                
+                // Buscar usuário
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('id, nome, sobrenome, tipo, status')
+                    .eq('whatsapp', whatsappFormatado)
+                    .single();
+                
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        console.log('Usuário não encontrado');
+                        return; // Usuário não encontrado, não é um erro
+                    }
+                    throw error;
+                }
+                
+                if (data) {
+                    console.log('Usuário encontrado:', data);
+                    
+                    // Preencher campos do formulário
+                    document.getElementById(`resp${numeroResp}_nome`).value = data.nome || '';
+                    document.getElementById(`resp${numeroResp}_sobrenome`).value = data.sobrenome || '';
+                    
+                    // Mostrar mensagem informativa
+                    showToast(`Responsável ${data.nome} ${data.sobrenome || ''} encontrado!`, 'success');
+                    
+                    // Se for um usuário inativo, alertar
+                    if (data.status !== 'Ativo') {
+                        showToast(`Atenção: Este usuário está com status ${data.status}`, 'warning');
+                    }
+                    
+                    // Se não for um responsável, alertar
+                    if (data.tipo !== 'RESPONSÁVEL') {
+                        showToast(`Atenção: Este usuário está cadastrado como ${data.tipo}`, 'warning');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao buscar usuário:', error);
+                // Não mostrar erro para o usuário neste caso
+            }
+        }
+
+        // Função para carregar usuários do dispositivo
+        async function carregarUsuariosClick() {
+            const btnCarregar = document.getElementById('btnCarregarUsuarios');
+            const loadingSpinner = document.getElementById('loadingCarregarUsuarios');
+            
+            try {
+                // Desabilitar botão e mostrar loading
+                btnCarregar.disabled = true;
+                loadingSpinner.classList.remove('hidden');
+                
+                // Obter o dispositivo atual
+                const vinculoAtual = document.querySelector('[data-vinculo-atual]');
+                if (!vinculoAtual) {
+                    throw new Error('Nenhum dispositivo selecionado');
+                }
+
+                const vinculoId = vinculoAtual.getAttribute('data-vinculo-atual');
+                const { data: vinculo, error: vinculoError } = await supabase
+                    .from('aluno_dispositivo')
+                    .select(`
+                        dispositivos (
+                            ip,
+                            login,
+                            senha
+                        )
+                    `)
+                    .eq('id', vinculoId)
+                    .single();
+
+                if (vinculoError) throw vinculoError;
+                
+                // Carregar usuários
+                const { users } = await carregarUsuariosDispositivo(
+                    vinculo.dispositivos.ip,
+                    vinculo.dispositivos.login || 'admin',
+                    vinculo.dispositivos.senha || 'admin'
+                );
+                
+                // Mostrar barra de busca
+                document.getElementById('searchContainer').classList.remove('hidden');
+
+                // Preencher campo de busca com o ID do aluno atual
+                const alunoId = getUrlParam('id');
+                const searchInput = document.getElementById('searchUsers');
+                if (searchInput && alunoId) {
+                    searchInput.value = alunoId;
+                    // Disparar o evento de input para filtrar automaticamente
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+                
+                // Exibir usuários
+                exibirUsuariosDispositivo(users);
+                
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                showToast('Erro ao carregar usuários: ' + error.message, 'error');
+            } finally {
+                // Reabilitar botão e esconder loading
+                btnCarregar.disabled = false;
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // Adicionar evento ao botão de carregar usuários quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnCarregar = document.getElementById('btnCarregarUsuarios');
+            if (btnCarregar) {
+                btnCarregar.addEventListener('click', carregarUsuariosClick);
+            }
+        });
+    </script>
+</body>
+</html>

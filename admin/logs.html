@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Logs do Sistema</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- DatePicker -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-green {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: rgb(6, 95, 70);
+        }
+        .badge-blue {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: rgb(30, 58, 138);
+        }
+        .badge-yellow {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: rgb(146, 64, 14);
+        }
+        .badge-purple {
+            background-color: rgba(124, 58, 237, 0.1);
+            color: rgb(76, 29, 149);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <h1 class="text-2xl font-bold text-gray-800">Registros de Entrada/Saída</h1>
+            <div class="flex items-center gap-3">
+                <button id="atualizarDados" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-arrows-clockwise"></i>
+                    Atualizar
+                </button>
+                <button id="exportarPDF" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-file-pdf"></i>
+                    Exportar PDF
+            </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card p-4 mb-6 animate-fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Período -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="periodo">
+                        Período
+                    </label>
+                    <div class="relative">
+                        <input type="text" 
+                               id="periodo" 
+                               class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                               placeholder="Selecione o período">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="ph ph-calendar text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Busca por nome -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="busca">
+                        Buscar Aluno
+                    </label>
+                    <div class="relative">
+                        <input type="text" 
+                               id="busca" 
+                               class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                               placeholder="Digite o nome do aluno">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="ph ph-magnifying-glass text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escola -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="escola">
+                        Escola
+                    </label>
+                    <select id="escola" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as escolas</option>
+                    </select>
+                </div>
+
+                <!-- Série -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="serie">
+                        Série
+                    </label>
+                    <select id="serie" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as séries</option>
+                    </select>
+                </div>
+                
+                <!-- Turma -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="turma">
+                        Turma
+                    </label>
+                    <select id="turma" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as turmas</option>
+                    </select>
+                </div>
+                
+                <!-- Tipo de Registro -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="tipoRegistro">
+                        Cidade
+                    </label>
+                    <select id="cidade" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as cidades</option>
+                    </select>
+                </div>
+                
+                <!-- Botões de Filtro -->
+                <div class="flex items-end gap-2">
+                    <button id="aplicarFiltros" class="h-11 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                        <i class="ph ph-funnel"></i>
+                        Aplicar Filtros
+                    </button>
+                    <button id="limparFiltros" class="h-11 px-4 py-2 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+                        Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Totalizadores -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="card p-6 flex items-center">
+                <div class="rounded-full bg-blue-100 p-3 mr-4">
+                    <i class="ph ph-student text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Total de Alunos</p>
+                    <p id="totalAlunos" class="text-2xl font-semibold">0</p>
+                </div>
+            </div>
+            
+            <div class="card p-6 flex items-center">
+                <div class="rounded-full bg-purple-100 p-3 mr-4">
+                    <i class="ph ph-buildings text-purple-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Total de Colégios</p>
+                    <p id="totalColegios" class="text-2xl font-semibold">0</p>
+                </div>
+            </div>
+            
+            <div class="card p-6 flex items-center">
+                <div class="rounded-full bg-yellow-100 p-3 mr-4">
+                    <i class="ph ph-clock text-yellow-600 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Registros Hoje</p>
+                    <p id="registrosHoje" class="text-2xl font-semibold">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="card overflow-hidden animate-fade-in">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Aluno</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Horário</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Série</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Turma</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Colégio</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Cidade</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <!-- Dados serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Estado vazio -->
+            <div id="emptyState" class="hidden py-12">
+                <div class="text-center">
+                    <i class="ph ph-hourglass text-4xl text-gray-400"></i>
+                    <p class="mt-3 text-gray-500">Nenhum registro encontrado</p>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingState" class="py-12">
+                <div class="text-center">
+                    <i class="ph ph-circle-notch text-4xl text-blue-600 animate-spin"></i>
+                    <p class="mt-3 text-gray-500">Carregando registros...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paginação -->
+        <div class="flex justify-between items-center mt-6">
+            <p class="text-sm text-gray-600" id="paginationInfo">Exibindo 0 de 0 registros</p>
+            <div class="flex gap-2">
+                <button id="prevPage" class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph ph-caret-left"></i>
+                </button>
+                <button id="nextPage" class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph ph-caret-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+        
+        // Variáveis de estado
+        let currentPage = 0;
+        let pageSize = 20;
+        let totalLogs = 0;
+        let filtros = {};
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Inicializar datepicker
+        function initDatePicker() {
+            flatpickr("#periodo", {
+                mode: "range",
+                dateFormat: "d/m/Y",
+                locale: {
+                    rangeSeparator: ' até ',
+                    firstDayOfWeek: 1,
+                    weekdays: {
+                        shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                        longhand: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                    },
+                    months: {
+                        shorthand: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                        longhand: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+                    }
+                }
+            });
+        }
+
+        // Carregar dados para selects
+        async function carregarFiltros() {
+            try {
+                // Carregar escolas
+                const { data: escolas, error: escolasError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('nome_colégio');
+
+                if (escolasError) throw escolasError;
+
+                const escolaSelect = document.getElementById('escola');
+                const escolasUnicas = [...new Set(escolas?.map(e => e.nome_colégio) || [])].filter(Boolean);
+                escolasUnicas.sort().forEach(nome => {
+                    const option = document.createElement('option');
+                    option.value = nome;
+                    option.textContent = nome;
+                    escolaSelect.appendChild(option);
+                });
+
+                // Carregar séries
+                const { data: series, error: seriesError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('serie');
+
+                if (seriesError) throw seriesError;
+
+                const serieSelect = document.getElementById('serie');
+                const seriesUnicas = [...new Set(series?.map(s => s.serie) || [])].filter(Boolean);
+                seriesUnicas.sort().forEach(nome => {
+                    const option = document.createElement('option');
+                    option.value = nome;
+                    option.textContent = nome;
+                    serieSelect.appendChild(option);
+                });
+
+                // Carregar turmas
+                const { data: turmas, error: turmasError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('turma');
+
+                if (turmasError) throw turmasError;
+
+                const turmaSelect = document.getElementById('turma');
+                const turmasUnicas = [...new Set(turmas?.map(t => t.turma) || [])].filter(Boolean);
+                turmasUnicas.sort().forEach(nome => {
+                    const option = document.createElement('option');
+                    option.value = nome;
+                    option.textContent = nome;
+                    turmaSelect.appendChild(option);
+                });
+
+                // Carregar cidades
+                const { data: cidades, error: cidadesError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('cidade');
+
+                if (cidadesError) throw cidadesError;
+
+                const cidadeSelect = document.getElementById('cidade');
+                const cidadesUnicas = [...new Set(cidades?.map(c => c.cidade) || [])].filter(Boolean);
+                cidadesUnicas.sort().forEach(nome => {
+                    const option = document.createElement('option');
+                    option.value = nome;
+                    option.textContent = nome;
+                    cidadeSelect.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar filtros:', error);
+                showToast('Erro ao carregar opções de filtro', 'error');
+            }
+        }
+
+        // Carregar totais
+        async function carregarTotais() {
+            try {
+                // Total de alunos únicos nos logs
+                const { data: alunos, error: alunosError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('nome_aluno');
+
+                if (!alunosError && alunos) {
+                    const totalAlunos = new Set(alunos.map(a => a.nome_aluno)).size;
+                    document.getElementById('totalAlunos').textContent = totalAlunos;
+                }
+
+                // Total de colégios únicos
+                const { data: colegios, error: colegiosError } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('nome_colégio');
+
+                if (!colegiosError && colegios) {
+                    const totalColegios = new Set(colegios.map(c => c.nome_colégio)).size;
+                    document.getElementById('totalColegios').textContent = totalColegios;
+                }
+
+                // Registros de hoje - usando abordagem alternativa sem filtros
+                try {
+                    const { data: todosLogs } = await supabaseClient
+                        .from('view_alunos_logs')
+                        .select('hora_check');
+                    
+                    // Filtrar manualmente os registros de hoje
+                    const hoje = new Date();
+                    const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                    const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+                    
+                    // Filtrar os logs pelo dia atual
+                    const logsHoje = todosLogs?.filter(log => {
+                        const dataLog = new Date(log.hora_check);
+                        return dataLog >= inicioHoje && dataLog < fimHoje;
+                    }) || [];
+                    
+                    document.getElementById('registrosHoje').textContent = logsHoje.length;
+                } catch (error) {
+                    console.error('Erro ao carregar registros de hoje:', error);
+                    document.getElementById('registrosHoje').textContent = '0';
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar totais:', error);
+                showToast('Erro ao carregar totalizadores', 'error');
+            }
+        }
+
+        // Função para carregar logs
+        async function carregarLogs() {
+            try {
+                const tableBody = document.getElementById('logsTableBody');
+                const emptyState = document.getElementById('emptyState');
+                const loadingState = document.getElementById('loadingState');
+                
+                // Mostrar loading
+                loadingState.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                
+                // Construir query base usando a view
+                let query = supabaseClient
+                    .from('view_alunos_logs')
+                    .select('*', { count: 'exact' });
+
+                // Aplicar filtros
+                if (filtros.p_nome) {
+                    query = query.ilike('nome_aluno', `%${filtros.p_nome}%`);
+                }
+                if (filtros.p_escola) {
+                    query = query.eq('nome_colégio', filtros.p_escola);
+                }
+                if (filtros.p_serie) {
+                    query = query.eq('serie', filtros.p_serie);
+                }
+                if (filtros.p_turma) {
+                    query = query.eq('turma', filtros.p_turma);
+                }
+                if (filtros.p_cidade) {
+                    query = query.eq('cidade', filtros.p_cidade);
+                }
+                
+                // Em vez de filtrar por data no banco, vamos pegar todos e filtrar depois
+                let logs;
+                let count;
+                
+                // Se não temos filtros de data, usamos a query normal
+                if (!filtros.p_data_inicio && !filtros.p_data_fim) {
+                    // Ordenação e paginação
+                    query = query
+                        .order('hora_check', { ascending: false })
+                        .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+                        
+                    const result = await query;
+                    logs = result.data;
+                    error = result.error;
+                    count = result.count;
+                } else {
+                    // Se temos filtros de data, precisamos fazer manualmente
+                    const { data: allLogs, error: allLogsError } = await supabaseClient
+                        .from('view_alunos_logs')
+                        .select('*')
+                        .order('hora_check', { ascending: false });
+                        
+                    if (allLogsError) throw allLogsError;
+                    
+                    // Filtrar manualmente por data
+                    let filteredLogs = [...allLogs];
+                    
+                    if (filtros.p_data_inicio) {
+                        const dataInicio = new Date(filtros.p_data_inicio);
+                        filteredLogs = filteredLogs.filter(log => 
+                            new Date(log.hora_check) >= dataInicio
+                        );
+                    }
+                    
+                    if (filtros.p_data_fim) {
+                        const dataFim = new Date(filtros.p_data_fim);
+                        filteredLogs = filteredLogs.filter(log => 
+                            new Date(log.hora_check) <= dataFim
+                        );
+                    }
+                    
+                    // Aplicar paginação manualmente
+                    count = filteredLogs.length;
+                    logs = filteredLogs.slice(
+                        currentPage * pageSize, 
+                        (currentPage + 1) * pageSize
+                    );
+                }
+
+                // Esconder loading
+                loadingState.classList.add('hidden');
+
+                if (!logs || logs.length === 0) {
+                    tableBody.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    document.getElementById('paginationInfo').textContent = 'Exibindo 0 de 0 registros';
+                    return;
+                }
+
+                // Atualizar contagem total
+                if (count !== null) {
+                    totalLogs = count;
+                    document.getElementById('paginationInfo').textContent = 
+                        `Exibindo ${currentPage * pageSize + 1}-${Math.min((currentPage + 1) * pageSize, totalLogs)} de ${totalLogs} registros`;
+                }
+
+                // Esconder estado vazio e mostrar dados
+                emptyState.classList.add('hidden');
+                
+                // Limpar tabela
+                tableBody.innerHTML = '';
+                
+                // Popular tabela com dados
+                logs.forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-200 hover:bg-gray-50';
+                    
+                    // Formatar horário
+                    const horario = new Date(log.hora_check).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    tr.innerHTML = `
+                        <td class="py-4 px-6">
+                            <div class="flex items-center">
+                                <img src="${log.foto_aluno || '/images/default-avatar.png'}" 
+                                     alt="${log.nome_aluno}"
+                                     class="avatar mr-3"
+                                     onerror="this.src='/images/default-avatar.png'">
+                                <div>
+                                    <p class="font-medium text-gray-900">${log.nome_aluno}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-6">${horario}</td>
+                        <td class="py-4 px-6">${log.serie || '-'}</td>
+                        <td class="py-4 px-6">${log.turma || '-'}</td>
+                        <td class="py-4 px-6">${log.nome_colégio || '-'}</td>
+                        <td class="py-4 px-6">${log.cidade || '-'}</td>
+                    `;
+                    
+                    tableBody.appendChild(tr);
+                });
+                
+                // Atualizar botões de paginação
+                document.getElementById('prevPage').disabled = currentPage === 0;
+                document.getElementById('nextPage').disabled = (currentPage + 1) * pageSize >= totalLogs;
+                
+            } catch (error) {
+                console.error('Erro ao carregar logs:', error);
+                showToast('Erro ao carregar registros', 'error');
+                
+                // Esconder loading e mostrar estado vazio
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        // Função para aplicar filtros
+        function aplicarFiltros() {
+            const busca = document.getElementById('busca').value;
+            const escola = document.getElementById('escola').value;
+            const serie = document.getElementById('serie').value;
+            const turma = document.getElementById('turma').value;
+            const cidade = document.getElementById('cidade').value;
+            const periodo = document.getElementById('periodo').value;
+            
+            // Resetar paginação
+            currentPage = 0;
+            
+            // Construir objeto de filtros
+            filtros = {};
+            
+            if (busca) filtros.p_nome = busca;
+            if (escola) filtros.p_escola = escola;
+            if (serie) filtros.p_serie = serie;
+            if (turma) filtros.p_turma = turma;
+            if (cidade) filtros.p_cidade = cidade;
+            
+            // Processar período se existir
+            if (periodo) {
+                const datas = periodo.split(' até ');
+                if (datas.length >= 1) {
+                    const parteData = datas[0].split('/');
+                    const dataInicio = new Date(parteData[2], parteData[1] - 1, parteData[0], 0, 0, 0);
+                    filtros.p_data_inicio = dataInicio.toISOString();
+                }
+                
+                if (datas.length === 2) {
+                    const parteData = datas[1].split('/');
+                    const dataFim = new Date(parteData[2], parteData[1] - 1, parteData[0], 23, 59, 59);
+                    filtros.p_data_fim = dataFim.toISOString();
+                }
+            }
+            
+            // Recarregar dados
+            carregarLogs();
+        }
+
+        // Função para limpar filtros
+        function limparFiltros() {
+            document.getElementById('busca').value = '';
+            document.getElementById('escola').selectedIndex = 0;
+            document.getElementById('serie').selectedIndex = 0;
+            document.getElementById('turma').selectedIndex = 0;
+            document.getElementById('cidade').selectedIndex = 0;
+            document.getElementById('periodo').value = '';
+            
+            // Resetar paginação e filtros
+            currentPage = 0;
+            filtros = {};
+            
+            // Recarregar dados
+            carregarLogs();
+        }
+
+        // Exportar para PDF
+        async function exportarPDF() {
+            try {
+                // Verificar se há dados para exportar
+                const rows = document.querySelectorAll('#logsTableBody tr');
+                if (rows.length === 0) {
+                    showToast('Não há dados para exportar', 'error');
+                    return;
+                }
+                
+                // Inicializar jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+
+                // Configurar fonte para suportar caracteres especiais
+                doc.setFont('helvetica');
+
+                // Título do documento
+                doc.setFontSize(16);
+                doc.text('Relatório de Registros de Alunos', 15, 15);
+
+                // Data do relatório
+                doc.setFontSize(10);
+                const dataRelatorio = new Date().toLocaleString('pt-BR');
+                doc.text(`Gerado em: ${dataRelatorio}`, 15, 22);
+
+                // Preparar dados para a tabela
+                const tableData = [];
+                rows.forEach(row => {
+                    const colunas = row.querySelectorAll('td');
+                    const rowData = [
+                        colunas[0].querySelector('.font-medium')?.textContent || '',
+                        colunas[1]?.textContent || '',
+                        colunas[2]?.textContent || '',
+                        colunas[3]?.textContent || '',
+                        colunas[4]?.textContent || '',
+                        colunas[5]?.textContent || ''
+                    ];
+                    tableData.push(rowData);
+                });
+
+                // Configurar cabeçalhos
+                const headers = [
+                    ['Aluno', 'Horário', 'Série', 'Turma', 'Colégio', 'Cidade']
+                ];
+
+                // Gerar tabela
+                doc.autoTable({
+                    head: headers,
+                    body: tableData,
+                    startY: 30,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        overflow: 'linebreak',
+                        halign: 'left'
+                    },
+                    headStyles: {
+                        fillColor: [59, 130, 246],
+                        textColor: 255,
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 50 }, // Aluno
+                        1: { cellWidth: 35 }, // Horário
+                        2: { cellWidth: 25 }, // Série
+                        3: { cellWidth: 25 }, // Turma
+                        4: { cellWidth: 50 }, // Colégio
+                        5: { cellWidth: 40 }  // Cidade
+                    },
+                    margin: { top: 30, right: 15, bottom: 15, left: 15 }
+                });
+
+                // Adicionar rodapé
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.text(
+                        `Página ${i} de ${pageCount}`,
+                        doc.internal.pageSize.width / 2,
+                        doc.internal.pageSize.height - 10,
+                        { align: 'center' }
+                    );
+                }
+
+                // Salvar o PDF
+                doc.save(`registros_alunos_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                showToast('Arquivo PDF exportado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao exportar PDF:', error);
+                showToast('Erro ao exportar arquivo', 'error');
+            }
+        }
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para inicializar o sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar e componentes
+            initializeSidebar();
+            initDatePicker();
+            
+            // Carregar dados
+            carregarFiltros();
+            carregarTotais();
+            carregarLogs();
+            
+            // Configurar botões de paginação
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 0) {
+                    currentPage--;
+                    carregarLogs();
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if ((currentPage + 1) * pageSize < totalLogs) {
+                    currentPage++;
+                    carregarLogs();
+                }
+            });
+            
+            // Configurar botões de filtro e ações
+            document.getElementById('aplicarFiltros').addEventListener('click', aplicarFiltros);
+            document.getElementById('limparFiltros').addEventListener('click', limparFiltros);
+            document.getElementById('exportarPDF').addEventListener('click', exportarPDF);
+            document.getElementById('atualizarDados').addEventListener('click', () => {
+                const btn = document.getElementById('atualizarDados');
+                const icon = btn.querySelector('i');
+                
+                // Adiciona classe de rotação
+                icon.classList.add('animate-spin');
+                btn.disabled = true;
+                
+                // Recarrega os dados
+                Promise.all([
+                    carregarFiltros(),
+                    carregarTotais(),
+                    carregarLogs()
+                ]).finally(() => {
+                    // Remove classe de rotação após 1 segundo
+                    setTimeout(() => {
+                        icon.classList.remove('animate-spin');
+                        btn.disabled = false;
+                    }, 1000);
+                });
+            });
+            
+            // Remover preloader após carregar
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 800);
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+    </script>
+</body>
+</html>

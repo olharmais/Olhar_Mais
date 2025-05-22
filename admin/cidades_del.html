@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Excluir Cidade</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        .preloader.fade-out {
+            opacity: 0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #dc2626;
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        .btn-primary.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #4b5563;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+        }
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 1rem;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #6b7280;
+            width: 150px;
+            flex-shrink: 0;
+        }
+        .detail-value {
+            color: #1f2937;
+            flex-grow: 1;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 1rem;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="cidades.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Excluir Cidade</h1>
+            </div>
+        </div>
+
+        <!-- Card de Confirmação -->
+        <div class="card p-6 mb-6">
+            <div class="mb-6 text-center">
+                <div class="bg-red-100 text-red-600 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <i class="ph ph-trash text-3xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Confirmar Exclusão</h2>
+                <p class="text-gray-600">Você está prestes a excluir a cidade. Esta ação não pode ser desfeita.</p>
+            </div>
+            
+            <!-- Detalhes da Cidade -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="detail-row">
+                    <div class="detail-label">Nome:</div>
+                    <div id="cidade-nome" class="detail-value font-medium">Carregando...</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Estado (UF):</div>
+                    <div id="cidade-uf" class="detail-value">Carregando...</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status:</div>
+                    <div id="cidade-status" class="detail-value">Carregando...</div>
+                </div>
+            </div>
+            
+            <!-- Aviso de Impacto -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="ph ph-warning text-yellow-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <span class="font-medium">Atenção:</span> A exclusão desta cidade pode afetar escolas e outros dados relacionados.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Confirmação -->
+            <div id="confirmar-container" class="mb-6 hidden">
+                <label class="flex items-center cursor-pointer mb-4">
+                    <input id="confirmar-checkbox" type="checkbox" class="h-5 w-5 rounded text-red-600 focus:ring-red-500 mr-2">
+                    <span class="text-gray-700">Confirmo que entendo o impacto desta ação e desejo prosseguir com a exclusão.</span>
+                </label>
+            </div>
+
+            <!-- Escolas Relacionadas -->
+            <div id="escolas-relacionadas" class="mb-6 hidden">
+                <h3 class="text-md font-semibold text-gray-800 mb-3">Escolas vinculadas a esta cidade:</h3>
+                <ul id="lista-escolas" class="list-disc pl-6 text-gray-600"></ul>
+            </div>
+            
+            <!-- Botões de Ação -->
+            <div class="flex gap-3 justify-end">
+                <a href="cidades.html" class="btn-secondary">
+                    <i class="ph ph-x"></i>
+                    <span>Cancelar</span>
+                </a>
+                <button id="btn-exclusao" class="btn-primary" disabled>
+                    <i class="ph ph-trash"></i>
+                    <span>Excluir Cidade</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Confirmação Final -->
+    <div id="modal-confirmacao" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Confirmar Exclusão</h3>
+            <p class="text-gray-600 mb-6">Tem certeza que deseja excluir permanentemente a cidade <span id="modal-cidade-nome" class="font-semibold"></span>?</p>
+            <div class="flex justify-end gap-3">
+                <button id="btn-cancelar-modal" class="btn-secondary">
+                    <span>Cancelar</span>
+                </button>
+                <button id="btn-confirmar-modal" class="btn-primary">
+                    <span>Sim, Excluir</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Função para mostrar/ocultar indicador de carregamento no botão
+        function toggleButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.classList.add('loading');
+                button.innerHTML = `
+                    <div class="loading-spinner !w-5 !h-5"></div>
+                    <span>Excluindo...</span>
+                `;
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.innerHTML = `
+                    <i class="ph ph-trash"></i>
+                    <span>Excluir Cidade</span>
+                `;
+                button.disabled = false;
+            }
+        }
+
+        // ID da cidade a ser excluída
+        let cidadeId = null;
+        let cidadeNome = '';
+        let possuiEscolas = false;
+
+        // Carregar dados da cidade
+        async function carregarCidade() {
+            try {
+                // Obter ID da URL
+                const params = new URLSearchParams(window.location.search);
+                cidadeId = params.get('id');
+                
+                if (!cidadeId) {
+                    throw new Error('ID da cidade não informado');
+                }
+                
+                // Obter dados da cidade
+                const { data: cidade, error } = await supabaseClient
+                    .from('cidades')
+                    .select('*')
+                    .eq('id', cidadeId)
+                    .single();
+                
+                if (error) throw error;
+                if (!cidade) throw new Error('Cidade não encontrada');
+                
+                // Salvar nome para uso posterior
+                cidadeNome = cidade.nome;
+                
+                // Preencher os detalhes
+                document.getElementById('cidade-nome').textContent = cidade.nome || 'N/A';
+                document.getElementById('cidade-uf').textContent = cidade.uf || 'N/A';
+                document.getElementById('cidade-status').textContent = formatarStatus(cidade.status) || 'N/A';
+                document.getElementById('modal-cidade-nome').textContent = cidade.nome;
+                
+                // Verificar escolas relacionadas
+                const { data: escolas, error: escolasError } = await supabaseClient
+                    .from('escolas')
+                    .select('id, nome')
+                    .eq('cidade_id', cidadeId);
+                
+                if (escolasError) throw escolasError;
+                
+                if (escolas && escolas.length > 0) {
+                    possuiEscolas = true;
+                    
+                    // Mostrar bloco de escolas
+                    const escolasContainer = document.getElementById('escolas-relacionadas');
+                    escolasContainer.classList.remove('hidden');
+                    
+                    // Preencher lista de escolas
+                    const listaEscolas = document.getElementById('lista-escolas');
+                    escolas.forEach(escola => {
+                        const li = document.createElement('li');
+                        li.textContent = escola.nome;
+                        listaEscolas.appendChild(li);
+                    });
+                }
+                
+                // Mostrar checkbox de confirmação
+                document.getElementById('confirmar-container').classList.remove('hidden');
+                
+                // Adicionar evento ao checkbox de confirmação
+                document.getElementById('confirmar-checkbox').addEventListener('change', function() {
+                    document.getElementById('btn-exclusao').disabled = !this.checked;
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados da cidade:', error);
+                showToast(error.message || 'Erro ao carregar dados da cidade', 'error');
+                
+                // Redirecionar para a lista após erro
+                setTimeout(() => {
+                    window.location.href = 'cidades.html';
+                }, 2000);
+            }
+        }
+
+        // Formatar status para exibição
+        function formatarStatus(status) {
+            switch (status) {
+                case 'ATIVA':
+                    return 'Ativa';
+                case 'INATIVA':
+                    return 'Inativa';
+                default:
+                    return status;
+            }
+        }
+
+        // Excluir cidade
+        async function excluirCidade() {
+            const btnConfirmar = document.getElementById('btn-confirmar-modal');
+            toggleButtonLoading(btnConfirmar, true);
+            
+            try {
+                let error;
+                
+                // Se tiver escolas, usa soft delete
+                if (possuiEscolas) {
+                    const { error: err } = await supabaseClient
+                        .from('cidades')
+                        .update({ 
+                            soft_delete: new Date().toISOString(),
+                            status: 'INATIVA'
+                        })
+                        .eq('id', cidadeId);
+                    error = err;
+                } else {
+                    // Se não tiver escolas, pode fazer exclusão normal
+                    const { error: err } = await supabaseClient
+                        .from('cidades')
+                        .delete()
+                        .eq('id', cidadeId);
+                    error = err;
+                }
+                
+                if (error) throw error;
+                
+                fecharModal();
+                showToast('Cidade excluída com sucesso!');
+                
+                // Redirecionar para a lista
+                setTimeout(() => {
+                    window.location.href = 'cidades.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao excluir cidade:', error);
+                showToast(error.message || 'Erro ao excluir cidade', 'error');
+                toggleButtonLoading(btnConfirmar, false);
+            }
+        }
+
+        // Abrir modal de confirmação
+        function abrirModal() {
+            const modal = document.getElementById('modal-confirmacao');
+            modal.classList.add('active');
+            
+            // Impedir scroll na página
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Fechar modal de confirmação
+        function fecharModal() {
+            const modal = document.getElementById('modal-confirmacao');
+            modal.classList.remove('active');
+            
+            // Restaurar scroll na página
+            document.body.style.overflow = '';
+        }
+
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar
+            initializeSidebar();
+            
+            // Carregar dados da cidade
+            carregarCidade().then(() => {
+                // Remover preloader após carregar
+                setTimeout(() => {
+                    preloader.classList.add('fade-out');
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                    }, 300);
+                }, 500);
+            });
+            
+            // Botão de exclusão
+            document.getElementById('btn-exclusao').addEventListener('click', abrirModal);
+            
+            // Botões do modal
+            document.getElementById('btn-cancelar-modal').addEventListener('click', fecharModal);
+            document.getElementById('btn-confirmar-modal').addEventListener('click', excluirCidade);
+            
+            // Fechar modal ao clicar fora ou pressionar ESC
+            document.getElementById('modal-confirmacao').addEventListener('click', function(event) {
+                if (event.target === this) fecharModal();
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') fecharModal();
+            });
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+    </script>
+</body>
+</html> 

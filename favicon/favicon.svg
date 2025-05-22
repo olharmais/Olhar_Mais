@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <!-- Fundo azul circular -->
+    <circle cx="256" cy="256" r="256" fill="#005ae2"/>
+    
+    <!-- Olho branco centralizado e maior -->
+    <path fill="#ffffff" d="M256,156c-80,0-145,45-160,100c15,55,80,100,160,100s145-45,160-100C401,201,336,156,256,156z M256,316c-33,0-60-27-60-60s27-60,60-60s60,27,60,60S289,316,256,316z"/>
+    <!-- Pupila centralizada e maior -->
+    <circle cx="256" cy="256" r="30" fill="#005ae2"/>
+</svg> 

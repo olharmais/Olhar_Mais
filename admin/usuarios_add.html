@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Adicionar Usuário</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preloader {
+            transition: opacity 0.3s ease-out;
+        }
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3b82f6;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        /* Correção para o Phosphor Icons */
+        .ph {
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+        <button id="closePreloader" class="absolute top-4 right-4 p-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300" title="Forçar fechamento">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="usuarios.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Adicionar Usuário</h1>
+            </div>
+            <button type="button" id="submitBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <i class="ph ph-check"></i>
+                <span>Salvar</span>
+            </button>
+        </div>
+
+        <!-- Formulário -->
+        <form id="userForm" class="space-y-6">
+            <!-- Informações Básicas -->
+            <div class="card p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Informações Básicas</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nome -->
+                    <div>
+                        <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome <span class="text-red-500">*</span></label>
+                        <input type="text" id="nome" name="nome" placeholder="Digite o nome do usuário" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    
+                    <!-- Sobrenome -->
+                    <div>
+                        <label for="sobrenome" class="block text-sm font-medium text-gray-700 mb-1">Sobrenome <span class="text-red-500">*</span></label>
+                        <input type="text" id="sobrenome" name="sobrenome" placeholder="Digite o sobrenome do usuário" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    
+                    <!-- WhatsApp -->
+                    <div>
+                        <label for="whatsapp" class="block text-sm font-medium text-gray-700 mb-1">WhatsApp <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                                <i class="ph ph-whatsapp-logo"></i>
+                            </div>
+                            <input type="tel" id="whatsapp" name="whatsapp" class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="(99) 99999-9999" required>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Formato: DDD + número, ex: 11999999999</p>
+                    </div>
+                    
+                    <!-- Tipo de Usuário -->
+                    <div>
+                        <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Usuário <span class="text-red-500">*</span></label>
+                        <select id="tipo" name="tipo" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="" disabled selected>Selecione um tipo</option>
+                            <option value="GESTOR">Gestor</option>
+                            <option value="PROFISSIONAL">Profissional</option>
+                            <option value="NUTRICIONISTA">Nutricionista</option>
+                            <option value="RESPONSAVEL">Responsável</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status <span class="text-red-500">*</span></label>
+                        <select id="status" name="status" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="Ativo" selected>Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                            <option value="Suspenso">Suspenso</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Credenciais de Acesso -->
+            <div class="card p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Credenciais de Acesso</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Hash1 / Telefone -->
+                    <div>
+                        <label for="hash1" class="block text-sm font-medium text-gray-700 mb-1">Login (Mesmo WhatsApp) <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                                <i class="ph ph-phone"></i>
+                            </div>
+                            <input type="text" id="hash1" name="hash1" placeholder="(99) 99999-9999" class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required disabled>
+                            <div class="absolute flex items-center space-x-1 text-xs text-gray-500 right-2 top-3">
+                                <i class="ph ph-info"></i>
+                                <span>Preenchido automaticamente</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">O login será feito usando o número de WhatsApp</p>
+                    </div>
+                    
+                    <!-- Hash2 / Senha -->
+                    <div>
+                        <label for="hash2" class="block text-sm font-medium text-gray-700 mb-1">Senha <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                                <i class="ph ph-lock"></i>
+                            </div>
+                            <input type="password" id="hash2" name="hash2" placeholder="Digite a senha" class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-200 mt-6 pt-6">
+                    <div class="flex items-center space-x-2">
+                        <i class="ph ph-info text-blue-500"></i>
+                        <p class="text-sm text-gray-600">As credenciais serão usadas pelo usuário para acessar o sistema.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botão de Submit (visível apenas em mobile) -->
+            <div class="block md:hidden">
+                <button type="button" id="mobileSubmitBtn" class="w-full px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-check"></i>
+                    <span>Salvar Usuário</span>
+                </button>
+            </div>
+        </form>
+        
+        <!-- Estado de progresso ao salvar -->
+        <div id="saveProgress" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-6 rounded-lg max-w-md w-full">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Salvando Usuário</h3>
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                <p id="progressStatus" class="text-sm text-gray-600">Preparando dados...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM carregado, iniciando...");
+            
+            // Inicialização do preloader
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                console.log("Preloader encontrado, garantindo que esteja visível");
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            }
+            
+            // Configurar botão de escape do preloader
+            document.getElementById('closePreloader').addEventListener('click', function() {
+                hidePreloader(true); // Esconder imediatamente
+            });
+            
+            try {
+                // Inicializar Supabase
+                console.log('Obtendo credenciais do Supabase...');
+                supabase = createSupabaseClient();
+                console.log('Supabase client created successfully');
+                
+                // Inicializar sidebar
+                initializeSidebar();
+                
+                // Configurar eventos
+                setupEventListeners();
+                
+                // Esconder preloader após inicialização
+                hidePreloader();
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao inicializar a página. Por favor, recarregue.', 'error');
+                hidePreloader();
+            }
+        });
+        
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+        
+        // Configurar eventos
+        function setupEventListeners() {
+            // Aplicar máscara ao campo de WhatsApp
+            const whatsappInput = document.getElementById('whatsapp');
+            whatsappInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 11) {
+                    value = value.substring(0, 11);
+                }
+                
+                let formattedValue = '';
+                if (value.length > 0) {
+                    formattedValue = '(' + value.substring(0, 2);
+                    if (value.length > 2) {
+                        formattedValue += ') ' + value.substring(2, 7);
+                        if (value.length > 7) {
+                            formattedValue += '-' + value.substring(7, 11);
+                        }
+                    }
+                }
+                
+                e.target.value = formattedValue;
+                
+                // Atualizar automaticamente o campo hash1
+                document.getElementById('hash1').value = formattedValue;
+            });
+            
+            // Alternar visibilidade da senha
+            document.getElementById('togglePassword').addEventListener('click', function() {
+                const passwordInput = document.getElementById('hash2');
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Alternar ícone
+                const icon = this.querySelector('i');
+                if (type === 'password') {
+                    icon.classList.remove('ph-eye-slash');
+                    icon.classList.add('ph-eye');
+                } else {
+                    icon.classList.remove('ph-eye');
+                    icon.classList.add('ph-eye-slash');
+                }
+            });
+            
+            // Botões de submit
+            document.getElementById('submitBtn').addEventListener('click', addUser);
+            document.getElementById('mobileSubmitBtn').addEventListener('click', addUser);
+        }
+        
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                className: "info",
+                style: {
+                    background: type === 'success' ? "linear-gradient(to right, #00b09b, #96c93d)" : "linear-gradient(to right, #ff5f6d, #ffc371)",
+                }
+            }).showToast();
+        }
+        
+        // Funções para controlar o preloader
+        function showPreloader() {
+            console.log("Mostrando preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+                console.log("Preloader mostrado");
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        function hidePreloader(immediate = false) {
+            console.log("Escondendo preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                if (immediate) {
+                    preloader.style.display = 'none';
+                    console.log("Preloader escondido imediatamente");
+                } else {
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                        console.log("Preloader escondido após transição");
+                    }, 300);
+                }
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        // Funções para controlar o progresso
+        function showProgress() {
+            document.getElementById('saveProgress').classList.remove('hidden');
+        }
+        
+        function hideProgress() {
+            document.getElementById('saveProgress').classList.add('hidden');
+        }
+        
+        function updateProgress(percent, status) {
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressStatus').textContent = status;
+        }
+        
+        // Adicionar usuário
+        async function addUser() {
+            // Validação do formulário
+            const form = document.getElementById('userForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            try {
+                showProgress();
+                updateProgress(10, 'Verificando dados...');
+                
+                // Obter valores do formulário
+                const nome = document.getElementById('nome').value.trim();
+                const sobrenome = document.getElementById('sobrenome').value.trim();
+                const whatsapp = document.getElementById('whatsapp').value.trim().replace(/\D/g, ''); // Remove caracteres não numéricos
+                const tipo = document.getElementById('tipo').value;
+                const status = document.getElementById('status').value;
+                const hash2 = document.getElementById('hash2').value.trim();
+                
+                updateProgress(20, 'Preparando dados para envio...');
+                
+                // Formatar o número de WhatsApp
+                let whatsappFormatado = whatsapp;
+                // Se o WhatsApp não começar com 55 (código do Brasil), adicionar
+                if (!whatsappFormatado.startsWith('55')) {
+                    whatsappFormatado = '55' + whatsappFormatado;
+                }
+                
+                // Criar objeto com dados do usuário
+                const newUser = {
+                    nome,
+                    sobrenome,
+                    whatsapp: whatsappFormatado,
+                    tipo,
+                    status,
+                    hash1: whatsappFormatado, // Usar whatsapp como hash1
+                    hash2
+                };
+                
+                updateProgress(40, 'Enviando dados para o servidor...');
+                
+                // Inserir no Supabase
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .insert(newUser)
+                    .select();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                updateProgress(80, 'Usuário criado com sucesso!');
+                
+                // Operação bem-sucedida
+                showToast('Usuário adicionado com sucesso!');
+                
+                updateProgress(100, 'Redirecionando...');
+                
+                // Redirecionar após 1 segundo
+                setTimeout(() => {
+                    window.location.href = 'usuarios.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao adicionar usuário:', error);
+                updateProgress(0, 'Erro ao adicionar usuário');
+                
+                // Mensagens de erro específicas
+                if (error.code === '23505') {
+                    showToast('Já existe um usuário com este telefone.', 'error');
+                } else {
+                    showToast('Erro ao adicionar usuário: ' + error.message, 'error');
+                }
+                
+                setTimeout(() => {
+                    hideProgress();
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html> 

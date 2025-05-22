@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Detalhes da Cidade</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+        .status-badge.active {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+        .status-badge.inactive {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        .preloader.fade-out {
+            opacity: 0;
+        }
+        .video-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .video-thumbnail {
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            position: relative;
+            background-color: #f3f4f6;
+        }
+        .video-thumbnail iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .video-info {
+            padding: 1rem;
+        }
+        .feriado-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <div class="flex items-center gap-3">
+                <a href="cidades.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Detalhes da Cidade</h1>
+            </div>
+            <div class="flex gap-2">
+                <a id="btnEditar" href="#" class="flex items-center gap-2 px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <i class="ph ph-pencil-simple"></i>
+                    <span>Editar</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Conteúdo -->
+        <div id="cidadeContent" class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+            <!-- Coluna Principal -->
+            <div class="md:col-span-2 space-y-6">
+                <!-- Informações Básicas -->
+                <div class="card p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-info text-blue-500"></i>
+                        Informações Básicas
+                    </h2>
+                    <div class="flex flex-col md:flex-row md:items-center gap-6 mb-6">
+                        <div id="brasaoContainer" class="flex-shrink-0 max-w-[120px] hidden">
+                            <img id="brasao" src="" alt="Brasão da cidade" class="w-full h-auto rounded-lg">
+                        </div>
+                        <div>
+                            <h1 id="nomeCidade" class="text-2xl font-bold text-gray-900"></h1>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span id="uf" class="text-gray-600"></span>
+                                <span class="text-gray-400">•</span>
+                                <span id="statusBadge" class="status-badge"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="observacaoContainer" class="border-t border-gray-200 pt-4 hidden">
+                        <h3 class="text-md font-medium text-gray-700 mb-2">Observações</h3>
+                        <p id="observacao" class="text-gray-600"></p>
+                    </div>
+                </div>
+                
+                <!-- Escolas Vinculadas -->
+                <div class="card p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-buildings text-blue-500"></i>
+                        Escolas Vinculadas
+                    </h2>
+                    <div id="escolasContainer" class="space-y-4">
+                        <div id="loadingEscolas" class="py-4 text-center text-gray-500">
+                            <div class="loading-spinner mx-auto mb-2 !w-5 !h-5"></div>
+                            <p>Carregando escolas...</p>
+                        </div>
+                        <div id="escolasLista" class="hidden">
+                            <!-- As escolas serão listadas aqui -->
+                        </div>
+                        <div id="semEscolas" class="py-8 text-center text-gray-500 hidden">
+                            <i class="ph ph-buildings text-gray-400 text-4xl mb-2"></i>
+                            <p>Nenhuma escola vinculada a esta cidade.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Vídeos Institucionais -->
+                <div id="videosContainer" class="card p-6 hidden">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-youtube-logo text-blue-500"></i>
+                        Vídeos Institucionais
+                    </h2>
+                    <div id="videosLista" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Os vídeos serão listados aqui -->
+                    </div>
+                </div>
+
+                <!-- Alunos da Cidade -->
+                <div class="card p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-student text-blue-500"></i>
+                        Alunos da Cidade
+                    </h2>
+                    
+                    <!-- Campo de Busca -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <input type="text" 
+                                   id="searchAlunos" 
+                                   placeholder="Buscar alunos por nome, matrícula ou turma..." 
+                                   class="w-full px-4 py-2 pl-10 pr-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <div id="alunosContainer" class="space-y-4">
+                        <div id="loadingAlunos" class="py-4 text-center text-gray-500">
+                            <div class="loading-spinner mx-auto mb-2 !w-5 !h-5"></div>
+                            <p>Carregando alunos...</p>
+                        </div>
+                        <div id="alunosLista" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Os alunos serão listados aqui -->
+                        </div>
+                        <div id="semAlunos" class="py-8 text-center text-gray-500 hidden">
+                            <i class="ph ph-student text-gray-400 text-4xl mb-2"></i>
+                            <p>Nenhum aluno cadastrado nesta cidade.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Coluna Lateral -->
+            <div class="space-y-6">
+                <!-- Feriados e Recessos -->
+                <div id="feriadosContainer" class="card p-6 hidden">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-calendar text-blue-500"></i>
+                        Feriados e Recessos
+                    </h2>
+                    <div id="feriadosLista" class="space-y-3">
+                        <!-- Os feriados serão listados aqui -->
+                    </div>
+                </div>
+                
+                <!-- Informações do Sistema -->
+                <div class="card p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-database text-blue-500"></i>
+                        Informações do Sistema
+                    </h2>
+                    <ul class="space-y-3">
+                        <li class="flex flex-col">
+                            <span class="text-sm text-gray-500">ID</span>
+                            <span id="idCidade" class="text-gray-700 font-medium"></span>
+                        </li>
+                        <li class="flex flex-col">
+                            <span class="text-sm text-gray-500">Criado em</span>
+                            <span id="dataCriacao" class="text-gray-700 font-medium"></span>
+                        </li>
+                        <li class="flex flex-col">
+                            <span class="text-sm text-gray-500">Última atualização</span>
+                            <span id="dataAtualizacao" class="text-gray-700 font-medium"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Formatar data
+        function formatarData(dataString) {
+            if (!dataString) return '-';
+            const data = new Date(dataString);
+            return data.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Formatar data simples (sem hora)
+        function formatarDataSimples(dataString) {
+            if (!dataString) return '-';
+            const data = new Date(dataString);
+            return data.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        // Obter URL do YouTube
+        function getYouTubeEmbedUrl(url) {
+            if (!url) return null;
+            
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            
+            if (match && match[2].length === 11) {
+                return `https://www.youtube.com/embed/${match[2]}`;
+            }
+            
+            return url; // Retorna a URL original se não for YouTube
+        }
+
+        // Função para carregar detalhes da cidade
+        async function carregarDetalhes() {
+            try {
+                // Obter ID da URL
+                const params = new URLSearchParams(window.location.search);
+                const cidadeId = params.get('id');
+                
+                if (!cidadeId) {
+                    throw new Error('ID da cidade não informado');
+                }
+                
+                // Configurar URL de edição e exclusão
+                document.getElementById('btnEditar').href = `cidades_edit.html?id=${cidadeId}`;
+                
+                // Carregar dados da cidade
+                const { data: cidade, error } = await supabaseClient
+                    .from('cidades')
+                    .select('*')
+                    .eq('id', cidadeId)
+                    .single();
+                
+                if (error) throw error;
+                if (!cidade) throw new Error('Cidade não encontrada');
+                
+                // Preencher os dados na página
+                document.getElementById('nomeCidade').textContent = cidade.nome;
+                document.getElementById('uf').textContent = cidade.uf;
+                document.getElementById('idCidade').textContent = cidade.id;
+                document.getElementById('dataCriacao').textContent = formatarData(cidade.created_at);
+                document.getElementById('dataAtualizacao').textContent = formatarData(cidade.updated_at);
+                
+                // Status
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = cidade.status === 'ATIVA' ? 'Ativa' : 'Inativa';
+                statusBadge.classList.add(cidade.status === 'ATIVA' ? 'active' : 'inactive');
+                
+                // Brasão
+                if (cidade.brasao) {
+                    document.getElementById('brasao').src = cidade.brasao;
+                    document.getElementById('brasaoContainer').classList.remove('hidden');
+                }
+                
+                // Observação
+                if (cidade.observacao) {
+                    document.getElementById('observacao').textContent = cidade.observacao;
+                    document.getElementById('observacaoContainer').classList.remove('hidden');
+                }
+                
+                // Feriados
+                if (cidade.recessos_feriados?.items?.length > 0) {
+                    const feriadosLista = document.getElementById('feriadosLista');
+                    feriadosLista.innerHTML = '';
+                    
+                    cidade.recessos_feriados.items.forEach(feriado => {
+                        const item = document.createElement('div');
+                        item.className = 'feriado-item';
+                        
+                        const dataFormatada = formatarDataSimples(feriado.data);
+                        
+                        item.innerHTML = `
+                            <h3 class="font-medium text-gray-800">${feriado.nome}</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <i class="ph ph-calendar-blank text-gray-500"></i>
+                                <span class="text-gray-700">${dataFormatada}</span>
+                            </div>
+                            ${feriado.descricao ? `<p class="text-gray-600 mt-2 text-sm">${feriado.descricao}</p>` : ''}
+                        `;
+                        
+                        feriadosLista.appendChild(item);
+                    });
+                    
+                    document.getElementById('feriadosContainer').classList.remove('hidden');
+                }
+                
+                // Vídeos
+                if (cidade.videos_institucionais?.items?.length > 0) {
+                    const videosLista = document.getElementById('videosLista');
+                    videosLista.innerHTML = '';
+                    
+                    cidade.videos_institucionais.items.forEach(video => {
+                        const embedUrl = getYouTubeEmbedUrl(video.url);
+                        
+                        const item = document.createElement('div');
+                        item.className = 'video-item';
+                        
+                        item.innerHTML = `
+                            <div class="video-thumbnail">
+                                <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                            <div class="video-info">
+                                <h3 class="font-medium text-gray-800">${video.titulo}</h3>
+                                ${video.descricao ? `<p class="text-gray-600 mt-1 text-sm">${video.descricao}</p>` : ''}
+                            </div>
+                        `;
+                        
+                        videosLista.appendChild(item);
+                    });
+                    
+                    document.getElementById('videosContainer').classList.remove('hidden');
+                }
+                
+                // Carregar escolas vinculadas
+                carregarEscolas(cidadeId);
+                
+                // Carregar alunos da cidade
+                await carregarAlunos(cidadeId);
+                
+            } catch (error) {
+                console.error('Erro ao carregar detalhes da cidade:', error);
+                showToast(error.message || 'Erro ao carregar detalhes', 'error');
+                
+                // Redirecionar para a lista após erro
+                setTimeout(() => {
+                    window.location.href = 'cidades.html';
+                }, 2000);
+            }
+        }
+
+        // Função para carregar escolas vinculadas à cidade
+        async function carregarEscolas(cidadeId) {
+            try {
+                const { data: escolas, error } = await supabaseClient
+                    .from('escolas')
+                    .select('id, nome, status')
+                    .eq('cidade_id', cidadeId)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                if (error) throw error;
+                
+                // Ocultar loading
+                document.getElementById('loadingEscolas').classList.add('hidden');
+                
+                if (escolas.length === 0) {
+                    document.getElementById('semEscolas').classList.remove('hidden');
+                    return;
+                }
+                
+                const escolasLista = document.getElementById('escolasLista');
+                escolasLista.innerHTML = '';
+                
+                escolas.forEach(escola => {
+                    const item = document.createElement('div');
+                    item.className = 'border-b border-gray-200 last:border-0 py-3 flex justify-between items-center';
+                    
+                    const statusClass = escola.status === 'ATIVA' ? 'active' : 'inactive';
+                    
+                    item.innerHTML = `
+                        <div>
+                            <a href="escolas_ver.html?id=${escola.id}" class="font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                                ${escola.nome}
+                            </a>
+                        </div>
+                        <div>
+                            <span class="status-badge ${statusClass}">
+                                ${escola.status === 'ATIVA' ? 'Ativa' : 'Inativa'}
+                            </span>
+                        </div>
+                    `;
+                    
+                    escolasLista.appendChild(item);
+                });
+                
+                escolasLista.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                document.getElementById('loadingEscolas').innerHTML = `
+                    <div class="py-4 text-center text-red-500">
+                        <i class="ph ph-warning-circle text-xl mb-2"></i>
+                        <p>Erro ao carregar escolas vinculadas.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Função para carregar alunos da cidade
+        async function carregarAlunos(cidadeId, searchTerm = '') {
+            try {
+                // Buscar escolas da cidade primeiro
+                const { data: escolas, error: escolasError } = await supabaseClient
+                    .from('escolas')
+                    .select('id')
+                    .eq('cidade_id', cidadeId)
+                    .is('soft_delete', null);
+                
+                if (escolasError) throw escolasError;
+                
+                if (!escolas || escolas.length === 0) {
+                    document.getElementById('loadingAlunos').classList.add('hidden');
+                    document.getElementById('semAlunos').classList.remove('hidden');
+                    return;
+                }
+                
+                const escolasIds = escolas.map(e => e.id);
+                
+                // Buscar alunos das escolas
+                let query = supabaseClient
+                    .from('alunos')
+                    .select(`
+                        id,
+                        nome_completo,
+                        foto_url,
+                        registro_aluno,
+                        escolas:escola_id (nome),
+                        series:serie (nome),
+                        turmas:turma (nome)
+                    `)
+                    .in('escola_id', escolasIds)
+                    .is('soft_delete', null);
+                
+                // Aplicar filtro de busca se houver
+                if (searchTerm) {
+                    query = query.or(`nome_completo.ilike.%${searchTerm}%,registro_aluno.ilike.%${searchTerm}%`);
+                }
+                
+                // Ordenar por nome
+                query = query.order('nome_completo');
+                
+                const { data: alunos, error: alunosError } = await query;
+                
+                if (alunosError) throw alunosError;
+                
+                // Ocultar loading
+                document.getElementById('loadingAlunos').classList.add('hidden');
+                
+                if (!alunos || alunos.length === 0) {
+                    document.getElementById('semAlunos').classList.remove('hidden');
+                    document.getElementById('alunosLista').classList.add('hidden');
+                    return;
+                }
+                
+                const alunosLista = document.getElementById('alunosLista');
+                alunosLista.innerHTML = '';
+                
+                alunos.forEach(aluno => {
+                    const card = document.createElement('div');
+                    card.className = 'flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors';
+                    
+                    card.innerHTML = `
+                        <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                            ${aluno.foto_url ? 
+                                `<img src="${aluno.foto_url}" alt="${aluno.nome_completo}" class="w-full h-full object-cover">` :
+                                `<div class="w-full h-full flex items-center justify-center">
+                                    <i class="ph ph-user text-gray-400 text-xl"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="flex-grow">
+                            <h4 class="font-medium text-gray-900">${aluno.nome_completo}</h4>
+                            <p class="text-sm text-gray-500">Matrícula: ${aluno.registro_aluno || '-'}</p>
+                            <div class="mt-1 text-sm">
+                                <span class="text-gray-600">${aluno.escolas?.nome || '-'}</span>
+                                <span class="text-gray-400 mx-1">•</span>
+                                <span class="text-gray-600">${aluno.series?.nome || '-'}</span>
+                                <span class="text-gray-400 mx-1">•</span>
+                                <span class="text-gray-600">${aluno.turmas?.nome || '-'}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    alunosLista.appendChild(card);
+                });
+                
+                alunosLista.classList.remove('hidden');
+                document.getElementById('semAlunos').classList.add('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar alunos:', error);
+                document.getElementById('loadingAlunos').innerHTML = `
+                    <div class="py-4 text-center text-red-500">
+                        <i class="ph ph-warning-circle text-xl mb-2"></i>
+                        <p>Erro ao carregar alunos.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para inicializar o sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar
+            initializeSidebar();
+            
+            // Carregar detalhes da cidade
+            carregarDetalhes();
+            
+            // Remover preloader após carregar
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 500);
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Adicionar evento de busca com debounce
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchAlunos');
+            let debounceTimer;
+
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const cidadeId = params.get('id');
+                    carregarAlunos(cidadeId, e.target.value.trim());
+                }, 300);
+            });
+        });
+    </script>
+</body>
+</html> 

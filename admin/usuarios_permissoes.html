@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Gerenciar Permissões</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preloader {
+            transition: opacity 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+        <button id="closePreloader" class="absolute top-4 right-4 p-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300" title="Forçar fechamento">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Loading principal -->
+    <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40 hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="usuarios_ver.html" id="backLink" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Gerenciar Permissões</h1>
+            </div>
+            <button type="button" id="saveBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <i class="ph ph-check"></i>
+                <span>Salvar</span>
+            </button>
+        </div>
+
+        <!-- Estado vazio/erro -->
+        <div id="emptyState" class="hidden card p-12 text-center">
+            <i class="ph ph-warning-circle text-3xl text-amber-500 mb-4"></i>
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Usuário não encontrado</h2>
+            <p class="text-gray-600 mb-6">O usuário que você está procurando não existe ou foi removido.</p>
+            <a href="usuarios.html" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Voltar para lista de usuários
+            </a>
+        </div>
+
+        <!-- Formulário de Permissões -->
+        <div id="permissoesForm" class="space-y-6 hidden">
+            <!-- Informações do Usuário -->
+            <div class="card p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 overflow-hidden">
+                        <img id="userAvatar" src="" alt="" class="w-full h-full object-cover hidden">
+                        <div id="userAvatarPlaceholder" class="w-full h-full flex items-center justify-center bg-blue-100 text-blue-600">
+                            <i class="ph ph-user text-2xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 id="userName" class="text-xl font-semibold text-gray-800">-</h2>
+                        <p id="userType" class="text-gray-600">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs de Permissões -->
+            <div class="card p-6">
+                <div class="border-b border-gray-200 mb-6">
+                    <nav class="flex space-x-4" aria-label="Tabs">
+                        <button type="button" class="px-3 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="cidades">
+                            Cidades
+                            <span id="cidadesCount" class="ml-1 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">0</span>
+                        </button>
+                        <button type="button" class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="escolas">
+                            Escolas
+                            <span id="escolasCount" class="ml-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">0</span>
+                        </button>
+                        <button type="button" class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="turmas">
+                            Turmas
+                            <span id="turmasCount" class="ml-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">0</span>
+                        </button>
+                        <button type="button" class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="alunos">
+                            Alunos
+                            <span id="alunosCount" class="ml-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">0</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Conteúdo das Tabs -->
+                <div class="space-y-6">
+                    <!-- Cidades -->
+                    <div id="cidadesTab" class="tab-content">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="flex-grow">
+                                <select id="cidadeSelect" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Selecione uma cidade...</option>
+                                </select>
+                            </div>
+                            <button type="button" id="addCidade" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <i class="ph ph-plus"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div id="cidadesList" class="space-y-2">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Escolas -->
+                    <div id="escolasTab" class="tab-content hidden">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="flex-grow">
+                                <select id="escolaSelect" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Selecione uma escola...</option>
+                                </select>
+                            </div>
+                            <button type="button" id="addEscola" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <i class="ph ph-plus"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div id="escolasList" class="space-y-2">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Turmas -->
+                    <div id="turmasTab" class="tab-content hidden">
+                        <!-- Filtros de busca -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Filtros</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="turmaCidadeFilter" class="block text-xs text-gray-500 mb-1">Cidade</label>
+                                    <select id="turmaCidadeFilter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="">Todas as cidades</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="turmaEscolaFilter" class="block text-xs text-gray-500 mb-1">Escola</label>
+                                    <select id="turmaEscolaFilter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="">Todas as escolas</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="flex-grow">
+                                <select id="turmaSelect" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Selecione uma turma...</option>
+                                </select>
+                            </div>
+                            <button type="button" id="addTurma" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <i class="ph ph-plus"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div id="turmasList" class="space-y-2">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Lista de Alunos -->
+                    <div id="alunosTab" class="tab-content hidden">
+                        <!-- Filtros de busca -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Filtros</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="alunoCidadeFilter" class="block text-xs text-gray-500 mb-1">Cidade</label>
+                                    <select id="alunoCidadeFilter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="">Todas as cidades</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="alunoEscolaFilter" class="block text-xs text-gray-500 mb-1">Escola</label>
+                                    <select id="alunoEscolaFilter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="">Todas as escolas</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="flex-grow">
+                                <select id="alunoSelect" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Selecione um aluno...</option>
+                                </select>
+                            </div>
+                            <button type="button" id="addAluno" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <i class="ph ph-plus"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div id="alunosList" class="space-y-2">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        let userId;
+        let userData;
+        
+        // Arrays para armazenar as permissões
+        let permissoesCidade = [];
+        let permissoesEscola = [];
+        let permissoesTurma = [];
+        let permissoesAluno = [];
+        
+        // Arrays para armazenar os dados para filtros
+        let todasCidades = [];
+        let todasEscolas = [];
+        let todasTurmas = [];
+        let todosAlunos = [];
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM carregado, iniciando...");
+            
+            // Inicialização do preloader
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                console.log("Preloader encontrado, garantindo que esteja visível");
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            }
+            
+            // Configurar botão de escape do preloader
+            document.getElementById('closePreloader').addEventListener('click', function() {
+                hidePreloader(true);
+            });
+            
+            try {
+                // Inicializar Supabase
+                console.log('Obtendo credenciais do Supabase...');
+                supabase = createSupabaseClient();
+                console.log('Supabase client created successfully');
+                
+                // Inicializar sidebar
+                initializeSidebar();
+                
+                // Obter ID do usuário da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                userId = urlParams.get('id');
+                
+                if (!userId) {
+                    showEmptyState('ID do usuário não fornecido');
+                    hidePreloader();
+                    return;
+                }
+                
+                // Atualizar link de voltar
+                document.getElementById('backLink').href = `usuarios_ver.html?id=${userId}`;
+                
+                // Configurar eventos
+                setupEventListeners();
+                
+                // Carregar dados iniciais
+                await loadInitialData();
+                
+                // Esconder preloader após inicialização
+                hidePreloader();
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao inicializar a página. Por favor, recarregue.', 'error');
+                hidePreloader();
+            }
+        });
+        
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+        
+        // Configurar eventos
+        function setupEventListeners() {
+            // Eventos das tabs
+            setupTabEvents();
+            
+            // Eventos dos botões de adicionar
+            document.getElementById('addCidade').addEventListener('click', () => adicionarPermissao('cidade'));
+            document.getElementById('addEscola').addEventListener('click', () => adicionarPermissao('escola'));
+            document.getElementById('addTurma').addEventListener('click', () => adicionarPermissao('turma'));
+            document.getElementById('addAluno').addEventListener('click', () => adicionarPermissao('aluno'));
+            
+            // Evento do botão salvar
+            document.getElementById('saveBtn').addEventListener('click', salvarPermissoes);
+            
+            // Eventos para os filtros
+            document.getElementById('alunoCidadeFilter').addEventListener('change', filtrarEscolasPorCidadeAluno);
+            document.getElementById('alunoEscolaFilter').addEventListener('change', filtrarAlunosPorEscola);
+        }
+        
+        // Carregar dados iniciais
+        async function loadInitialData() {
+            try {
+                showLoading();
+                
+                // Carregar dados do usuário
+                await loadUserData();
+                
+                // Carregar permissões existentes
+                await loadPermissoes();
+                
+                // Carregar opções dos selects e dados para filtros
+                await Promise.all([
+                    loadCidades(),
+                    loadEscolas(),
+                    loadTurmas()
+                ]);
+
+                // Preencher filtros de alunos iniciais
+                await Promise.all([
+                    preencherCidadesAlunos(),
+                    preencherEscolasAlunos()
+                ]);
+                
+                // Atualizar contadores nas abas
+                atualizarContadores();
+                
+                // Mostrar formulário
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('permissoesForm').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados iniciais:', error);
+                showToast('Erro ao carregar dados: ' + error.message, 'error');
+                showEmptyState('Erro ao carregar dados');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Carregar dados do usuário
+        async function loadUserData() {
+            const { data: usuario, error } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            
+            if (error) throw error;
+            if (!usuario) throw new Error('Usuário não encontrado');
+            
+            userData = usuario;
+            
+            // Preencher dados do usuário
+            const nomeCompleto = `${usuario.nome || ''} ${usuario.sobrenome || ''}`.trim();
+            document.getElementById('userName').textContent = nomeCompleto || 'Nome não informado';
+            document.getElementById('userType').textContent = formatarTipo(usuario.tipo);
+            
+            if (usuario.foto_url) {
+                const avatar = document.getElementById('userAvatar');
+                avatar.src = usuario.foto_url;
+                avatar.alt = nomeCompleto;
+                avatar.classList.remove('hidden');
+                document.getElementById('userAvatarPlaceholder').classList.add('hidden');
+            }
+        }
+        
+        // Carregar permissões existentes
+        async function loadPermissoes() {
+            const [
+                { data: pCidade },
+                { data: pEscola },
+                { data: pTurma },
+                { data: pAluno }
+            ] = await Promise.all([
+                supabase
+                    .from('permissoes_cidade')
+                    .select('*, cidades:cidade_id(id, nome)')
+                    .eq('usuario_id', userId),
+                supabase
+                    .from('permissoes_escola')
+                    .select('*, escolas:escola_id(id, nome)')
+                    .eq('usuario_id', userId),
+                supabase
+                    .from('permissoes_turma')
+                    .select('*, turmas:turma_id(id, nome)')
+                    .eq('usuario_id', userId),
+                supabase
+                    .from('permissoes_aluno')
+                    .select('*, alunos:aluno_id(id, nome_completo, foto_url, escola_id)')
+                    .eq('usuario_id', userId)
+            ]);
+            
+            permissoesCidade = pCidade || [];
+            permissoesEscola = pEscola || [];
+            permissoesTurma = pTurma || [];
+            permissoesAluno = pAluno || [];
+            
+            // Atualizar listas
+            atualizarListaPermissoes('cidade', permissoesCidade);
+            atualizarListaPermissoes('escola', permissoesEscola);
+            atualizarListaPermissoes('turma', permissoesTurma);
+            atualizarListaPermissoes('aluno', permissoesAluno);
+        }
+        
+        // Carregar opções dos selects
+        async function loadCidades() {
+            const { data: cidades } = await supabase
+                .from('cidades')
+                .select('id, nome')
+                .order('nome');
+            
+            todasCidades = cidades || [];
+            preencherSelect('cidadeSelect', todasCidades, permissoesCidade.map(p => p.cidade_id));
+            preencherSelect('turmaCidadeFilter', todasCidades, [], true);
+        }
+        
+        async function loadEscolas() {
+            const { data: escolas } = await supabase
+                .from('escolas')
+                .select('id, nome, cidade_id')
+                .order('nome');
+            
+            todasEscolas = escolas || [];
+            preencherSelect('escolaSelect', todasEscolas, permissoesEscola.map(p => p.escola_id));
+            preencherSelect('turmaEscolaFilter', [], [], true);
+        }
+        
+        async function loadTurmas() {
+            const { data: turmas } = await supabase
+                .from('turmas')
+                .select('id, nome, escola_id')
+                .order('nome');
+            
+            todasTurmas = turmas || [];
+            atualizarSelectTurmas();
+        }
+        
+        // Preencher select
+        function preencherSelect(selectId, items, selectedIds = [], incluirTodos = false) {
+            const select = document.getElementById(selectId);
+            const opcaoTodos = incluirTodos ? `<option value="">Todos</option>` : `<option value="">Selecione...</option>`;
+            
+            const options = items
+                .filter(item => !selectedIds.includes(item.id))
+                .map(item => `<option value="${item.id}">${item.nome}</option>`);
+            
+            select.innerHTML = opcaoTodos + options.join('');
+        }
+        
+        // Filtros para turmas
+        function filtrarEscolasPorCidade() {
+            const cidadeId = document.getElementById('turmaCidadeFilter').value;
+            let escolasFiltradas = [];
+            
+            if (cidadeId) {
+                escolasFiltradas = todasEscolas.filter(escola => escola.cidade_id == cidadeId);
+            } else {
+                escolasFiltradas = todasEscolas;
+            }
+            
+            preencherSelect('turmaEscolaFilter', escolasFiltradas, [], true);
+            
+            // Resetar e atualizar o select de turmas
+            document.getElementById('turmaEscolaFilter').value = "";
+            atualizarSelectTurmas();
+        }
+        
+        function filtrarTurmasPorEscola() {
+            atualizarSelectTurmas();
+        }
+        
+        function atualizarSelectTurmas() {
+            const cidadeId = document.getElementById('turmaCidadeFilter').value;
+            const escolaId = document.getElementById('turmaEscolaFilter').value;
+            let turmasFiltradas = [];
+            
+            // Aplicar filtros
+            if (escolaId) {
+                // Se escola selecionada, filtra por escola
+                turmasFiltradas = todasTurmas.filter(turma => turma.escola_id == escolaId);
+            } else if (cidadeId) {
+                // Se cidade selecionada, filtra todas as turmas de escolas da cidade
+                const escolasDaCidade = todasEscolas.filter(escola => escola.cidade_id == cidadeId).map(e => e.id);
+                turmasFiltradas = todasTurmas.filter(turma => escolasDaCidade.includes(turma.escola_id));
+            } else {
+                // Sem filtro, mostra todas as turmas
+                turmasFiltradas = todasTurmas;
+            }
+            
+            // Remover turmas já associadas
+            const turmasAssociadas = permissoesTurma.map(p => p.turma_id);
+            turmasFiltradas = turmasFiltradas.filter(turma => !turmasAssociadas.includes(turma.id));
+            
+            // Preencher select
+            const select = document.getElementById('turmaSelect');
+            select.innerHTML = '<option value="">Selecione uma turma...</option>';
+            
+            turmasFiltradas.forEach(turma => {
+                const escola = todasEscolas.find(e => e.id === turma.escola_id);
+                const option = document.createElement('option');
+                option.value = turma.id;
+                option.textContent = `${turma.nome} ${escola ? `(${escola.nome})` : ''}`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Adicionar permissão
+        async function adicionarPermissao(tipo) {
+            const select = document.getElementById(`${tipo}Select`);
+            const itemId = select.value;
+            
+            if (!itemId) {
+                showToast(`Selecione um(a) ${tipo} primeiro`, 'error');
+                return;
+            }
+            
+            try {
+                showLoading();
+
+                let query;
+                if (tipo === 'aluno') {
+                    query = supabase
+                        .from('permissoes_aluno')
+                        .insert({
+                            usuario_id: userId,
+                            aluno_id: itemId
+                        })
+                        .select(`
+                            *,
+                            alunos:aluno_id (
+                                id,
+                                nome_completo,
+                                foto_url,
+                                registro_aluno,
+                                escola_id,
+                                escolas:escola_id (
+                                    id,
+                                    nome
+                                )
+                            )
+                        `)
+                        .single();
+                } else {
+                    query = supabase
+                        .from(`permissoes_${tipo}`)
+                        .insert({
+                            usuario_id: userId,
+                            [`${tipo}_id`]: itemId
+                        })
+                        .select(`*, ${tipo}s:${tipo}_id(id, nome)`)
+                        .single();
+                }
+                
+                const { data, error } = await query;
+                
+                if (error) throw error;
+                
+                // Adicionar à lista local
+                switch(tipo) {
+                    case 'cidade':
+                        permissoesCidade.push(data);
+                        break;
+                    case 'escola':
+                        permissoesEscola.push(data);
+                        break;
+                    case 'turma':
+                        permissoesTurma.push(data);
+                        break;
+                    case 'aluno':
+                        permissoesAluno.push(data);
+                        break;
+                }
+                
+                // Atualizar lista e select
+                atualizarListaPermissoes(tipo, eval(`permissoes${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`));
+                
+                // Recarregar dados específicos do tipo
+                if (tipo === 'aluno') {
+                    await atualizarSelectAlunos();
+                } else {
+                    await eval(`load${tipo.charAt(0).toUpperCase() + tipo.slice(1)}s()`);
+                }
+                
+                // Atualizar contadores
+                atualizarContadores();
+                
+                showToast(`${tipo.charAt(0).toUpperCase() + tipo.slice(1)} adicionado(a) com sucesso!`);
+                
+            } catch (error) {
+                console.error(`Erro ao adicionar ${tipo}:`, error);
+                showToast(`Erro ao adicionar ${tipo}: ` + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Remover permissão
+        async function removerPermissao(tipo, id) {
+            try {
+                showLoading();
+                
+                const { error } = await supabase
+                    .from(`permissoes_${tipo}`)
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                // Remover da lista local
+                switch(tipo) {
+                    case 'cidade':
+                        permissoesCidade = permissoesCidade.filter(p => p.id !== id);
+                        break;
+                    case 'escola':
+                        permissoesEscola = permissoesEscola.filter(p => p.id !== id);
+                        break;
+                    case 'turma':
+                        permissoesTurma = permissoesTurma.filter(p => p.id !== id);
+                        break;
+                    case 'aluno':
+                        permissoesAluno = permissoesAluno.filter(p => p.id !== id);
+                        break;
+                }
+                
+                // Atualizar lista e select
+                atualizarListaPermissoes(tipo, eval(`permissoes${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`));
+                
+                // Recarregar dados específicos do tipo
+                if (tipo === 'aluno') {
+                    await atualizarSelectAlunos();
+                } else {
+                    await eval(`load${tipo.charAt(0).toUpperCase() + tipo.slice(1)}s()`);
+                }
+                
+                // Atualizar contadores
+                atualizarContadores();
+                
+                showToast(`${tipo.charAt(0).toUpperCase() + tipo.slice(1)} removido(a) com sucesso!`);
+                
+            } catch (error) {
+                console.error(`Erro ao remover ${tipo}:`, error);
+                showToast(`Erro ao remover ${tipo}: ` + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Atualizar lista de permissões
+        function atualizarListaPermissoes(tipo, permissoes) {
+            const list = document.getElementById(`${tipo}sList`);
+            
+            if (!permissoes || permissoes.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        Nenhum(a) ${tipo} associado(a)
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = permissoes.map(permissao => {
+                const item = permissao[`${tipo}s`];
+                let displayName = 'Nome não disponível';
+                let displayInfo = '';
+
+                if (tipo === 'aluno') {
+                    displayName = item?.nome_completo || 'Nome não disponível';
+                } else {
+                    displayName = item?.nome || 'Nome não disponível';
+                    displayInfo = `ID: ${item?.id || 'N/A'}`;
+                }
+
+                return `
+                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <i class="ph ${getIconForType(tipo)}"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-800">${displayName}</h4>
+                                <p class="text-sm text-gray-500">${displayInfo}</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removerPermissao('${tipo}', ${permissao.id})" 
+                                class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Configurar eventos das tabs
+        function setupTabEvents() {
+            const tabs = document.querySelectorAll('[data-tab]');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remover classes ativas de todas as tabs
+                    tabs.forEach(t => {
+                        t.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                        t.classList.add('text-gray-500');
+                    });
+                    
+                    // Adicionar classes ativas à tab clicada
+                    tab.classList.remove('text-gray-500');
+                    tab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                    
+                    // Esconder todos os conteúdos
+                    contents.forEach(content => content.classList.add('hidden'));
+                    
+                    // Mostrar o conteúdo correspondente
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(`${tabId}Tab`).classList.remove('hidden');
+                });
+            });
+        }
+        
+        // Funções auxiliares
+        function formatarTipo(tipo) {
+            const tipos = {
+                'GESTOR': 'Gestor',
+                'PROFISSIONAL': 'Profissional',
+                'NUTRICIONISTA': 'Nutricionista',
+                'RESPONSAVEL': 'Responsável'
+            };
+            return tipos[tipo] || tipo || 'Não definido';
+        }
+        
+        function getIconForType(tipo) {
+            const icons = {
+                'cidade': 'ph-map-pin',
+                'escola': 'ph-buildings',
+                'turma': 'ph-users-three',
+                'aluno': 'ph-student'
+            };
+            return icons[tipo] || 'ph-circle';
+        }
+        
+        // Funções de UI
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                className: "info",
+                style: {
+                    background: type === 'success' ? "linear-gradient(to right, #00b09b, #96c93d)" : "linear-gradient(to right, #ff5f6d, #ffc371)",
+                }
+            }).showToast();
+        }
+        
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+        
+        function showPreloader() {
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            }
+        }
+        
+        function hidePreloader(immediate = false) {
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                if (immediate) {
+                    preloader.style.display = 'none';
+                } else {
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                    }, 300);
+                }
+            }
+        }
+        
+        function showEmptyState(message) {
+            const emptyState = document.getElementById('emptyState');
+            const permissoesForm = document.getElementById('permissoesForm');
+            
+            if (message) {
+                const paragraph = emptyState.querySelector('p');
+                if (paragraph) {
+                    paragraph.textContent = message;
+                }
+            }
+            
+            emptyState.classList.remove('hidden');
+            permissoesForm.classList.add('hidden');
+        }
+
+        // Função para salvar permissões
+        async function salvarPermissoes() {
+            try {
+                showLoading();
+                showToast('Permissões salvas com sucesso!');
+                setTimeout(() => {
+                    window.location.href = `usuarios_ver.html?id=${userId}`;
+                }, 1500);
+            } catch (error) {
+                console.error('Erro ao salvar permissões:', error);
+                showToast('Erro ao salvar permissões: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Atualizar contadores nas abas
+        function atualizarContadores() {
+            document.getElementById('cidadesCount').textContent = permissoesCidade.length || 0;
+            document.getElementById('escolasCount').textContent = permissoesEscola.length || 0;
+            document.getElementById('turmasCount').textContent = permissoesTurma.length || 0;
+            document.getElementById('alunosCount').textContent = permissoesAluno.length || 0;
+        }
+
+        // Funções para filtros de alunos
+        function filtrarEscolasPorCidadeAluno() {
+            const cidadeId = document.getElementById('alunoCidadeFilter').value;
+            
+            const select = document.getElementById('alunoEscolaFilter');
+            select.innerHTML = '<option value="">Todas as escolas</option>';
+            
+            if (cidadeId) {
+                const escolasFiltradas = todasEscolas.filter(escola => escola.cidade_id == cidadeId);
+                escolasFiltradas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    select.appendChild(option);
+                });
+            } else {
+                todasEscolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    select.appendChild(option);
+                });
+            }
+            
+            // Atualizar lista de alunos
+            atualizarSelectAlunos();
+        }
+        
+        function filtrarAlunosPorEscola() {
+            atualizarSelectAlunos();
+        }
+        
+        async function atualizarSelectAlunos() {
+            const cidadeId = document.getElementById('alunoCidadeFilter').value;
+            const escolaId = document.getElementById('alunoEscolaFilter').value;
+            
+            try {
+                let query = supabase
+                    .from('alunos')
+                    .select(`
+                        id,
+                        nome_completo,
+                        registro_aluno,
+                        escola_id,
+                        escolas:escola_id (
+                            id,
+                            nome,
+                            cidade_id
+                        )
+                    `)
+                    .order('nome_completo');
+                
+                if (escolaId) {
+                    query = query.eq('escola_id', escolaId);
+                } else if (cidadeId) {
+                    const escolasDaCidade = todasEscolas
+                        .filter(escola => escola.cidade_id == cidadeId)
+                        .map(e => e.id);
+                    query = query.in('escola_id', escolasDaCidade);
+                }
+                
+                const { data: alunos, error } = await query;
+                
+                if (error) throw error;
+                
+                todosAlunos = alunos || [];
+                
+                // Remover alunos já associados
+                const alunosAssociados = permissoesAluno.map(p => p.aluno_id);
+                const alunosFiltrados = todosAlunos.filter(aluno => !alunosAssociados.includes(aluno.id));
+                
+                // Preencher select
+                const select = document.getElementById('alunoSelect');
+                select.innerHTML = '<option value="">Selecione um aluno...</option>';
+                
+                alunosFiltrados.forEach(aluno => {
+                    const option = document.createElement('option');
+                    option.value = aluno.id;
+                    option.textContent = `${aluno.nome_completo} - ${aluno.registro_aluno} (${aluno.escolas?.nome || 'Escola não informada'})`;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao atualizar select de alunos:', error);
+                showToast('Erro ao carregar alunos', 'error');
+            }
+        }
+
+        // Função para carregar cidades no filtro de alunos
+        async function preencherCidadesAlunos() {
+            try {
+                const { data: cidades, error } = await supabase
+                    .from('cidades')
+                    .select('id, nome')
+                    .order('nome');
+
+                if (error) throw error;
+
+                const select = document.getElementById('alunoCidadeFilter');
+                select.innerHTML = '<option value="">Todas as cidades</option>';
+                
+                cidades?.forEach(cidade => {
+                    const option = document.createElement('option');
+                    option.value = cidade.id;
+                    option.textContent = cidade.nome;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar cidades:', error);
+                showToast('Erro ao carregar cidades', 'error');
+            }
+        }
+
+        // Função para carregar escolas no filtro de alunos
+        async function preencherEscolasAlunos() {
+            try {
+                const { data: escolas, error } = await supabase
+                    .from('escolas')
+                    .select('id, nome, cidade_id')
+                    .order('nome');
+
+                if (error) throw error;
+
+                const select = document.getElementById('alunoEscolaFilter');
+                select.innerHTML = '<option value="">Todas as escolas</option>';
+                
+                escolas?.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                showToast('Erro ao carregar escolas', 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

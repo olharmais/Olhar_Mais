@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Painel Administrativo</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container {
+            min-height: 300px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+            <div class="flex items-center gap-3">
+                <button id="atualizarDados" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-arrows-clockwise"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Cards de Métricas Principais -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total de Alunos -->
+            <div class="card p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Total de Alunos</h3>
+                    <i class="ph ph-student text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-alunos">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-trend-up mr-1"></i>
+                    <span id="novos-alunos">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Total de Escolas -->
+            <div class="card p-6 bg-gradient-to-br from-green-500 to-green-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Total de Escolas</h3>
+                    <i class="ph ph-buildings text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-escolas">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-chart-bar mr-1"></i>
+                    <span id="total-escolas-info">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Dispositivos Ativos -->
+            <div class="card p-6 bg-gradient-to-br from-purple-500 to-purple-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Dispositivos Ativos</h3>
+                    <i class="ph ph-device-mobile-camera text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-dispositivos">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-activity mr-1"></i>
+                    <span id="dispositivos-status">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Registros Hoje -->
+            <div class="card p-6 bg-gradient-to-br from-red-500 to-red-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Registros Hoje</h3>
+                    <i class="ph ph-clock text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-registros">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-chart-line-up mr-1"></i>
+                    <span id="registros-hora">Carregando...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Segunda Linha de Métricas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total de Alunos Presentes -->
+            <div class="card p-6 bg-gradient-to-br from-amber-500 to-amber-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Alunos Presentes</h3>
+                    <i class="ph ph-users text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-alunos-presentes">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-percent mr-1"></i>
+                    <span id="percentual-presenca">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Total de Séries -->
+            <div class="card p-6 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Total de Séries</h3>
+                    <i class="ph ph-book-bookmark text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-series">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-books mr-1"></i>
+                    <span id="series-info">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Total de Turmas -->
+            <div class="card p-6 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Total de Turmas</h3>
+                    <i class="ph ph-chalkboard-teacher text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-turmas">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-users-three mr-1"></i>
+                    <span id="turmas-info">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Total de Usuários -->
+            <div class="card p-6 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white metric-card animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium">Total de Usuários</h3>
+                    <i class="ph ph-user-circle text-3xl opacity-80"></i>
+                </div>
+                <p class="text-3xl font-bold" id="total-usuarios">...</p>
+                <div class="flex items-center mt-2 text-sm opacity-80">
+                    <i class="ph ph-users mr-1"></i>
+                    <span id="usuarios-info">Carregando...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos e Análises -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Gráfico de Registros por Hora -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Alunos por Cidade</h3>
+                <div class="chart-container" id="chart-registros-hora"></div>
+            </div>
+
+            <!-- Gráfico de Alunos por Série -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Alunos por Série</h3>
+                <div class="chart-container" id="chart-alunos-serie"></div>
+            </div>
+
+            <!-- Gráfico de Dispositivos por Status -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Dispositivos por Status</h3>
+                <div class="chart-container" id="chart-dispositivos-status"></div>
+            </div>
+
+            <!-- Gráfico de Escolas por Cidade -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Escolas por Cidade</h3>
+                <div class="chart-container" id="chart-escolas-cidade"></div>
+            </div>
+
+            <!-- Gráfico de Câmeras por Tipo -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Câmeras por Tipo</h3>
+                <div class="chart-container" id="chart-cameras-tipo"></div>
+            </div>
+
+            <!-- Gráfico de Logs por Dia -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Logs por Dia</h3>
+                <div class="chart-container" id="chart-logs-dia"></div>
+            </div>
+        </div>
+
+        <!-- Mais Métricas -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Status do Sistema -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Status do Sistema</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Banco de Dados</span>
+                        <span id="status-db" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                            <i class="ph ph-circle-notch animate-spin"></i> Verificando...
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">API WhatsApp</span>
+                        <span id="status-whatsapp" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                            <i class="ph ph-circle-notch animate-spin"></i> Verificando...
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Dispositivos Online</span>
+                        <span id="status-devices" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                            <i class="ph ph-circle-notch animate-spin"></i> Verificando...
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Escolas -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Top Escolas</h3>
+                <div class="space-y-4" id="top-escolas">
+                    <div class="flex items-center justify-center h-32">
+                        <i class="ph ph-circle-notch animate-spin text-2xl text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Últimos Logs -->
+            <div class="card p-6 animate-fade-in">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Últimos Logs</h3>
+                <div class="space-y-4" id="ultimas-atividades">
+                    <div class="flex items-center justify-center h-32">
+                        <i class="ph ph-circle-notch animate-spin text-2xl text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+        
+        // Variáveis para os gráficos
+        let chartRegistrosHora;
+        let chartAlunosSerie;
+        let chartDispositivosStatus;
+        let chartEscolasCidade;
+        let chartCamerasTipo;
+        let chartLogsDia;
+        
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Função para atualizar métricas
+        async function updateMetrics() {
+            try {
+                // Buscar dados do Supabase com queries mais completas usando views
+                const [
+                    { data: alunos },
+                    { data: dispositivos },
+                    { data: logs_recentes },
+                    { data: series },
+                    { data: cameras },
+                    { data: dias_logs },
+                    { data: escolas_resumo }
+                ] = await Promise.all([
+                    supabaseClient
+                        .from('alunos')
+                        .select('*, escolas!inner(*), series(*), turmas(*)')
+                        .is('soft_delete', null),
+                    supabaseClient
+                        .from('dispositivos')
+                        .select('*')
+                        .is('soft_delete', null),
+                    supabaseClient
+                        .from('view_alunos_logs')
+                        .select('*')
+                        .order('hora_check', { ascending: false })
+                        .limit(1000),
+                    supabaseClient
+                        .from('series')
+                        .select('*')
+                        .is('soft_delete', null),
+                    supabaseClient
+                        .from('cameras')
+                        .select('*')
+                        .is('soft_delete', null),
+                    supabaseClient
+                        .from('dias_com_logs')
+                        .select('*')
+                        .order('data', { ascending: false })
+                        .limit(30),
+                    supabaseClient
+                        .from('view_escolas_resumo')
+                        .select('*')
+                ]);
+
+                // Atualizar métricas principais com dados mais precisos
+                updateMainMetrics(alunos, dispositivos, logs_recentes);
+                
+                // Atualizar todos os gráficos
+                updateCharts(logs_recentes, alunos, series, dispositivos, cameras, dias_logs);
+                
+                // Atualizar status do sistema
+                updateSystemStatus(dispositivos, cameras);
+                
+                // Atualizar top escolas com mais contexto usando view_escolas_resumo
+                updateTopEscolas(escolas_resumo);
+                
+                // Atualizar últimas atividades com mais detalhes usando view_alunos_logs
+                updateUltimasAtividades(logs_recentes);
+
+                showToast('Dados atualizados com sucesso!');
+            } catch (error) {
+                console.error('Erro ao atualizar métricas:', error);
+                showToast('Erro ao atualizar dados', 'error');
+            }
+        }
+
+        // Função para atualizar métricas principais
+        async function updateMainMetrics(alunos, dispositivos, logs_recentes) {
+            try {
+                // Total de alunos e novos alunos
+                const totalAlunos = alunos?.length || 0;
+                const novosAlunos = alunos?.filter(a => {
+                    const created = new Date(a.created_at);
+                    const now = new Date();
+                    return created.getMonth() === now.getMonth();
+                }).length || 0;
+
+                document.getElementById('total-alunos').textContent = totalAlunos;
+                document.getElementById('novos-alunos').innerHTML = `+${novosAlunos} novos este mês`;
+
+                // Total de escolas
+                const { data: escolas } = await supabaseClient
+                    .from('escolas')
+                    .select('id')
+                    .is('soft_delete', null);
+                
+                const totalEscolas = escolas?.length || 0;
+                document.getElementById('total-escolas').textContent = totalEscolas;
+                document.getElementById('total-escolas-info').textContent = `Total de escolas no sistema`;
+
+                // Dispositivos ativos
+                const totalDispositivos = dispositivos?.length || 0;
+                const dispositivosAtivos = dispositivos?.filter(d => 
+                    d.status === 'ativo' || d.status === 'ATIVO'
+                ).length || 0;
+                
+                document.getElementById('total-dispositivos').textContent = dispositivosAtivos;
+                document.getElementById('dispositivos-status').textContent = 
+                    `${dispositivosAtivos} de ${totalDispositivos}`;
+
+                // Registros hoje
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                const amanha = new Date(hoje);
+                amanha.setDate(amanha.getDate() + 1);
+                
+                const registrosHoje = logs_recentes?.filter(log => {
+                    const dataLog = new Date(log.hora_check);
+                    return dataLog >= hoje && dataLog < amanha;
+                }).length || 0;
+
+                document.getElementById('total-registros').textContent = registrosHoje;
+                document.getElementById('registros-hora').textContent = 
+                    `Média de ${Math.round(registrosHoje / 24)} por hora`;
+
+                // Alunos presentes hoje (usando view_metricas_cidade)
+                const { data: metricas } = await supabaseClient
+                    .from('view_metricas_cidade')
+                    .select('presentes_hoje, total_alunos');
+
+                const totalPresentes = metricas?.reduce((sum, m) => sum + (m.presentes_hoje || 0), 0) || 0;
+                const totalAlunosSistema = metricas?.reduce((sum, m) => sum + (m.total_alunos || 0), 0) || 0;
+                const percentualPresenca = totalAlunosSistema > 0 
+                    ? Math.round((totalPresentes / totalAlunosSistema) * 100) 
+                    : 0;
+
+                document.getElementById('total-alunos-presentes').textContent = totalPresentes;
+                document.getElementById('percentual-presenca').textContent = 
+                    `${percentualPresenca}% dos alunos`;
+
+                // Total de séries
+                const { data: series } = await supabaseClient
+                    .from('series')
+                    .select('id')
+                    .is('soft_delete', null);
+
+                const totalSeries = series?.length || 0;
+                document.getElementById('total-series').textContent = totalSeries;
+                document.getElementById('series-info').textContent = 
+                    `Total de séries cadastradas`;
+
+                // Total de turmas
+                const { data: turmas } = await supabaseClient
+                    .from('turmas')
+                    .select('id')
+                    .is('soft_delete', null);
+
+                const totalTurmas = turmas?.length || 0;
+                document.getElementById('total-turmas').textContent = totalTurmas;
+                document.getElementById('turmas-info').textContent = 
+                    `Total de turmas ativas`;
+
+                // Total de usuários
+                const { data: usuarios } = await supabaseClient
+                    .from('usuarios')
+                    .select('count')
+                    .in('status', ['Ativo', 'Inativo'])
+                    .single();
+
+                const totalUsuarios = usuarios?.count || 0;
+                document.getElementById('total-usuarios').textContent = totalUsuarios;
+                document.getElementById('usuarios-info').textContent = 
+                    `Total de usuários cadastrados`;
+
+            } catch (error) {
+                console.error('Erro ao atualizar métricas:', error);
+                showToast('Erro ao atualizar algumas métricas', 'error');
+            }
+        }
+
+        // Função para atualizar gráficos
+        function updateCharts(logs, alunos, series, dispositivos, cameras, dias_logs) {
+            // Gráfico de registros por hora (já existente)
+            updateRegistrosHoraChart(logs);
+            
+            // Gráfico de alunos por série (já existente)
+            updateAlunosSerieChart(alunos, series);
+            
+            // Gráfico de dispositivos por status (novo)
+            updateDispositivosStatusChart(dispositivos);
+            
+            // Gráfico de escolas por cidade (novo)
+            updateEscolasCidadeChart(alunos, series);
+            
+            // Gráfico de câmeras por tipo (novo)
+            updateCamerasTipoChart(cameras);
+            
+            // Gráfico de logs por dia (novo)
+            updateLogsDiaChart(dias_logs);
+        }
+
+        // Funções individuais para cada gráfico
+        function updateRegistrosHoraChart(logs) {
+            // Buscar dados da view_metricas_cidade
+            supabaseClient
+                .from('view_metricas_cidade')
+                .select('*')
+                .then(({ data: cidades, error }) => {
+                    if (error) {
+                        console.error('Erro ao buscar métricas por cidade:', error);
+                        return;
+                    }
+
+                    const options = {
+                        series: [{
+                            name: 'Alunos',
+                            data: cidades.map(cidade => cidade.total_alunos)
+                        }],
+                        chart: {
+                            height: 300,
+                            type: 'bar',
+                            animations: {
+                                enabled: true,
+                                easing: 'easeinout',
+                                speed: 800
+                            },
+                            toolbar: {
+                                show: false
+                            }
+                        },
+                        colors: ['#2159E2'],
+                        plotOptions: {
+                            bar: {
+                                borderRadius: 8,
+                                columnWidth: '60%',
+                                distributed: true
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        xaxis: {
+                            categories: cidades.map(cidade => cidade.cidade_nome),
+                            labels: {
+                                style: {
+                                    fontSize: '12px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            title: {
+                                text: 'Total de Alunos'
+                            }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: function(val) {
+                                    return val + " alunos"
+                                }
+                            }
+                        }
+                    };
+
+                    if (chartRegistrosHora) {
+                        chartRegistrosHora.updateOptions(options);
+                    } else {
+                        chartRegistrosHora = new ApexCharts(
+                            document.querySelector("#chart-registros-hora"), 
+                            options
+                        );
+                        chartRegistrosHora.render();
+                    }
+                });
+        }
+
+        function updateAlunosSerieChart(alunos, series) {
+            const alunosPorSerie = {};
+            
+            // Inicializar contadores para cada série
+            series?.forEach(serie => {
+                alunosPorSerie[serie.nome] = 0;
+            });
+            
+            // Contar alunos por série
+            alunos?.forEach(aluno => {
+                const serie = series?.find(s => s.id === aluno.serie);
+                if (serie?.nome) {
+                    alunosPorSerie[serie.nome]++;
+                }
+            });
+
+            const options = {
+                series: [{
+                    name: 'Alunos',
+                    data: Object.values(alunosPorSerie)
+                }],
+                chart: {
+                    height: 300,
+                    type: 'bar',
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 800
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                colors: ['#2159E2'],
+                plotOptions: {
+                    bar: {
+                        borderRadius: 8,
+                        columnWidth: '60%',
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                xaxis: {
+                    categories: Object.keys(alunosPorSerie)
+                },
+                yaxis: {
+                    title: {
+                        text: 'Número de Alunos'
+                    }
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + " alunos"
+                        }
+                    }
+                }
+            };
+
+            // Criar ou atualizar o gráfico
+            if (chartAlunosSerie) {
+                chartAlunosSerie.updateOptions(options);
+            } else {
+                chartAlunosSerie = new ApexCharts(
+                    document.querySelector("#chart-alunos-serie"), 
+                    options
+                );
+                chartAlunosSerie.render();
+            }
+        }
+
+        function updateDispositivosStatusChart(dispositivos) {
+            const statusCount = {
+                'ATIVO': 0,
+                'INATIVO': 0,
+                'MANUTENCAO': 0
+            };
+            
+            dispositivos?.forEach(d => {
+                statusCount[d.status] = (statusCount[d.status] || 0) + 1;
+            });
+
+            const options = {
+                series: Object.values(statusCount),
+                chart: {
+                    height: 300,
+                    type: 'donut',
+                },
+                labels: Object.keys(statusCount),
+                colors: ['#2159E2', '#21B6E2', '#21E2B6'],
+                legend: {
+                    position: 'bottom'
+                }
+            };
+
+            if (chartDispositivosStatus) {
+                chartDispositivosStatus.updateOptions(options);
+            } else {
+                chartDispositivosStatus = new ApexCharts(
+                    document.querySelector("#chart-dispositivos-status"), 
+                    options
+                );
+                chartDispositivosStatus.render();
+            }
+        }
+
+        function updateEscolasCidadeChart(alunos, series) {
+            // Buscar dados da view_metricas_cidade
+            supabaseClient
+                .from('view_metricas_cidade')
+                .select('*')
+                .then(({ data: cidades, error }) => {
+                    if (error) {
+                        console.error('Erro ao buscar métricas por cidade:', error);
+                        return;
+                    }
+
+                    const options = {
+                        series: [{
+                            name: 'Escolas',
+                            data: cidades.map(cidade => cidade.total_escolas)
+                        }],
+                        chart: {
+                            height: 300,
+                            type: 'bar',
+                            animations: {
+                                enabled: true,
+                                easing: 'easeinout',
+                                speed: 800
+                            },
+                            toolbar: {
+                                show: false
+                            }
+                        },
+                        colors: ['#2159E2'],
+                        plotOptions: {
+                            bar: {
+                                borderRadius: 8,
+                                columnWidth: '60%',
+                                distributed: true
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        xaxis: {
+                            categories: cidades.map(cidade => cidade.cidade_nome),
+                            labels: {
+                                style: {
+                                    fontSize: '12px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            title: {
+                                text: 'Total de Escolas'
+                            }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: function(val) {
+                                    return val + " escolas"
+                                }
+                            }
+                        }
+                    };
+
+                    if (chartEscolasCidade) {
+                        chartEscolasCidade.updateOptions(options);
+                    } else {
+                        chartEscolasCidade = new ApexCharts(
+                            document.querySelector("#chart-escolas-cidade"), 
+                            options
+                        );
+                        chartEscolasCidade.render();
+                    }
+                });
+        }
+
+        function updateCamerasTipoChart(cameras) {
+            const camerasPorTipo = {};
+            cameras?.forEach(camera => {
+                camerasPorTipo[camera.tipo] = (camerasPorTipo[camera.tipo] || 0) + 1;
+            });
+
+            const options = {
+                series: Object.values(camerasPorTipo),
+                chart: {
+                    height: 300,
+                    type: 'pie',
+                },
+                labels: Object.keys(camerasPorTipo),
+                colors: ['#2159E2', '#21B6E2', '#4B21E2', '#21E2B6'],
+                legend: {
+                    position: 'bottom'
+                }
+            };
+
+            if (chartCamerasTipo) {
+                chartCamerasTipo.updateOptions(options);
+            } else {
+                chartCamerasTipo = new ApexCharts(
+                    document.querySelector("#chart-cameras-tipo"), 
+                    options
+                );
+                chartCamerasTipo.render();
+            }
+        }
+
+        function updateLogsDiaChart(dias_logs) {
+            const data = dias_logs?.map(dia => ({
+                x: new Date(dia.data).getTime(),
+                y: dia.qtd_logs
+            })).sort((a, b) => a.x - b.x);
+
+            const options = {
+                series: [{
+                    name: 'Logs',
+                    data: data
+                }],
+                chart: {
+                    height: 300,
+                    type: 'line',
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3,
+                    colors: ['#2159E2']
+                },
+                colors: ['#2159E2'],
+                xaxis: {
+                    type: 'datetime'
+                },
+                yaxis: {
+                    title: {
+                        text: 'Quantidade de Logs'
+                    }
+                }
+            };
+
+            if (chartLogsDia) {
+                chartLogsDia.updateOptions(options);
+            } else {
+                chartLogsDia = new ApexCharts(
+                    document.querySelector("#chart-logs-dia"), 
+                    options
+                );
+                chartLogsDia.render();
+            }
+        }
+
+        // Função para atualizar status do sistema
+        async function updateSystemStatus(dispositivos, cameras) {
+            try {
+                // Verificar conexão com banco
+                const { data, error } = await supabaseClient
+                    .from('alunos')
+                    .select('id')
+                    .limit(1);
+
+                document.getElementById('status-db').className = 
+                    `px-2 py-1 ${error ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} rounded-full text-sm`;
+                document.getElementById('status-db').innerHTML = 
+                    error ? '<i class="ph ph-x-circle"></i> Erro' : '<i class="ph ph-check-circle"></i> Conectado';
+
+                // Para a API do WhatsApp, apenas indicar "Disponível" já que não podemos verificar devido ao CORS
+                document.getElementById('status-whatsapp').className = 
+                    'px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm';
+                document.getElementById('status-whatsapp').innerHTML = 
+                    '<i class="ph ph-check-circle"></i> Disponível';
+
+                // Verificar dispositivos
+                const { data: dispositivos } = await supabaseClient
+                    .from('dispositivos')
+                    .select('*');
+
+                // Filtrar dispositivos ativos localmente
+                const dispositivosAtivos = dispositivos?.filter(d => d.status === 'ativo') || [];
+                const totalDispositivos = dispositivosAtivos.length;
+
+                document.getElementById('status-devices').className = 
+                    `px-2 py-1 ${totalDispositivos === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} rounded-full text-sm`;
+                document.getElementById('status-devices').innerHTML = 
+                    `<i class="ph ph-${totalDispositivos === 0 ? 'warning' : 'check'}-circle"></i> ${totalDispositivos} online`;
+
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+                // Atualizar status para erro
+                ['status-db', 'status-devices'].forEach(id => {
+                    document.getElementById(id).className = 'px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm';
+                    document.getElementById(id).innerHTML = '<i class="ph ph-x-circle"></i> Erro';
+                });
+                
+                // O status do WhatsApp continua como disponível, pois não podemos verificar
+                document.getElementById('status-whatsapp').className = 
+                    'px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-sm';
+                document.getElementById('status-whatsapp').innerHTML = 
+                    '<i class="ph ph-question"></i> Não verificado';
+            }
+        }
+
+        // Função para atualizar top escolas (usando view_escolas_resumo)
+        function updateTopEscolas(escolas_resumo) {
+            // Se não há dados, mostrar mensagem amigável
+            if (!escolas_resumo?.length) {
+                document.getElementById('top-escolas').innerHTML = 
+                    '<p class="text-gray-500 text-center">Nenhuma escola encontrada</p>';
+                return;
+            }
+
+            console.log("Atualizando top escolas com", escolas_resumo.length, "escolas do resumo");
+
+            // Ordenar por número de alunos
+            const topEscolas = escolas_resumo
+                .sort((a, b) => b.total_alunos - a.total_alunos)
+                .slice(0, 5);
+
+            const container = document.getElementById('top-escolas');
+            
+            if (topEscolas.length > 0) {
+                container.innerHTML = topEscolas.map((escola, index) => `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
+                                ${index + 1}
+                            </span>
+                            <span class="ml-3 text-gray-700">${escola.escola_nome || 'Escola não identificada'}</span>
+                        </div>
+                        <span class="text-gray-500 text-sm">${escola.total_alunos || 0} alunos</span>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma escola encontrada</p>';
+            }
+        }
+
+        // Função para atualizar últimas atividades
+        function updateUltimasAtividades(logs_recentes) {
+            if (!logs_recentes?.length) {
+                document.getElementById('ultimas-atividades').innerHTML = 
+                    '<p class="text-gray-500 text-center">Nenhuma atividade recente</p>';
+                return;
+            }
+
+            console.log("Atualizando logs com", logs_recentes.length, "logs recentes");
+            console.log("Exemplo de log:", logs_recentes[0]);
+
+            // Já temos as informações completas de cada log através da view
+            const ultimosLogs = logs_recentes
+                .slice(0, 5)
+                .map(log => {
+                    // Garantir que a data é válida
+                    let dataLog = null;
+                    try {
+                        // Usar o campo hora_check da view_alunos_logs
+                        dataLog = new Date(log.hora_check);
+                        // Verificar se a data é válida
+                        if (isNaN(dataLog.getTime())) {
+                            throw new Error("Data inválida");
+                        }
+                    } catch (e) {
+                        console.warn("Data inválida encontrada:", log.hora_check);
+                        dataLog = new Date(); // fallback para data atual
+                    }
+
+                    // Formatar horário no padrão brasileiro usando Intl.DateTimeFormat
+                    const formatadorData = new Intl.DateTimeFormat('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+
+                    return {
+                        nome: log.nome_aluno || 'Aluno não identificado',
+                        foto: log.foto_aluno || '/images/default-avatar.png',
+                        escola: log.nome_colégio || 'Escola não identificada',
+                        horario: formatadorData.format(dataLog)
+                    };
+                });
+            
+            const container = document.getElementById('ultimas-atividades');
+            
+            if (ultimosLogs.length > 0) {
+                container.innerHTML = ultimosLogs.map(log => `
+                    <div class="flex items-start space-x-3 mb-3">
+                        <div class="flex-shrink-0">
+                            <img src="${log.foto}" 
+                                alt="${log.nome}"
+                                class="w-10 h-10 rounded-full object-cover"
+                                onerror="this.src='/images/default-avatar.png'">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">
+                                ${log.nome}
+                            </p>
+                            <p class="text-xs text-gray-600 truncate">
+                                ${log.escola}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                ${log.horario}
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center">Nenhum log recente</p>';
+            }
+        }
+
+        // Função para inicializar o sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar
+            initializeSidebar();
+            
+            // Carregar dados iniciais
+            updateMetrics();
+            
+            // Configurar botão de atualizar
+            document.getElementById('atualizarDados').addEventListener('click', () => {
+                const btn = document.getElementById('atualizarDados');
+                const icon = btn.querySelector('i');
+                
+                // Adiciona classe de rotação
+                icon.classList.add('animate-spin');
+                btn.disabled = true;
+                
+                // Atualiza os dados
+                updateMetrics().finally(() => {
+                    // Remove classe de rotação após 1 segundo
+                    setTimeout(() => {
+                        icon.classList.remove('animate-spin');
+                        btn.disabled = false;
+                    }, 1000);
+                });
+            });
+            
+            // Remover preloader
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 500);
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+    </script>
+</body>
+</html>

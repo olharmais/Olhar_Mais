@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Nutricionista</title>
+    <meta name="description" content="OlharMais - Dashboard Nutricionista">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        
+        /* Ajuste para o navbar mobile */
+        body {
+            padding-bottom: 60px; /* Altura do navbar + margem */
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+
+        /* Estilo dos Stories */
+        .story-circle {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            padding: 3px;
+            background: linear-gradient(45deg, #005ae2, #3988ff);
+            cursor: pointer;
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .story-circle .inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            padding: 2px;
+            overflow: hidden;
+        }
+        
+        .story-circle video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .story-circle .title {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 4px;
+            color: #4b5563;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Modal de Stories */
+        .stories-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: black;
+            display: none;
+        }
+
+        .stories-modal.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stories-header {
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
+        }
+
+        .stories-progress {
+            position: absolute;
+            top: 0.5rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            z-index: 3;
+        }
+
+        .stories-progress-bar {
+            height: 100%;
+            background: white;
+            width: 0;
+            transition: width linear;
+        }
+
+        .stories-content {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stories-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .stories-nav {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            z-index: 1;
+        }
+
+        .stories-nav-prev,
+        .stories-nav-next {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .stories-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            margin-left: auto;
+        }
+
+        .story-escola-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+        }
+
+        .story-escola-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            overflow: hidden;
+        }
+
+        .story-escola-nome {
+            font-weight: 500;
+        }
+
+        .story-time {
+            font-size: 0.875rem;
+            opacity: 0.7;
+        }
+
+        .stories-container {
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            white-space: nowrap;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .stories-container::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center">
+            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+            <div class="ml-auto">
+                <button onclick="window.location.href='notificacoes_nutri.html'" class="text-gray-600 hover:text-primary transition-colors relative">
+                    <i class="ph ph-bell text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Stories -->
+        <div class="stories-container overflow-x-auto whitespace-nowrap pb-2 -mx-4 px-4 mb-4">
+            <div id="stories-list" class="inline-flex gap-3">
+                <!-- Stories serão inseridos aqui via JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Boas-vindas -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Olá, <span id="nome-usuario" class="text-primary">Nutricionista</span></h2>
+            <p class="text-gray-600">Confira o resumo das suas escolas</p>
+        </div>
+        
+        <!-- Cards de Métricas -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <!-- Total de Escolas -->
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-[#4285F4]/10 rounded-full flex items-center justify-center">
+                        <i class="ph ph-buildings text-xl text-[#4285F4]"></i>
+                    </div>
+                    <span class="text-xs text-[#4285F4]/70">Total</span>
+                </div>
+                <h3 id="total-escolas" class="text-2xl font-bold text-gray-800">0</h3>
+                <p class="text-sm text-[#4285F4]">Escolas</p>
+            </div>
+            
+            <!-- Total de Turmas -->
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#DB4437] hover:bg-[#DB4437]/5 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-[#DB4437]/10 rounded-full flex items-center justify-center">
+                        <i class="ph ph-users-three text-xl text-[#DB4437]"></i>
+                    </div>
+                    <span class="text-xs text-[#DB4437]/70">Total</span>
+                </div>
+                <h3 id="total-turmas" class="text-2xl font-bold text-gray-800">0</h3>
+                <p class="text-sm text-[#DB4437]">Turmas</p>
+            </div>
+            
+            <!-- Total de Alunos -->
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#F4B400] hover:bg-[#F4B400]/5 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-[#F4B400]/10 rounded-full flex items-center justify-center">
+                        <i class="ph ph-student text-xl text-[#F4B400]"></i>
+                    </div>
+                    <span class="text-xs text-[#F4B400]/70">Total</span>
+                </div>
+                <h3 id="total-alunos" class="text-2xl font-bold text-gray-800">0</h3>
+                <p class="text-sm text-[#F4B400]">Alunos</p>
+            </div>
+            
+            <!-- Presença Hoje -->
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#0F9D58] hover:bg-[#0F9D58]/5 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-[#0F9D58]/10 rounded-full flex items-center justify-center">
+                        <i class="ph ph-check-circle text-xl text-[#0F9D58]"></i>
+                    </div>
+                    <span class="text-xs text-[#0F9D58]/70">Hoje</span>
+                </div>
+                <h3 id="presenca-hoje" class="text-2xl font-bold text-gray-800">0%</h3>
+                <p class="text-sm text-[#0F9D58]">Presença</p>
+            </div>
+        </div>
+        
+        <!-- Ações Rápidas -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Ações Rápidas</h3>
+            <div class="grid grid-cols-1 gap-3">
+                <a href="/nutricionista/frequencia_nutri.html" class="bg-white rounded-lg p-4 shadow-sm flex items-center">
+                    <div class="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center mr-4">
+                        <i class="ph ph-calendar-check text-xl text-primary"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <h4 class="font-medium text-gray-800">Verificar Frequência</h4>
+                        <p class="text-sm text-gray-600">Consulte a presença por turma</p>
+                    </div>
+                    <i class="ph ph-caret-right text-gray-400"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Resumo por Escola -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo por Escola</h3>
+            <div id="escolas-container" class="grid grid-cols-1 gap-3">
+                <!-- Escolas serão inseridas aqui via JavaScript -->
+            </div>
+        </div>
+    </main>
+    
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_nutri.js"></script>
+    
+    <!-- Fallback: iframe com navbar (oculto se JS alternativo funcionar) -->
+    <iframe id="navbar-iframe" src="navbar_nutri.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
+    
+    <!-- Modal de Stories -->
+    <div class="stories-modal">
+        <div class="stories-progress">
+            <div class="stories-progress-bar"></div>
+        </div>
+        
+        <div class="stories-header">
+            <div class="story-escola-info">
+                <div class="story-escola-avatar">
+                    <img src="/assets/img/escola-placeholder.png" alt="Logo da escola">
+                </div>
+                <div>
+                    <div class="story-escola-nome">Nome da Cidade</div>
+                    <div class="story-time">há 2 horas</div>
+                </div>
+            </div>
+            <button class="stories-close">
+                <i class="ph ph-x text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="stories-content">
+            <video class="stories-video" playsinline></video>
+            <div class="stories-nav">
+                <div class="stories-nav-prev"></div>
+                <div class="stories-nav-next"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Ocultar o iframe se o JS alternativo carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof adicionarBarraNavegacao === 'function') {
+                const iframe = document.getElementById('navbar-iframe');
+                if (iframe) iframe.style.display = 'none';
+            }
+        });
+    
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            }
+        };
+        
+        // Carregar dados do dashboard
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é NUTRICIONISTA
+                if (userData.tipo !== 'NUTRICIONISTA') {
+                    console.error('Usuário não é NUTRICIONISTA');
+                    Toast.show('Acesso não autorizado para este perfil', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+                
+                // Atualizar nome do usuário
+                document.getElementById('nome-usuario').textContent = userData.nome || 'Nutricionista';
+                
+                // Inicializar Supabase
+                const supabase = createSupabaseClient();
+                
+                // Buscar escolas permitidas, turmas permitidas e todas as escolas para referência futura
+                const [
+                    { data: permissoesCidade, error: errorPermissoesCidade },
+                    { data: permissoesEscola, error: errorPermissoesEscola },
+                    { data: permissoesTurma, error: errorPermissoesTurma },
+                    { data: todasEscolas, error: errorTodasEscolas }
+                ] = await Promise.all([
+                    supabase.from('permissoes_cidade').select('cidade_id').eq('usuario_id', userData.id),
+                    supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userData.id),
+                    supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userData.id),
+                    supabase.from('escolas').select('id, nome, cidade_id')
+                ]);
+                
+                if (errorPermissoesCidade || errorPermissoesEscola || errorPermissoesTurma || errorTodasEscolas) {
+                    console.error('Erro ao buscar permissões:', {
+                        errorPermissoesCidade, 
+                        errorPermissoesEscola, 
+                        errorPermissoesTurma,
+                        errorTodasEscolas
+                    });
+                    throw new Error('Erro ao buscar permissões');
+                }
+
+                // Determinar as escolas permitidas com base nas permissões
+                let escolasPermitidas = [];
+                let turmasPermitidas = [];
+                let modoAcesso = 'turma'; // 'cidade', 'escola', ou 'turma'
+
+                // Caso 1: Permissão por cidade - acesso a todas as escolas das cidades permitidas
+                if (permissoesCidade && permissoesCidade.length > 0) {
+                    modoAcesso = 'cidade';
+                    const cidadesIds = permissoesCidade.map(p => p.cidade_id);
+                    escolasPermitidas = todasEscolas.filter(escola => cidadesIds.includes(escola.cidade_id));
+                    
+                    console.log('Acesso por cidade:', {
+                        cidadesIds, 
+                        totalEscolas: escolasPermitidas.length
+                    });
+                } 
+                // Caso 2: Permissão por escola - acesso apenas às escolas específicas
+                else if (permissoesEscola && permissoesEscola.length > 0) {
+                    modoAcesso = 'escola';
+                    const escolasIds = permissoesEscola.map(p => p.escola_id);
+                    escolasPermitidas = todasEscolas.filter(escola => escolasIds.includes(escola.id));
+                    
+                    console.log('Acesso por escola:', {
+                        escolasIds,
+                        totalEscolas: escolasPermitidas.length
+                    });
+                } 
+                // Caso 3: Permissão por turma - acesso apenas às escolas das turmas permitidas
+                else if (permissoesTurma && permissoesTurma.length > 0) {
+                    modoAcesso = 'turma';
+                    turmasPermitidas = permissoesTurma.map(p => p.turma_id);
+                    
+                    // Buscar as escolas correspondentes às turmas permitidas
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('id, escola_id')
+                        .in('id', turmasPermitidas);
+                        
+                    if (turmasError) {
+                        console.error('Erro ao buscar turmas:', turmasError);
+                        throw turmasError;
+                    }
+                    
+                    // Extrair os IDs únicos de escolas
+                    const escolasIdsDasTurmas = [...new Set(turmas.map(t => t.escola_id))];
+                    escolasPermitidas = todasEscolas.filter(escola => escolasIdsDasTurmas.includes(escola.id));
+                    
+                    console.log('Acesso por turma:', {
+                        turmasPermitidas,
+                        escolasIdsDasTurmas,
+                        totalEscolas: escolasPermitidas.length
+                    });
+                }
+
+                // Verificar se temos dados de escolas
+                if (!escolasPermitidas || escolasPermitidas.length === 0) {
+                    console.log('Nenhuma escola encontrada para este usuário');
+                    Toast.show('Nenhuma escola encontrada para seu usuário', 'warning');
+                    return;
+                }
+                
+                // Atualizar total de escolas
+                document.getElementById('total-escolas').textContent = escolasPermitidas.length || 0;
+                console.log('Total de escolas permitidas:', escolasPermitidas.length);
+                
+                // Para cada escola, buscar dados adicionais
+                let totalTurmas = 0;
+                let totalAlunos = 0;
+                let todasTurmasIds = [];
+                
+                const escolasContainer = document.getElementById('escolas-container');
+                
+                for (const escola of escolasPermitidas) {
+                    // Buscar cidade da escola
+                    const { data: cidade } = await supabase
+                        .from('cidades')
+                        .select('nome')
+                        .eq('id', escola.cidade_id)
+                        .single();
+                    
+                    // Buscar turmas da escola (filtradas por permissão se necessário)
+                    let turmasQuery = supabase
+                        .from('turmas')
+                        .select('id')
+                        .eq('escola_id', escola.id);
+                    
+                    // Se o modo de acesso for por turma, filtrar apenas turmas permitidas
+                    if (modoAcesso === 'turma') {
+                        turmasQuery = turmasQuery.in('id', turmasPermitidas);
+                    }
+                    
+                    const { data: turmas, error: turmasError } = await turmasQuery;
+                    
+                    if (turmasError) {
+                        console.error(`Erro ao buscar turmas da escola ${escola.id}:`, turmasError);
+                        continue; // Continuar para a próxima escola
+                    }
+                    
+                    const turmasIds = turmas?.map(t => t.id) || [];
+                    if (turmasIds.length === 0) {
+                        console.log(`Escola ${escola.nome}: nenhuma turma permitida, pulando.`);
+                        continue; // Se não há turmas permitidas, pular para a próxima escola
+                    }
+                    
+                    totalTurmas += turmasIds.length;
+                    todasTurmasIds = [...todasTurmasIds, ...turmasIds];
+                    console.log(`Escola ${escola.nome}: ${turmasIds.length} turmas`);
+                    
+                    // Buscar alunos das turmas
+                    const { data: alunos, error: alunosError } = await supabase
+                        .from('alunos')
+                        .select('id')
+                        .in('turma', turmasIds)
+                        .is('soft_delete', null);
+                    
+                    if (alunosError) {
+                        console.error(`Erro ao buscar alunos da escola ${escola.id}:`, alunosError);
+                        continue; // Continuar para a próxima escola
+                    }
+                    
+                    const totalAlunosEscola = alunos?.length || 0;
+                    totalAlunos += totalAlunosEscola;
+                    console.log(`Escola ${escola.nome}: ${totalAlunosEscola} alunos`);
+                    
+                    // Buscar presença de hoje
+                    const hoje = new Date().toISOString().split('T')[0];
+                    const { data: presencaHoje } = await supabase
+                        .from('view_alunos_logs')
+                        .select('nome_aluno')
+                        .in('turma', turmasIds)
+                        .gte('hora_check', hoje)
+                        .lt('hora_check', hoje + 'T23:59:59');
+                    
+                    // Filtrar para contar cada aluno apenas uma vez
+                    const alunosUnicos = [...new Set(presencaHoje?.map(p => p.nome_aluno) || [])];
+                    
+                    // Log para verificar a contagem na escola
+                    console.log(`Escola ${escola.nome}: ${totalAlunosEscola} alunos, ${alunosUnicos.length} presentes`);
+                    
+                    const presencaPorcentagem = totalAlunosEscola > 0 
+                        ? Math.round((alunosUnicos.length) / totalAlunosEscola * 100) 
+                        : 0;
+                    
+                    // Criar card da escola
+                    const escolaCard = document.createElement('div');
+                    escolaCard.className = 'bg-white rounded-lg p-4 shadow-sm';
+                    
+                    // Calcular presentes e ausentes
+                    const alunosPresentes = alunosUnicos.length;
+                    const alunosAusentes = totalAlunosEscola - alunosPresentes;
+                    
+                    escolaCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-medium text-gray-800">${escola.nome}</h4>
+                            <span class="text-sm text-gray-500">${cidade?.nome || ''}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div class="bg-green-50 rounded-lg p-3 text-center">
+                                <p class="text-sm font-medium text-green-600">${alunosPresentes}</p>
+                                <p class="text-xs text-green-500">Presentes Hoje</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3 text-center">
+                                <p class="text-sm font-medium text-red-600">${alunosAusentes}</p>
+                                <p class="text-xs text-red-500">Ausentes Hoje</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-center pt-3 border-t border-gray-100">
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${turmas?.length || 0}</p>
+                                <p class="text-xs text-gray-500">Turmas</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${totalAlunosEscola}</p>
+                                <p class="text-xs text-gray-500">Alunos</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${presencaPorcentagem}%</p>
+                                <p class="text-xs text-gray-500">Presença</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    escolasContainer.appendChild(escolaCard);
+                }
+                
+                // Calcular presença total de hoje apenas para as turmas permitidas
+                const hoje = new Date().toISOString().split('T')[0];
+                console.log('Data para filtro:', hoje);
+                console.log('Total de turmas para filtro:', todasTurmasIds.length);
+                
+                // Buscar logs únicos por aluno (considerar apenas um log por aluno)
+                // Filtrar pela lista de turmas permitidas
+                let presencaQuery = supabase
+                    .from('view_alunos_logs')
+                    .select('nome_aluno')
+                    .gte('hora_check', hoje)
+                    .lt('hora_check', hoje + 'T23:59:59');
+                
+                // Só aplicamos o filtro de turma se tivermos turmas específicas
+                if (todasTurmasIds.length > 0) {
+                    presencaQuery = presencaQuery.in('turma', todasTurmasIds);
+                }
+                
+                const { data: presencaTotal, error: presencaError } = await presencaQuery;
+                
+                if (presencaError) {
+                    console.error('Erro ao buscar presença:', presencaError);
+                    Toast.show('Erro ao buscar dados de presença', 'error');
+                }
+                
+                // Filtrar para contar cada aluno apenas uma vez
+                const alunosUnicosTotal = [...new Set(presencaTotal?.map(p => p.nome_aluno) || [])];
+                
+                // Log para verificar a contagem
+                console.log('Total de alunos:', totalAlunos);
+                console.log('Alunos presentes hoje (contagem única):', alunosUnicosTotal.length);
+                
+                const presencaTotalPorcentagem = totalAlunos > 0 
+                    ? Math.round((alunosUnicosTotal.length) / totalAlunos * 100) 
+                    : 0;
+                
+                console.log('Porcentagem de presença calculada:', presencaTotalPorcentagem + '%');
+                console.log('Modo de acesso do usuário:', modoAcesso);
+                
+                document.getElementById('presenca-hoje').textContent = presencaTotalPorcentagem + '%';
+                document.getElementById('total-turmas').textContent = totalTurmas;
+                document.getElementById('total-alunos').textContent = totalAlunos;
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                Toast.show('Erro ao carregar dados do dashboard', 'error');
+            }
+        });
+
+        // Variáveis para controle dos stories
+        let currentStoryIndex = 0;
+        let storiesData = [];
+        let storyProgressInterval;
+
+        // Função para carregar os stories
+        async function carregarStories() {
+            try {
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) return;
+                
+                const userData = JSON.parse(userSession);
+                const supabase = createSupabaseClient();
+                
+                // Buscar notificações com vídeos das cidades permitidas
+                // Primeiro, buscar a cidade do usuário
+                const { data: usuario, error: userError } = await supabase
+                    .from('usuarios')
+                    .select('cidade')
+                    .eq('id', userData.id)
+                    .single();
+                
+                if (userError) throw userError;
+                
+                // Buscar escolas do nutricionista
+                const { data: permissoesTurma, error: permissoesTurmaError } = await supabase
+                    .from('permissoes_turma')
+                    .select('turma_id')
+                    .eq('usuario_id', userData.id);
+                
+                if (permissoesTurmaError) throw permissoesTurmaError;
+                
+                // Se tem turmas, buscar as escolas dessas turmas
+                let cidadesPermitidas = [];
+                if (usuario?.cidade) {
+                    cidadesPermitidas.push(usuario.cidade);
+                }
+                
+                if (permissoesTurma && permissoesTurma.length > 0) {
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('escola_id')
+                        .in('id', permissoesTurma.map(p => p.turma_id));
+                    
+                    if (turmasError) throw turmasError;
+                    
+                    if (turmas && turmas.length > 0) {
+                        const { data: escolas, error: escolasError } = await supabase
+                            .from('escolas')
+                            .select('cidade_id')
+                            .in('id', turmas.map(t => t.escola_id));
+                        
+                        if (escolasError) throw escolasError;
+                        
+                        if (escolas && escolas.length > 0) {
+                            const novasCidades = escolas.map(e => e.cidade_id).filter(c => c !== null);
+                            cidadesPermitidas = [...new Set([...cidadesPermitidas, ...novasCidades])];
+                        }
+                    }
+                }
+                
+                // Se não tem nenhuma cidade, não mostra stories
+                if (cidadesPermitidas.length === 0) {
+                    document.querySelector('.stories-container').style.display = 'none';
+                    return;
+                }
+                
+                // Buscar notificações com vídeos das cidades permitidas
+                let { data: videos, error } = await supabase
+                    .from('notificacoes')
+                    .select(`
+                        *,
+                        cidades:cidade_id(nome, brasao)
+                    `)
+                    .in('cidade_id', cidadesPermitidas)
+                    .not('video_file_url', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                if (!videos || videos.length === 0) {
+                    document.querySelector('.stories-container').style.display = 'none';
+                    return;
+                }
+                
+                storiesData = videos;
+                renderizarStories();
+            } catch (error) {
+                console.error('Erro ao carregar stories:', error);
+                Toast.show('Erro ao carregar stories', 'error');
+            }
+        }
+
+        // Função para renderizar os stories
+        function renderizarStories() {
+            const container = document.getElementById('stories-list');
+            container.innerHTML = '';
+            
+            storiesData.forEach((story, index) => {
+                const storyElement = document.createElement('div');
+                storyElement.className = 'story-circle';
+                storyElement.innerHTML = `
+                    <div class="inner">
+                        <video muted playsinline>
+                            <source src="${story.video_file_url}" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="title">${story.cidades?.nome || 'Cidade'}</div>
+                `;
+                
+                // Carregar preview do vídeo
+                const video = storyElement.querySelector('video');
+                video.addEventListener('loadeddata', () => {
+                    video.currentTime = 1; // Pegar frame do primeiro segundo
+                });
+                
+                storyElement.addEventListener('click', () => abrirStory(index));
+                container.appendChild(storyElement);
+            });
+        }
+
+        // Função para atualizar o progresso
+        function updateProgress() {
+            const video = document.querySelector('.stories-video');
+            const progressBar = document.querySelector('.stories-progress-bar');
+            const porcentagem = (video.currentTime / video.duration) * 100;
+            progressBar.style.width = `${porcentagem}%`;
+        }
+
+        // Função para lidar com o fim do vídeo
+        function handleVideoEnd() {
+            if (currentStoryIndex < storiesData.length - 1) {
+                abrirStory(currentStoryIndex + 1);
+            } else {
+                fecharStories();
+            }
+        }
+
+        // Função para abrir um story
+        async function abrirStory(index) {
+            if (!storiesData[index]) return;
+            
+            currentStoryIndex = index;
+            const story = storiesData[index];
+            const modal = document.querySelector('.stories-modal');
+            const video = modal.querySelector('.stories-video');
+            
+            // Atualizar informações do story
+            modal.querySelector('.story-escola-nome').textContent = story.cidades?.nome || 'Cidade';
+            modal.querySelector('.story-time').textContent = formatarTempoRelativo(story.created_at);
+            modal.querySelector('.story-escola-avatar img').src = story.cidades?.brasao || '/assets/img/escola-placeholder.png';
+            
+            // Configurar vídeo
+            video.src = story.video_file_url;
+            video.currentTime = 0;
+            
+            // Mostrar modal
+            modal.classList.add('active');
+            
+            // Iniciar reprodução e progresso
+            video.play();
+            iniciarProgressoStory();
+        }
+
+        // Função para formatar tempo relativo
+        function formatarTempoRelativo(data) {
+            const agora = new Date();
+            const dataStory = new Date(data);
+            const diff = agora - dataStory;
+            
+            const minutos = Math.floor(diff / 60000);
+            const horas = Math.floor(minutos / 60);
+            const dias = Math.floor(horas / 24);
+            
+            if (dias > 0) return `há ${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+            if (horas > 0) return `há ${horas} ${horas === 1 ? 'hora' : 'horas'}`;
+            if (minutos > 0) return `há ${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`;
+            return 'agora';
+        }
+
+        // Função para iniciar a barra de progresso
+        function iniciarProgressoStory() {
+            const video = document.querySelector('.stories-video');
+            const progressBar = document.querySelector('.stories-progress-bar');
+            
+            clearInterval(storyProgressInterval);
+            progressBar.style.width = '0%';
+            
+            // Remover eventos anteriores e adicionar novos
+            video.removeEventListener('timeupdate', updateProgress);
+            video.removeEventListener('ended', handleVideoEnd);
+            
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('ended', handleVideoEnd);
+        }
+
+        // Função para fechar os stories
+        function fecharStories() {
+            const modal = document.querySelector('.stories-modal');
+            const video = modal.querySelector('.stories-video');
+            
+            video.pause();
+            video.src = '';
+            modal.classList.remove('active');
+            clearInterval(storyProgressInterval);
+        }
+
+        // Event Listeners
+        document.querySelector('.stories-close').addEventListener('click', fecharStories);
+
+        document.querySelector('.stories-nav-prev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentStoryIndex > 0) {
+                abrirStory(currentStoryIndex - 1);
+            }
+        });
+
+        document.querySelector('.stories-nav-next').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentStoryIndex < storiesData.length - 1) {
+                abrirStory(currentStoryIndex + 1);
+            }
+        });
+
+        // Carregar stories quando a página carregar
+        document.addEventListener('DOMContentLoaded', carregarStories);
+    </script>
+</body>
+</html> 

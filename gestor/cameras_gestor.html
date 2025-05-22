@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; media-src 'self' blob: https: data:;">
+    <title>OlharMais - Câmeras</title>
+    <meta name="description" content="OlharMais - Visualização de Câmeras">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/config/supabase.js"></script>
+    
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .camera-preview {
+            aspect-ratio: 16/9;
+            background: #1f2937;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .camera-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .camera-preview .placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 5;
+            cursor: pointer;
+        }
+        
+        .camera-preview .placeholder .play-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(0, 90, 226, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 30px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .camera-preview .placeholder:hover .play-button {
+            background-color: #005ae2;
+            transform: scale(1.1);
+        }
+        
+        .live-indicator {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            color: white;
+            font-size: 0.75rem;
+            z-index: 10;
+        }
+        
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center">
+            <a href="home_gestor.html" class="mr-4 text-gray-600 hover:text-primary transition-colors">
+                <i class="ph ph-arrow-left text-xl"></i>
+            </a>
+            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+            <div class="ml-auto flex items-center gap-4">
+                <button onclick="window.location.href='notificacoes_gestor.html'" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="ph ph-bell text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Cabeçalho e Filtros -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Câmeras</h2>
+            <p class="text-gray-600 mb-4">Visualize as câmeras das escolas da sua cidade</p>
+            
+            <!-- Filtros -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Câmera</label>
+                        <div class="flex space-x-4">
+                            <div id="tipo-cidade" class="cursor-pointer bg-gray-50 rounded-lg p-6 text-center hover:bg-primary-light transition flex-1 relative border border-gray-200" data-tipo="SITE">
+                                <div class="absolute top-2 right-2 text-primary hidden">
+                                    <i class="ph ph-check-circle-fill text-lg"></i>
+                                </div>
+                                <div class="flex flex-col items-center justify-center h-full">
+                                    <i class="ph ph-video-camera text-4xl mb-3 text-gray-600"></i>
+                                    <span class="block text-sm font-medium text-gray-700">Câmeras da Cidade</span>
+                                </div>
+                            </div>
+                            <div id="tipo-escola" class="cursor-pointer bg-gray-50 rounded-lg p-6 text-center hover:bg-primary-light transition flex-1 relative border border-gray-200" data-tipo="ESCOLA">
+                                <div class="absolute top-2 right-2 text-primary hidden">
+                                    <i class="ph ph-check-circle-fill text-lg"></i>
+                                </div>
+                                <div class="flex flex-col items-center justify-center h-full">
+                                    <i class="ph ph-student text-4xl mb-3 text-gray-600"></i>
+                                    <span class="block text-sm font-medium text-gray-700">Câmeras das Escolas</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Escola</label>
+                        <select id="escola-filter" class="w-full h-[54px] rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary">
+                            <option value="">Todas as escolas</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grid de Câmeras -->
+        <div id="cameras-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Preenchido via JavaScript -->
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+        
+        <!-- Estado Vazio -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <i class="ph ph-video-camera-slash text-5xl text-gray-400 mb-4"></i>
+            <p class="text-xl font-medium text-gray-800">Nenhuma câmera encontrada</p>
+            <p class="mt-2 text-gray-600">Não há câmeras disponíveis para visualização no momento</p>
+        </div>
+    </main>
+    
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <script>
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            }
+        };
+
+        // Estado Global
+        let cameras = [];
+        let escolas = [];
+        let filtros = {
+            escola: '',
+            tipo: ''
+        };
+        let permissoes = {
+            turmas: [],
+            escolas: [],
+            cidade: null
+        };
+
+        // Carregar Permissões do Usuário
+        async function carregarPermissoes() {
+            try {
+                const supabase = createSupabaseClient();
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                
+                if (!userSession) {
+                    window.location.href = '/auth.html';
+                    return;
+                }
+
+                // 1. Buscar permissões de cidade
+                const { data: permissoesCidade, error: permissoesCidadeError } = await supabase
+                    .from('permissoes_cidade')
+                    .select('cidade_id')
+                    .eq('usuario_id', userSession.id);
+
+                if (permissoesCidadeError) throw permissoesCidadeError;
+                
+                if (permissoesCidade?.length > 0) {
+                    permissoes.cidade = permissoesCidade.map(p => p.cidade_id);
+                    console.log('Permissões de cidade:', permissoes.cidade);
+                    return;
+                }
+
+                // 2. Buscar permissões de escola
+                const { data: permissoesEscola, error: permissoesEscolaError } = await supabase
+                    .from('permissoes_escola')
+                    .select('escola_id')
+                    .eq('usuario_id', userSession.id);
+
+                if (permissoesEscolaError) throw permissoesEscolaError;
+                
+                if (permissoesEscola?.length > 0) {
+                    permissoes.escolas = permissoesEscola.map(p => p.escola_id);
+                    console.log('Permissões de escola:', permissoes.escolas);
+                    return;
+                }
+
+                // 3. Buscar permissões de turma
+                const { data: permissoesTurma, error: permissoesTurmaError } = await supabase
+                    .from('permissoes_turma')
+                    .select('turma_id')
+                    .eq('usuario_id', userSession.id);
+
+                if (permissoesTurmaError) throw permissoesTurmaError;
+                
+                if (permissoesTurma?.length > 0) {
+                    permissoes.turmas = permissoesTurma.map(p => p.turma_id);
+                    
+                    // Buscar escolas das turmas
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('escola_id')
+                        .in('id', permissoes.turmas);
+
+                    if (turmasError) throw turmasError;
+                    if (turmas?.length > 0) {
+                        permissoes.escolas = [...new Set(turmas.map(t => t.escola_id))];
+                        console.log('Escolas das turmas:', permissoes.escolas);
+                        return;
+                    }
+                }
+
+                // 4. Buscar alunos do responsável
+                const { data: permissoesAlunos, error: permissoesError } = await supabase
+                    .from('permissoes_aluno')
+                    .select('aluno_id')
+                    .eq('usuario_id', userSession.id);
+
+                if (permissoesError) throw permissoesError;
+
+                if (permissoesAlunos?.length > 0) {
+                    // Buscar escolas dos alunos
+                    const { data: alunos, error: alunosError } = await supabase
+                        .from('alunos')
+                        .select('escola_id')
+                        .in('id', permissoesAlunos.map(r => r.aluno_id))
+                        .is('soft_delete', null);
+
+                    if (alunosError) throw alunosError;
+
+                    if (alunos?.length > 0) {
+                        permissoes.escolas = [...new Set(alunos.map(a => a.escola_id))];
+                        console.log('Escolas dos alunos:', permissoes.escolas);
+                    }
+                }
+
+                console.log('Permissões finais:', permissoes);
+            } catch (error) {
+                console.error('Erro ao carregar permissões:', error);
+                Toast.show('Erro ao carregar permissões', 'error');
+            }
+        }
+
+        // Carregar Escolas
+        async function carregarEscolas() {
+            try {
+                const supabase = createSupabaseClient();
+                let query = supabase
+                    .from('escolas')
+                    .select('id, nome')
+                    .is('soft_delete', null);
+
+                // Se tem permissão por cidade
+                if (permissoes.cidade?.length > 0) {
+                    query = query.in('cidade_id', permissoes.cidade);
+                }
+                // Se tem permissão por escola específica
+                else if (permissoes.escolas?.length > 0) {
+                    query = query.in('id', permissoes.escolas);
+                }
+                // Se não tem nenhuma permissão
+                else {
+                    document.getElementById('escola-filter').innerHTML = '<option value="">Nenhuma escola disponível</option>';
+                    document.getElementById('escola-filter').disabled = true;
+                    return;
+                }
+
+                const { data, error } = await query.order('nome');
+
+                if (error) {
+                    console.error('Erro SQL:', error);
+                    throw error;
+                }
+
+                escolas = data || [];
+                const select = document.getElementById('escola-filter');
+                
+                if (escolas.length === 0) {
+                    select.innerHTML = '<option value="">Nenhuma escola disponível</option>';
+                    select.disabled = true;
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Todas as escolas</option>';
+                select.disabled = false;
+                
+                escolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    select.appendChild(option);
+                });
+
+                console.log('Escolas carregadas:', escolas.length);
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                Toast.show('Erro ao carregar escolas. Tente novamente.', 'error');
+            }
+        }
+
+        // Carregar Câmeras
+        async function carregarCameras() {
+            try {
+                if (!permissoes.cidade && !permissoes.escolas.length) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('cameras-grid').style.display = 'none';
+                    return;
+                }
+
+                const supabase = createSupabaseClient();
+                let query = supabase
+                    .from('cameras')
+                    .select(`
+                        *,
+                        escolas (
+                            id,
+                            nome
+                        )
+                    `)
+                    .is('soft_delete', null);
+
+                // Se tiver escolas com permissão
+                if (permissoes.escolas.length > 0) {
+                    query = query.in('escola_id', permissoes.escolas);
+                } else if (permissoes.cidade) {
+                    query = query.eq('cidade_id', permissoes.cidade);
+                } else {
+                    // Se não tiver nem cidade nem escolas, não mostra nada
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('cameras-grid').style.display = 'none';
+                    return;
+                }
+
+                const { data, error } = await query;
+
+                if (error) {
+                    console.error('Erro SQL:', error);
+                    throw error;
+                }
+
+                cameras = data || [];
+                document.getElementById('loading').style.display = 'none';
+                
+                console.log('Câmeras carregadas:', cameras.length);
+                
+                if (!cameras.length) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('cameras-grid').style.display = 'none';
+                    return;
+                }
+
+                aplicarFiltros();
+
+            } catch (error) {
+                console.error('Erro ao carregar câmeras:', error);
+                Toast.show('Erro ao carregar câmeras. Tente novamente.', 'error');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('cameras-grid').style.display = 'none';
+            }
+        }
+
+        // Aplicar Filtros
+        function aplicarFiltros() {
+            const camerasFiltradas = cameras.filter(camera => {
+                // Se tiver escola selecionada, filtra por ela
+                if (filtros.escola && camera.escola_id !== parseInt(filtros.escola)) return false;
+                
+                // Se tiver tipo selecionado, filtra por ele
+                if (filtros.tipo) {
+                    if (filtros.tipo === 'SITE' && camera.tipo !== 'SITE') return false;
+                    if (filtros.tipo === 'ESCOLA' && camera.tipo !== 'ESCOLA') return false;
+                }
+                
+                return true;
+            });
+
+            const grid = document.getElementById('cameras-grid');
+            const emptyState = document.getElementById('empty-state');
+            
+            grid.innerHTML = '';
+            
+            if (camerasFiltradas.length === 0) {
+                grid.style.display = 'none';
+                emptyState.classList.remove('hidden');
+            } else {
+                grid.style.display = 'grid';
+                emptyState.classList.add('hidden');
+                
+                camerasFiltradas.forEach(camera => {
+                    grid.appendChild(criarElementoCamera(camera));
+                });
+            }
+        }
+
+        // Criar Elemento de Câmera
+        function criarElementoCamera(camera) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow overflow-hidden';
+            
+            card.innerHTML = `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">${camera.nome}</h3>
+                    <p class="text-sm text-gray-500">${camera.escolas?.nome || 'Escola não encontrada'}</p>
+                </div>
+                <div class="px-4 pb-4">
+                    <div class="camera-preview" id="camera-${camera.id}">
+                        <div class="placeholder" data-camera-id="${camera.id}" data-url="${camera.url}">
+                            <div class="play-button">
+                                <i class="ph ph-play"></i>
+                            </div>
+                        </div>
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>AO VIVO</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const placeholder = card.querySelector('.placeholder');
+            placeholder.addEventListener('click', () => {
+                iniciarStream(camera, card.querySelector('.camera-preview'));
+            });
+            
+            return card;
+        }
+
+        // Iniciar Stream
+        function iniciarStream(camera, container) {
+            const placeholder = container.querySelector('.placeholder');
+            if (placeholder) placeholder.remove();
+            
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            
+            container.appendChild(video);
+            
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(camera.url);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        console.error('Erro HLS:', data);
+                        mostrarErro(container, 'Erro ao carregar o stream');
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = camera.url;
+                video.addEventListener('error', () => {
+                    console.error('Erro de vídeo nativo');
+                    mostrarErro(container, 'Erro ao carregar o stream');
+                });
+            } else {
+                mostrarErro(container, 'Seu navegador não suporta a reprodução deste vídeo');
+            }
+        }
+
+        // Mostrar Erro
+        function mostrarErro(container, mensagem) {
+            container.innerHTML = `
+                <div class="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 text-white text-center p-4">
+                    <div>
+                        <i class="ph ph-warning-circle text-4xl mb-2"></i>
+                        <p>${mensagem}</p>
+                        <button onclick="window.location.reload()" class="mt-4 px-4 py-2 bg-primary rounded-lg hover:bg-primary-dark transition-colors">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async () => {
+            await carregarPermissoes();
+            await carregarEscolas();
+            await carregarCameras();
+            
+            // Eventos dos Filtros
+            document.getElementById('escola-filter').addEventListener('change', (e) => {
+                filtros.escola = e.target.value;
+                aplicarFiltros();
+            });
+
+            // Eventos dos cards de tipo de câmera
+            const cardTipoCidade = document.getElementById('tipo-cidade');
+            const cardTipoEscola = document.getElementById('tipo-escola');
+
+            function atualizarSelecaoTipo(card) {
+                // Remover seleção de todos os cards
+                [cardTipoCidade, cardTipoEscola].forEach(c => {
+                    c.classList.remove('bg-blue-50', 'border-primary');
+                    c.classList.add('bg-gray-50');
+                    c.querySelector('.ph-check-circle-fill').parentElement.classList.add('hidden');
+                });
+
+                // Adicionar seleção ao card clicado
+                if (card) {
+                    card.classList.remove('bg-gray-50');
+                    card.classList.add('bg-blue-50', 'border-primary');
+                    card.querySelector('.ph-check-circle-fill').parentElement.classList.remove('hidden');
+                }
+            }
+
+            cardTipoCidade.addEventListener('click', () => {
+                if (filtros.tipo === 'SITE') {
+                    filtros.tipo = '';
+                    atualizarSelecaoTipo(null);
+                } else {
+                    filtros.tipo = 'SITE';
+                    atualizarSelecaoTipo(cardTipoCidade);
+                }
+                aplicarFiltros();
+            });
+
+            cardTipoEscola.addEventListener('click', () => {
+                if (filtros.tipo === 'ESCOLA') {
+                    filtros.tipo = '';
+                    atualizarSelecaoTipo(null);
+                } else {
+                    filtros.tipo = 'ESCOLA';
+                    atualizarSelecaoTipo(cardTipoEscola);
+                }
+                aplicarFiltros();
+            });
+        });
+    </script>
+</body>
+</html>
+ 

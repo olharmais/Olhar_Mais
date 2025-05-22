@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Visualizar Câmera</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .camera-preview {
+            aspect-ratio: 16/9;
+            background: #1f2937;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .camera-preview img,
+        .camera-preview iframe {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .camera-preview .error-message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+            color: #9ca3af;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .info-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-value {
+            font-size: 0.875rem;
+            color: #111827;
+            font-weight: 500;
+        }
+        
+        .camera-preview video {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-800">Visualizar Câmera</h1>
+            <div class="flex gap-2">
+                <a href="cameras.html" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-arrow-left"></i>
+                    <span>Voltar</span>
+                </a>
+                <a href="#" id="editButton" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-pencil-simple"></i>
+                    <span>Editar</span>
+                </a>
+                <a href="#" id="deleteButton" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-trash"></i>
+                    <span>Excluir</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Grid de Conteúdo -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Preview da Câmera -->
+            <div class="card p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Preview da Câmera</h2>
+                <div class="camera-preview" id="cameraPreview">
+                    <div class="loading-state flex items-center justify-center h-full">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações da Câmera -->
+            <div class="card p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Informações da Câmera</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nome -->
+                    <div>
+                        <div class="info-label">Nome</div>
+                        <div class="info-value" id="info-nome">Carregando...</div>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <div class="info-label">Status</div>
+                        <div id="info-status">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Carregando...
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div>
+                        <div class="info-label">Tipo</div>
+                        <div id="info-tipo">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Carregando...
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- URL -->
+                    <div>
+                        <div class="info-label">URL</div>
+                        <div class="info-value break-all" id="info-url">Carregando...</div>
+                    </div>
+
+                    <!-- Cidade -->
+                    <div>
+                        <div class="info-label">Cidade</div>
+                        <div class="info-value" id="info-cidade">Carregando...</div>
+                    </div>
+
+                    <!-- Escola -->
+                    <div>
+                        <div class="info-label">Escola</div>
+                        <div class="info-value" id="info-escola">Carregando...</div>
+                    </div>
+
+                    <!-- Data de Criação -->
+                    <div>
+                        <div class="info-label">Data de Criação</div>
+                        <div class="info-value" id="info-criacao">Carregando...</div>
+                    </div>
+
+                    <!-- Última Atualização -->
+                    <div>
+                        <div class="info-label">Última Atualização</div>
+                        <div class="info-value" id="info-atualizacao">Carregando...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        let camera;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Inicializar Supabase
+                supabase = window.createSupabaseClient();
+                
+                // Carregar sidebar
+                await loadSidebar();
+                
+                // Carregar dados da câmera
+                await loadCamera();
+                
+                // Configurar eventos
+                setupEvents();
+                
+                // Remover preloader
+                hidePreloader();
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao carregar o sistema', 'error');
+            }
+        });
+        
+        // Carregar sidebar
+        async function loadSidebar() {
+            try {
+                const response = await fetch('sidebar_admin.html');
+                const html = await response.text();
+                document.getElementById('sidebar-container').innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar sidebar:', error);
+            }
+        }
+        
+        // Carregar dados da câmera
+        async function loadCamera() {
+            try {
+                // Obter ID da câmera da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const cameraId = urlParams.get('id');
+                
+                if (!cameraId) {
+                    throw new Error('ID da câmera não fornecido');
+                }
+                
+                // Buscar dados da câmera
+                const { data: cameraData, error: cameraError } = await supabase
+                    .from('cameras')
+                    .select(`
+                        *,
+                        cidades (
+                            nome
+                        ),
+                        escolas (
+                            nome
+                        )
+                    `)
+                    .eq('id', cameraId)
+                    .single();
+                
+                if (cameraError) throw cameraError;
+                if (!cameraData) throw new Error('Câmera não encontrada');
+                
+                camera = cameraData;
+                
+                // Atualizar informações
+                document.getElementById('info-nome').textContent = cameraData.nome;
+                document.getElementById('info-url').textContent = cameraData.url;
+                document.getElementById('info-cidade').textContent = cameraData.cidades?.nome || '-';
+                document.getElementById('info-escola').textContent = cameraData.escolas?.nome || '-';
+                document.getElementById('info-criacao').textContent = new Date(cameraData.created_at).toLocaleString('pt-BR');
+                document.getElementById('info-atualizacao').textContent = new Date(cameraData.updated_at).toLocaleString('pt-BR');
+                
+                // Status badge
+                document.getElementById('info-status').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        cameraData.status === 'ATIVO' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                    }">
+                        ${cameraData.status}
+                    </span>
+                `;
+                
+                // Tipo badge
+                document.getElementById('info-tipo').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        cameraData.tipo === 'SITE' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-blue-100 text-blue-800'
+                    }">
+                        ${cameraData.tipo}
+                    </span>
+                `;
+                
+                // Configurar botões de ação
+                document.getElementById('editButton').href = `cameras_edit.html?id=${cameraData.id}`;
+                document.getElementById('deleteButton').href = `cameras_del.html?id=${cameraData.id}`;
+                
+                // Iniciar preview da câmera
+                initCameraPreview(cameraData.url);
+            } catch (error) {
+                console.error('Erro ao carregar câmera:', error);
+                showToast('Erro ao carregar dados da câmera', 'error');
+                setTimeout(() => {
+                    window.location.href = 'cameras.html';
+                }, 3000);
+            }
+        }
+        
+        // Inicializar preview da câmera
+        function initCameraPreview(url) {
+            const previewContainer = document.getElementById('cameraPreview');
+            
+            try {
+                // Limpar container
+                previewContainer.innerHTML = '';
+                
+                // Verificar se a URL é válida
+                if (!url) throw new Error('URL inválida');
+                
+                // Criar elemento de vídeo
+                const video = document.createElement('video');
+                video.id = 'videoPlayer';
+                video.controls = true;
+                video.autoplay = true;
+                video.muted = true; // Importante para autoplay funcionar em alguns navegadores
+                
+                // Adicionar ao container
+                previewContainer.appendChild(video);
+                
+                // Tentar reproduzir usando HLS.js
+                if (Hls.isSupported()) {
+                    const hls = new Hls({
+                        debug: false,
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                    
+                    // Eventos do HLS
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play().catch(e => {
+                            console.error('Erro ao iniciar reprodução:', e);
+                        });
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    showPreviewError('Erro de rede ao carregar o stream');
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    showPreviewError('Erro de mídia ao reproduzir o stream');
+                                    break;
+                                default:
+                                    showPreviewError('Erro ao reproduzir o stream');
+                                    break;
+                            }
+                        }
+                    });
+                }
+                // Fallback para navegadores com suporte nativo a HLS (Safari)
+                else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                    video.addEventListener('loadedmetadata', () => {
+                        video.play().catch(e => {
+                            console.error('Erro ao iniciar reprodução:', e);
+                            showPreviewError('Erro ao reproduzir o stream');
+                        });
+                    });
+                    
+                    video.addEventListener('error', () => {
+                        showPreviewError('Erro ao carregar o stream');
+                    });
+                }
+                else {
+                    throw new Error('HLS não é suportado neste navegador');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao inicializar preview:', error);
+                showPreviewError(error.message || 'Erro ao inicializar o preview da câmera');
+            }
+        }
+        
+        // Mostrar erro no preview
+        function showPreviewError(message) {
+            const previewContainer = document.getElementById('cameraPreview');
+            previewContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="ph ph-warning-circle text-4xl"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        // Configurar eventos
+        function setupEvents() {
+            // Eventos adicionais podem ser configurados aqui
+        }
+        
+        // Função para exibir toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444"
+                }
+            }).showToast();
+        }
+        
+        // Função para esconder preloader
+        function hidePreloader() {
+            const preloader = document.querySelector('.preloader');
+            preloader.style.opacity = '0';
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 300);
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Frequência</title>
+    <meta name="description" content="OlharMais - Controle de frequência de alunos">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        
+        /* Ajuste para o navbar mobile */
+        body {
+            padding-bottom: 60px; /* Altura do navbar + margem */
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body class="font-sans bg-white dark:bg-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center">
+            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+            <div class="ml-auto flex items-center gap-4">
+                <a href="notificacoes_respo.html" id="notifications-btn" class="text-gray-600 hover:text-primary transition-colors relative">
+                    <i class="ph ph-bell text-xl"></i>
+                    <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                </a>
+                <a href="cameras_respo.html" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="ph ph-video-camera text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Cabeçalho -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Frequência do Aluno</h2>
+            <p class="text-gray-600">Visualize todos os registros de entrada e saída</p>
+        </div>
+        
+        <!-- Seleção do Aluno -->
+        <div class="bg-white rounded-lg shadow p-5 mb-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Selecione o Aluno</label>
+                <select id="aluno-select" class="w-full border border-gray-300 rounded-full px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
+                    <option value="">Carregando alunos...</option>
+                    </select>
+            </div>
+        </div>
+        
+        <!-- Lista de Registros -->
+        <div id="registros-container" class="hidden animate-fade-in">
+            <!-- Informações do Aluno -->
+            <div class="bg-white rounded-lg shadow p-5 mb-6">
+                <div class="flex items-start gap-4">
+                    <div id="foto-aluno" class="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        <!-- Foto será inserida via JavaScript -->
+        </div>
+                    <div>
+                        <h3 id="nome-aluno" class="text-xl font-bold text-gray-800 mb-1">Carregando...</h3>
+                        <div class="flex flex-wrap gap-2 text-sm">
+                            <span id="escola-aluno" class="bg-primary-light text-primary px-2 py-1 rounded-full">Carregando...</span>
+                            <span id="turma-aluno" class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista de Logs -->
+            <div id="logs-container" class="space-y-2">
+                <!-- Os logs serão inseridos aqui via JavaScript -->
+            </div>
+
+            <!-- Mensagem de Nenhum Registro -->
+            <div id="sem-registros" class="hidden">
+                <div class="text-center py-12 text-gray-600 bg-white rounded-lg shadow p-6">
+                    <i class="ph ph-calendar-x text-5xl text-gray-400 mb-4"></i>
+                    <p class="text-xl font-medium">Nenhum registro encontrado</p>
+                    <p class="mt-2">O aluno ainda não possui registros de entrada/saída</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="hidden">
+            <div class="flex items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_respo.js"></script>
+    
+    <!-- Fallback: iframe com navbar -->
+    <iframe id="navbar-iframe" src="navbar_respo.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
+    
+    <script>
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            },
+            
+            // Adicionando métodos de conveniência
+            error(message) {
+                this.show(message, 'error');
+            },
+            
+            success(message) {
+                this.show(message, 'success');
+            },
+            
+            warning(message) {
+                this.show(message, 'warning');
+            },
+            
+            info(message) {
+                this.show(message, 'info');
+            }
+        };
+
+        // Função para formatar data
+        function formatarDataHora(data) {
+            return new Date(data).toLocaleString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Carregar dados iniciais
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é RESPONSÁVEL
+                if (userData.tipo !== 'RESPONSÁVEL') {
+                    console.error('Usuário não é RESPONSÁVEL');
+                    Toast.error('Acesso não autorizado para este perfil');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+                
+                // Inicializar Supabase
+                const supabase = createSupabaseClient();
+                
+                // Buscar alunos associados ao responsável
+                const { data: permissoes, error: permissoesError } = await supabase
+                    .from('permissoes_aluno')
+                    .select(`
+                        aluno_id,
+                        alunos:aluno_id (
+                            id,
+                            nome_completo,
+                            foto_url,
+                            escola:escola_id (
+                                id,
+                                nome
+                            ),
+                            turma:turma (
+                                id,
+                                nome,
+                                periodo
+                            )
+                        )
+                    `)
+                    .eq('usuario_id', userData.id);
+
+                if (permissoesError) {
+                    throw permissoesError;
+                }
+
+                // Preencher select de alunos
+                const alunoSelect = document.getElementById('aluno-select');
+                alunoSelect.innerHTML = '<option value="">Selecione um aluno</option>';
+
+                permissoes.forEach(permissao => {
+                    const aluno = permissao.alunos;
+                    if (!aluno) return;
+
+                    const option = document.createElement('option');
+                    option.value = aluno.id;
+                    option.textContent = aluno.nome_completo;
+                    option.dataset.fotoUrl = aluno.foto_url;
+                    option.dataset.escolaNome = aluno.escola?.nome;
+                    option.dataset.turmaNome = aluno.turma?.nome;
+                    option.dataset.turmaPeriodo = aluno.turma?.periodo;
+                    alunoSelect.appendChild(option);
+                });
+
+                // Verificar se há um aluno na URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const alunoId = urlParams.get('aluno');
+                if (alunoId) {
+                    alunoSelect.value = alunoId;
+                    await carregarRegistrosAluno(supabase, alunoId);
+                }
+
+                // Event listener para mudança de aluno
+                alunoSelect.addEventListener('change', async function() {
+                    const alunoId = this.value;
+                    if (alunoId) {
+                        await carregarRegistrosAluno(supabase, alunoId);
+                    } else {
+                        document.getElementById('registros-container').classList.add('hidden');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                Toast.error('Erro ao carregar dados');
+            }
+        });
+
+        // Função para carregar registros do aluno
+        async function carregarRegistrosAluno(supabase, alunoId) {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('registros-container').classList.add('hidden');
+                document.getElementById('sem-registros').classList.add('hidden');
+
+                // Buscar dados do aluno
+                const alunoSelect = document.getElementById('aluno-select');
+                const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
+
+                // Atualizar informações do aluno
+                document.getElementById('foto-aluno').innerHTML = `
+                    <img src="${alunoOption.dataset.fotoUrl || '/assets/img/avatar-placeholder.png'}" 
+                         alt="Foto do aluno" 
+                         class="w-full h-full object-cover"
+                         onerror="this.src='/assets/img/avatar-placeholder.png'">
+                `;
+                document.getElementById('nome-aluno').textContent = alunoOption.textContent;
+                document.getElementById('escola-aluno').textContent = alunoOption.dataset.escolaNome;
+                document.getElementById('turma-aluno').textContent = `${alunoOption.dataset.turmaNome} - ${alunoOption.dataset.turmaPeriodo}`;
+
+                // Buscar todos os logs do aluno
+                const { data: logs, error: logsError } = await supabase
+                    .from('view_alunos_logs')
+                    .select('*')
+                    .eq('nome_aluno', alunoOption.textContent)
+                    .order('hora_check', { ascending: true });
+
+                if (logsError) {
+                    console.error('Erro ao buscar logs:', logsError);
+                    throw logsError;
+                }
+
+                const logsContainer = document.getElementById('logs-container');
+                logsContainer.innerHTML = '';
+
+                if (!logs || logs.length === 0) {
+                    document.getElementById('sem-registros').classList.remove('hidden');
+                } else {
+                    // Agrupar logs por data
+                    const logsPorData = {};
+                    logs.forEach(log => {
+                        // Ajuste para lidar com timezone - criar a data como UTC e depois converter para local
+                        const dataUTC = new Date(log.hora_check);
+                        // Criar data usando componentes locais para evitar problemas de timezone
+                        const dataLocal = new Date(
+                            dataUTC.getFullYear(),
+                            dataUTC.getMonth(),
+                            dataUTC.getDate()
+                        );
+                        
+                        const dataKey = dataLocal.toISOString().split('T')[0];
+                        
+                        if (!logsPorData[dataKey]) {
+                            logsPorData[dataKey] = [];
+                        }
+                        logsPorData[dataKey].push({
+                            ...log,
+                            hora_check_local: dataUTC
+                        });
+                    });
+
+                    // Criar elementos para cada data
+                    Object.keys(logsPorData).sort().reverse().forEach(dataKey => {
+                        const logsData = logsPorData[dataKey];
+                        
+                        // Ordenar logs do dia por hora
+                        logsData.sort((a, b) => a.hora_check_local - b.hora_check_local);
+                        
+                        // Pegar primeira entrada e última saída
+                        const primeiraEntrada = logsData[0];
+                        const ultimaSaida = logsData[logsData.length - 1];
+                        
+                        // Formatar a data para exibição - usando a data original do registro
+                        const dataObj = new Date(primeiraEntrada.hora_check_local);
+                        
+                        // Formatação para exibição
+                        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                        const diaSemana = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(dataObj);
+                        
+                        // Criar card do dia
+                        const cardDia = document.createElement('div');
+                        cardDia.className = 'bg-white rounded-lg p-4 shadow-sm mb-4';
+                        
+                        cardDia.innerHTML = `
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">${dataFormatada}</h3>
+                                    <p class="text-sm text-gray-600">${diaSemana}</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-green-50 rounded p-3">
+                                    <div class="text-green-600 font-medium mb-1">Entrada</div>
+                                    <div class="text-lg font-semibold text-gray-800">
+                                        ${primeiraEntrada.hora_check_local.toLocaleTimeString('pt-BR', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </div>
+                                </div>
+                                <div class="bg-red-50 rounded p-3">
+                                    <div class="text-red-600 font-medium mb-1">Saída</div>
+                                    <div class="text-lg font-semibold text-gray-800">
+                                        ${logsData.length > 1 ? 
+                                            ultimaSaida.hora_check_local.toLocaleTimeString('pt-BR', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) : 
+                                            '--:--'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        logsContainer.appendChild(cardDia);
+                    });
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('registros-container').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar registros:', error);
+                Toast.error('Erro ao carregar registros do aluno');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarNavbar();
+        });
+    </script>
+</body>
+</html> 

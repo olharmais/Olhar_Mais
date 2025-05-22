@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Dashboard</title>
+    <meta name="description" content="Dashboard de métricas do OlharMais">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'danger': '#EF4444',
+                        'info': '#3B82F6'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        
+        .gradient-blue {
+            background: linear-gradient(135deg, #005ae2 0%, #3988ff 100%);
+        }
+        
+        .gradient-green {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+        
+        .gradient-orange {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        }
+        
+        .gradient-purple {
+            background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #10B981;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .live-dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            background: #10B981;
+            opacity: 0.4;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 py-4 px-6">
+        <div class="max-w-[1920px] mx-auto flex items-center justify-between">
+            <a href="home_gestor.html" class="flex items-center gap-2">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
+                    OlharMais
+                </h1>
+            </a>
+            <div class="flex items-center gap-2">
+                <div class="live-dot"></div>
+                <span class="text-sm text-gray-600">Dados em tempo real</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6">
+        <div class="max-w-[1920px] mx-auto">
+            <!-- Cabeçalho -->
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 id="cidade-nome" class="text-4xl font-bold text-gray-800 mb-2">Carregando...</h2>
+                    <p id="data-atual" class="text-lg text-gray-600"></p>
+                </div>
+                <img id="brasao-cidade" src="" alt="" class="h-20 object-contain hidden">
+            </div>
+
+            <!-- Métricas Principais -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total de Escolas -->
+                <div class="metric-card gradient-blue text-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-medium">Total de Escolas</h3>
+                        <i class="ph ph-buildings text-3xl"></i>
+                    </div>
+                    <p id="total-escolas" class="text-4xl font-bold">-</p>
+                    <p class="text-sm opacity-90 mt-2">unidades de ensino</p>
+                </div>
+
+                <!-- Total de Turmas -->
+                <div class="metric-card gradient-green text-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-medium">Total de Turmas</h3>
+                        <i class="ph ph-chalkboard-teacher text-3xl"></i>
+                    </div>
+                    <p id="total-turmas" class="text-4xl font-bold">-</p>
+                    <p class="text-sm opacity-90 mt-2">turmas ativas</p>
+                </div>
+
+                <!-- Total de Alunos -->
+                <div class="metric-card gradient-purple text-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-medium">Total de Alunos</h3>
+                        <i class="ph ph-student text-3xl"></i>
+                    </div>
+                    <p id="total-alunos" class="text-4xl font-bold">-</p>
+                    <p class="text-sm opacity-90 mt-2">alunos matriculados</p>
+                </div>
+
+                <!-- Presentes Hoje -->
+                <div class="metric-card gradient-orange text-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-medium">Presentes Hoje</h3>
+                        <i class="ph ph-check-circle text-3xl"></i>
+                    </div>
+                    <p id="presentes-hoje" class="text-4xl font-bold">-</p>
+                    <p id="percentual-presenca" class="text-sm opacity-90 mt-2">calculando...</p>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Presença por Escola -->
+                <div class="metric-card p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Presença por Escola</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-escolas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Distribuição por Série -->
+                <div class="metric-card p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Distribuição por Série</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-series"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Últimos Registros -->
+            <div class="metric-card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800">Últimos Registros</h3>
+                    <div class="flex items-center gap-2">
+                        <div class="live-dot"></div>
+                        <span class="text-sm text-gray-600">Atualizando em tempo real</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left border-b border-gray-200">
+                                <th class="pb-3 text-gray-600 font-medium">Aluno</th>
+                                <th class="pb-3 text-gray-600 font-medium">Escola</th>
+                                <th class="pb-3 text-gray-600 font-medium">Horário</th>
+                               
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-registros">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configurações dos gráficos
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.font.size = 14;
+        Chart.defaults.plugins.legend.position = 'bottom';
+        
+        // Variáveis globais para os gráficos
+        let graficoEscolas;
+        let graficoSeries;
+        
+        // Formatar números
+        function formatarNumero(numero) {
+            return new Intl.NumberFormat('pt-BR').format(numero);
+        }
+        
+        // Formatar data e hora
+        function formatarDataHora(data) {
+            return new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(new Date(data));
+        }
+        
+        // Atualizar data atual
+        function atualizarDataAtual() {
+            const agora = new Date();
+            document.getElementById('data-atual').textContent = formatarDataHora(agora);
+        }
+        
+        // Criar/Atualizar gráfico de escolas
+        function atualizarGraficoEscolas(dados) {
+            const ctx = document.getElementById('chart-escolas').getContext('2d');
+            
+            // Abreviar nomes longos das escolas
+            const labelsAbreviados = dados.labels.map(nome => {
+                if (nome.length > 20) {
+                    return nome.substring(0, 20) + '...';
+                }
+                return nome;
+            });
+            
+            const config = {
+                type: 'bar',
+                data: {
+                    labels: labelsAbreviados,
+                    datasets: [{
+                        label: 'Presentes',
+                        data: dados.valores,
+                        backgroundColor: 'rgba(0, 90, 226, 0.8)',
+                        borderColor: 'rgba(0, 90, 226, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Total',
+                        data: dados.total,
+                        backgroundColor: 'rgba(203, 213, 225, 0.5)',
+                        borderColor: 'rgba(203, 213, 225, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Barras horizontais
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (tooltipItems) => {
+                                    // Mostrar nome completo no tooltip
+                                    const index = tooltipItems[0].dataIndex;
+                                    return dados.labels[index];
+                                },
+                                label: (context) => {
+                                    const value = context.raw;
+                                    const datasetIndex = context.datasetIndex;
+                                    const total = dados.total[context.dataIndex];
+                                    
+                                    if (datasetIndex === 0) { // Presentes
+                                        const percentual = ((value / total) * 100).toFixed(1);
+                                        return `Presentes: ${value} (${percentual}%)`;
+                                    }
+                                    return `Total: ${value} alunos`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            stacked: false
+                        }
+                    }
+                }
+            };
+            
+            if (graficoEscolas) {
+                graficoEscolas.destroy();
+            }
+            
+            graficoEscolas = new Chart(ctx, config);
+        }
+        
+        // Criar/Atualizar gráfico de séries
+        function atualizarGraficoSeries(dados) {
+            const ctx = document.getElementById('chart-series').getContext('2d');
+            
+            const config = {
+                type: 'doughnut',
+                data: {
+                    labels: dados.labels,
+                    datasets: [{
+                        data: dados.valores,
+                        backgroundColor: [
+                            'rgba(0, 90, 226, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(245, 158, 11, 0.8)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    },
+                    cutout: '60%'
+                }
+            };
+            
+            if (graficoSeries) {
+                graficoSeries.destroy();
+            }
+            
+            graficoSeries = new Chart(ctx, config);
+        }
+        
+        // Atualizar tabela de registros
+        function atualizarRegistros(registros) {
+            const tbody = document.getElementById('tabela-registros');
+            tbody.innerHTML = '';
+            
+            registros.forEach(registro => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100';
+                tr.innerHTML = `
+                    <td class="py-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${registro.aluno_foto || '../assets/img/user.png'}" 
+                                 alt="${registro.aluno_nome}"
+                                 class="w-10 h-10 rounded-full object-cover">
+                            <span class="font-medium text-gray-800">${registro.aluno_nome}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 text-gray-600">${registro.escola_nome}</td>
+                    <td class="py-4 text-gray-600">${formatarDataHora(registro.horario)}</td>
+                    <td class="py-4">
+                        
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Carregar dados
+        async function carregarDados() {
+            try {
+                const supabase = createSupabaseClient();
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                
+                if (!userSession?.id) {
+                    console.error('Usuário não encontrado na sessão');
+                    return;
+                }
+
+                // Buscar usuário para obter a cidade
+                const { data: usuario, error: errorUsuario } = await supabase
+                    .from('usuarios')
+                    .select('cidade')
+                    .eq('id', userSession.id)
+                    .single();
+
+                if (errorUsuario || !usuario?.cidade) {
+                    console.error('Erro ao buscar usuário ou cidade não encontrada');
+                    return;
+                }
+
+                // Carregar métricas da cidade
+                const { data: metricasCidade } = await supabase
+                    .from('view_metricas_cidade')
+                    .select('*')
+                    .eq('cidade_id', usuario.cidade)
+                    .single();
+                
+                if (metricasCidade) {
+                    document.getElementById('cidade-nome').textContent = metricasCidade.cidade_nome;
+                    document.getElementById('total-escolas').textContent = formatarNumero(metricasCidade.total_escolas);
+                    document.getElementById('total-turmas').textContent = formatarNumero(metricasCidade.total_turmas);
+                    document.getElementById('total-alunos').textContent = formatarNumero(metricasCidade.total_alunos);
+                    document.getElementById('presentes-hoje').textContent = formatarNumero(metricasCidade.presentes_hoje);
+                    
+                    const percentual = ((metricasCidade.presentes_hoje / metricasCidade.total_alunos) * 100).toFixed(1);
+                    document.getElementById('percentual-presenca').textContent = `${percentual}% de presença`;
+                }
+                
+                // Carregar dados das escolas (view_escolas_resumo)
+                const { data: dadosEscolas } = await supabase
+                    .from('view_escolas_resumo')
+                    .select('*')
+                    .eq('cidade_id', usuario.cidade);
+                
+                if (dadosEscolas) {
+                    atualizarGraficoEscolas({
+                        labels: dadosEscolas.map(e => e.escola_nome),
+                        valores: dadosEscolas.map(e => e.presentes_hoje),
+                        total: dadosEscolas.map(e => e.total_alunos)
+                    });
+                }
+                
+                // Carregar distribuição por série (view_distribuicao_series)
+                const { data: dadosSeries } = await supabase
+                    .from('view_distribuicao_series')
+                    .select('*')
+                    .eq('cidade_id', usuario.cidade);
+                
+                if (dadosSeries) {
+                    atualizarGraficoSeries({
+                        labels: dadosSeries.map(s => s.serie_nome),
+                        valores: dadosSeries.map(s => s.total_alunos)
+                    });
+                }
+                
+                // Carregar histórico de presença (view_historico_presenca)
+                const { data: historicoPresenca } = await supabase
+                    .from('view_historico_presenca')
+                    .select('*')
+                    .eq('cidade_id', usuario.cidade)
+                    .order('data', { ascending: true });
+                    
+                if (historicoPresenca) {
+                    // Atualizar gráfico ou métricas de histórico se necessário
+                    console.log('Histórico de presença carregado:', historicoPresenca.length, 'dias');
+                }
+                
+                // Carregar últimos registros (view_alunos_logs)
+                const { data: ultimosRegistros } = await supabase
+                    .from('view_alunos_logs')
+                    .select('*')
+                    .eq('cidade', metricasCidade.cidade_nome)
+                    .order('hora_check', { ascending: false })
+                    .limit(10);
+                
+                if (ultimosRegistros) {
+                    const registrosFormatados = ultimosRegistros.map(registro => ({
+                        aluno_nome: registro.nome_aluno,
+                        aluno_foto: registro.foto_aluno,
+                        escola_nome: registro.nome_colégio,
+                        horario: registro.hora_check,
+                        tipo_evento: registro.event === 1 ? 'entrada' : 'saída'
+                    }));
+                    atualizarRegistros(registrosFormatados);
+                }
+                
+                // Carregar alunos críticos (view_alunos_criticos)
+                const { data: alunosCriticos } = await supabase
+                    .from('view_alunos_criticos')
+                    .select('*')
+                    .eq('escola_id', usuario.cidade)
+                    .order('percentual_presenca', { ascending: true })
+                    .limit(5);
+                    
+                if (alunosCriticos) {
+                    console.log('Alunos críticos carregados:', alunosCriticos.length);
+                    // Podemos adicionar uma seção para mostrar esses alunos se desejar
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+            }
+        }
+        
+        // Atualização automática
+        setInterval(atualizarDataAtual, 60000); // Atualiza a data a cada minuto
+        setInterval(carregarDados, 60000);      // Atualiza os dados a cada minuto
+        
+        // Primeira carga
+        atualizarDataAtual();
+        carregarDados();
+    </script>
+</body>
+</html>

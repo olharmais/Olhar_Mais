@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Excluir Aluno</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preloader {
+            transition: opacity 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+        <button id="closePreloader" class="absolute top-4 right-4 p-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300" title="Forçar fechamento">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Loading principal -->
+    <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40 hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="alunos.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Excluir Aluno</h1>
+            </div>
+        </div>
+
+        <!-- Estado vazio/erro -->
+        <div id="emptyState" class="hidden card p-12 text-center">
+            <i class="ph ph-warning-circle text-3xl text-amber-500 mb-4"></i>
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Aluno não encontrado</h2>
+            <p class="text-gray-600 mb-6">O aluno que você está procurando não existe ou foi removido.</p>
+            <a href="alunos.html" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Voltar para lista de alunos
+            </a>
+        </div>
+
+        <!-- Card de Confirmação -->
+        <div id="confirmationCard" class="hidden card p-8 max-w-2xl mx-auto">
+            <!-- Alerta de erro -->
+            <div id="errorAlert" class="hidden mb-6 bg-red-50 p-4 rounded-lg">
+                <div class="flex items-start">
+                    <i class="ph ph-x-circle text-red-600 mr-3 text-lg"></i>
+                    <div>
+                        <h4 class="text-red-700 font-medium">Não é possível excluir este aluno</h4>
+                        <p id="errorMessage" class="text-red-600 text-sm mt-2">
+                            Este aluno possui registros relacionados em outras tabelas do sistema.
+                        </p>
+                        <div class="mt-4 flex gap-3">
+                            <button id="softDeleteButton" type="button" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm">
+                                Desativar aluno (manter registros)
+                            </button>
+                            <a id="editLinkButton" href="#" class="hidden px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1">
+                                <i class="ph ph-pencil text-sm"></i>
+                                <span>Editar aluno</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="ph ph-warning text-red-600 text-3xl"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">Confirmar Exclusão</h2>
+                <p class="text-gray-600">
+                    Você está prestes a excluir permanentemente o aluno <strong id="alunoNome">-</strong>. 
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+            
+            <!-- Detalhes do Aluno -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 class="text-md font-medium text-gray-700 mb-3">Detalhes do Aluno</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Registro:</span>
+                        <span id="alunoRegistro" class="ml-2 font-medium">-</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Escola:</span>
+                        <span id="alunoEscola" class="ml-2 font-medium">-</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Série:</span>
+                        <span id="alunoSerie" class="ml-2 font-medium">-</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Turma:</span>
+                        <span id="alunoTurma" class="ml-2 font-medium">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg mb-8">
+                <div class="flex items-start">
+                    <i class="ph ph-warning-circle text-red-600 mr-3 text-lg"></i>
+                    <div>
+                        <h4 class="text-red-700 font-medium">Consequências da exclusão:</h4>
+                        <ul class="text-red-600 text-sm mt-2 list-disc list-inside">
+                            <li>O registro do aluno será completamente removido do sistema</li>
+                            <li>O histórico de presença será perdido</li>
+                            <li>Os IDs do aluno no sistema de reconhecimento serão invalidados</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botões de ação -->
+            <div class="flex justify-center space-x-4">
+                <a href="alunos.html" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancelar
+                </a>
+                <button id="deleteButton" type="button" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center">
+                    <span id="loadingSpinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    Excluir Aluno
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        let alunoData = {};
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM carregado, iniciando...");
+            
+            // Verificar o estado do preloader
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                console.log("Preloader encontrado, garantindo que esteja visível");
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            } else {
+                console.error("Preloader não encontrado!");
+            }
+
+            // Configurar botão de escape do preloader
+            document.getElementById('closePreloader').addEventListener('click', function() {
+                hidePreloader(true); // Esconder imediatamente
+            });
+
+            // Inicializar Supabase
+            try {
+                console.log('Obtendo credenciais do Supabase...');
+                const creds = window.getSupabaseCredentials();
+                console.log('Credenciais obtidas:', creds.url);
+                
+                console.log('Criando cliente Supabase...');
+                supabase = window.createSupabaseClient();
+                console.log('Supabase client created successfully:', supabase);
+                
+                // Teste de conexão
+                console.log('Testando conexão com o Supabase...');
+                const { data: testData, error: testError } = await supabase.from('escolas').select('id').limit(1);
+                if (testError) throw testError;
+                console.log('Conexão com Supabase funcionando corretamente:', testData);
+                
+                // Inicializar sidebar
+                initializeSidebar();
+                
+                // Obter ID do aluno da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const alunoId = urlParams.get('id');
+                console.log('ID do aluno obtido da URL:', alunoId);
+                
+                if (alunoId) {
+                    try {
+                        // Mostrar preloader - ajustado para usar a nova função
+                        showPreloader();
+                        
+                        // Buscar dados do aluno
+                        await loadAlunoData(alunoId);
+                    } catch (error) {
+                        console.error('Erro ao carregar aluno:', error);
+                        showToast('Erro ao carregar dados do aluno: ' + error.message, 'error');
+                        hidePreloader();
+                    }
+                } else {
+                    // Sem ID, mostrar erro
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    document.getElementById('confirmationCard').classList.add('hidden');
+                    showToast('ID do aluno não fornecido', 'error');
+                    hidePreloader();
+                }
+                
+                // Configurar botão de exclusão
+                document.getElementById('deleteButton').addEventListener('click', deleteAluno);
+                
+                // Configurar botão de soft delete
+                document.getElementById('softDeleteButton').addEventListener('click', softDeleteAluno);
+            } catch (error) {
+                console.error('Erro ao carregar supabase:', error);
+                showToast('Erro ao carregar supabase: ' + error.message, 'error');
+                hidePreloader(); // Esconder preloader em caso de erro na inicialização
+            }
+        });
+        
+        // Carregar dados do aluno
+        async function loadAlunoData(alunoId) {
+            try {
+                // Buscar dados do aluno com joins para informações relacionadas
+                const { data, error } = await supabase
+                    .from('alunos')
+                    .select(`
+                        id, 
+                        nome_completo, 
+                        registro_aluno, 
+                        escola_id,
+                        escola:escolas(nome),
+                        serie, 
+                        series:series(nome),
+                        turma, 
+                        turmas:turmas(nome)
+                    `)
+                    .eq('id', alunoId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data) {
+                    // Guardar dados
+                    alunoData = data;
+                    console.log('Dados do aluno carregados:', data);
+                    
+                    // Mostrar detalhes
+                    displayAlunoDetails(data);
+                    document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('confirmationCard').classList.remove('hidden');
+                } else {
+                    // Mostrar empty state
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    document.getElementById('confirmationCard').classList.add('hidden');
+                    showToast('Aluno não encontrado', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar aluno:', error);
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('confirmationCard').classList.add('hidden');
+                showToast('Erro ao carregar dados do aluno: ' + error.message, 'error');
+            } finally {
+                hidePreloader();
+            }
+        }
+        
+        // Exibir detalhes do aluno
+        function displayAlunoDetails(aluno) {
+            document.getElementById('alunoNome').textContent = aluno.nome_completo || '-';
+            document.getElementById('alunoRegistro').textContent = aluno.registro_aluno || '-';
+            document.getElementById('alunoEscola').textContent = aluno.escola?.nome || 'Não definida';
+            document.getElementById('alunoSerie').textContent = aluno.series?.nome || 'Não definida';
+            document.getElementById('alunoTurma').textContent = aluno.turmas?.nome || 'Não definida';
+        }
+        
+        // Excluir aluno
+        async function deleteAluno() {
+            // Mostrar loading no botão
+            const deleteButton = document.getElementById('deleteButton');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            deleteButton.disabled = true;
+            loadingSpinner.classList.remove('hidden');
+            
+            try {
+                if (!alunoData.id) {
+                    throw new Error('ID do aluno não encontrado');
+                }
+                
+                console.log(`Excluindo aluno ID: ${alunoData.id}`);
+                
+                // Verificar se o aluno possui vínculos com dispositivos
+                const { data: dispositivos, error: dispositivosError } = await supabase
+                    .from('aluno_dispositivo')
+                    .select('id, id_dispositivo, dispositivos(camera_id)')
+                    .eq('aluno', alunoData.id);
+                
+                if (dispositivosError) {
+                    console.error('Erro ao verificar dispositivos vinculados:', dispositivosError);
+                    throw dispositivosError;
+                }
+                
+                // Se existem dispositivos vinculados, impedir a exclusão
+                if (dispositivos && dispositivos.length > 0) {
+                    const dispositivosList = dispositivos.map(d => d.dispositivos?.camera_id || `ID ${d.id_dispositivo}`).join(', ');
+                    const errorMsg = `Não é possível excluir este aluno porque ele está vinculado a ${dispositivos.length} dispositivo(s): ${dispositivosList}. Por favor, acesse a tela de edição do aluno e desvincule todos os dispositivos primeiro.`;
+                    
+                    // Mostrar alerta de erro
+                    const errorAlert = document.getElementById('errorAlert');
+                    const errorMessage = document.getElementById('errorMessage');
+                    const editLinkButton = document.getElementById('editLinkButton');
+                    
+                    errorAlert.classList.remove('hidden');
+                    errorMessage.textContent = errorMsg;
+                    
+                    // Configurar e mostrar o botão de link para edição
+                    editLinkButton.href = `alunos_edit.html?id=${alunoData.id}`;
+                    editLinkButton.classList.remove('hidden');
+                    
+                    // Scroll para o alerta de erro
+                    errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    throw new Error(errorMsg);
+                }
+                
+                // 1. Primeiro excluir as referências na tabela "usuarios"
+                const { data: usuarios, error: usuariosError } = await supabase
+                    .from('usuarios')
+                    .select('id')
+                    .eq('aluno', alunoData.id);
+                
+                if (usuariosError) {
+                    console.error('Erro ao buscar usuários relacionados:', usuariosError);
+                }
+                
+                if (usuarios && usuarios.length > 0) {
+                    console.log(`Excluindo ${usuarios.length} usuários relacionados ao aluno...`);
+                    
+                    const { error: deleteUsuariosError } = await supabase
+                        .from('usuarios')
+                        .delete()
+                        .eq('aluno', alunoData.id);
+                    
+                    if (deleteUsuariosError) {
+                        throw new Error(`Erro ao excluir usuários relacionados: ${deleteUsuariosError.message}`);
+                    }
+                    
+                    console.log('Usuários relacionados excluídos com sucesso');
+                }
+                
+                // 2. Agora excluir o aluno
+                const { error } = await supabase
+                    .from('alunos')
+                    .delete()
+                    .eq('id', alunoData.id);
+                
+                if (error) {
+                    // Se houver um erro específico de chave estrangeira, fornecer uma mensagem mais amigável
+                    if (error.code === '23503') {
+                        const table = error.details.match(/table "(.*?)"/);
+                        const tableName = table ? table[1] : 'outra tabela';
+                        throw new Error(`Não é possível excluir este aluno porque ele está sendo usado em "${tableName}". Por favor, remova estas referências primeiro.`);
+                    }
+                    throw error;
+                }
+                
+                showToast('Aluno excluído com sucesso!', 'success');
+                
+                // Redirecionar para a lista após 1 segundo
+                setTimeout(() => {
+                    window.location.href = 'alunos.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao excluir aluno:', error);
+                showToast('Erro ao excluir aluno: ' + error.message, 'error');
+                
+                // Mostrar o alerta de erro com a mensagem adequada
+                const errorAlert = document.getElementById('errorAlert');
+                const errorMessage = document.getElementById('errorMessage');
+                
+                if (error.code === '23503' || (error.message && error.message.includes('referências')) || (error.message && error.message.includes('vinculado'))) {
+                    errorAlert.classList.remove('hidden');
+                    
+                    // Se a mensagem não foi definida na verificação de dispositivos
+                    if (!errorMessage.innerHTML.includes('tela de edição')) {
+                    errorMessage.textContent = error.message;
+                    }
+                    
+                    // Verificar se mostramos o botão de edição
+                    const editLinkButton = document.getElementById('editLinkButton');
+                    if (error.message && error.message.includes('vinculado')) {
+                        editLinkButton.href = `alunos_edit.html?id=${alunoData.id}`;
+                        editLinkButton.classList.remove('hidden');
+                    } else {
+                        editLinkButton.classList.add('hidden');
+                    }
+                    
+                    // Scroll para o alerta de erro
+                    errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Reativar botão
+                deleteButton.disabled = false;
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+        
+        // Função para desativar o aluno (soft delete)
+        async function softDeleteAluno() {
+            // Mostrar loading no botão
+            const softDeleteButton = document.getElementById('softDeleteButton');
+            const originalText = softDeleteButton.textContent;
+            softDeleteButton.disabled = true;
+            softDeleteButton.innerHTML = `
+                <span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                Desativando...
+            `;
+            
+            try {
+                if (!alunoData.id) {
+                    throw new Error('ID do aluno não encontrado');
+                }
+                
+                console.log(`Desativando aluno ID: ${alunoData.id}`);
+                
+                // Atualizar o status do aluno para INATIVO e adicionar soft_delete
+                const { error } = await supabase
+                    .from('alunos')
+                    .update({
+                        status: 'INATIVO',
+                        soft_delete: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', alunoData.id);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showToast('Aluno desativado com sucesso!', 'success');
+                
+                // Redirecionar para a lista após 1 segundo
+                setTimeout(() => {
+                    window.location.href = 'alunos.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao desativar aluno:', error);
+                showToast('Erro ao desativar aluno: ' + error.message, 'error');
+                
+                // Restaurar botão
+                softDeleteButton.disabled = false;
+                softDeleteButton.textContent = originalText;
+            }
+        }
+        
+        // Função para exibir toast
+        function showToast(message, type = 'success') {
+            // Configurar Toast
+            const toastOptions = {
+                position: 'top-right',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined
+            };
+            
+            if (type === 'success') {
+                Toastify({
+                    text: message,
+                    className: "info",
+                    style: {
+                        background: "linear-gradient(to right, #00b09b, #96c93d)",
+                    }
+                }).showToast();
+            } else {
+                Toastify({
+                    text: message,
+                    className: "info",
+                    style: {
+                        background: "linear-gradient(to right, #ff5f6d, #ffc371)",
+                    }
+                }).showToast();
+            }
+        }
+
+        // Função para mostrar loading
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+
+        // Função para esconder loading
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Funções para controlar o preloader
+        function showPreloader() {
+            console.log("Mostrando preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+                console.log("Preloader mostrado");
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        function hidePreloader(immediate = false) {
+            console.log("Escondendo preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                if (immediate) {
+                    preloader.style.display = 'none';
+                    console.log("Preloader escondido imediatamente");
+                } else {
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                        console.log("Preloader escondido após transição");
+                    }, 300);
+                }
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+            
+            // Esconder também o loading principal
+            hideLoading();
+        }
+    </script>
+</body>
+</html>

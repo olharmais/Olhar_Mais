@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Frequência</title>
+    <meta name="description" content="OlharMais - Controle de frequência de alunos">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        
+        /* Ajuste para o navbar mobile */
+        body {
+            padding-bottom: 60px; /* Altura do navbar + margem */
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body class="font-sans bg-white dark:bg-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center">
+            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+            <div class="ml-auto">
+                <button onclick="window.location.href='notificacoes_nutri.html'" class="text-gray-600 hover:text-primary transition-colors relative">
+                    <i class="ph ph-bell text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Cabeçalho -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Frequência dos Alunos</h2>
+            <p class="text-gray-600">Visualize a frequência dos alunos por turma e data</p>
+        </div>
+        
+        <!-- Seleção inicial (Etapa 1) -->
+        <div id="selecao-container" class="bg-white rounded-lg shadow p-5 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Seletor de Escola -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Escola</label>
+                    <select id="escola-select" class="w-full border border-gray-300 rounded-full px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
+                        <option value="">Selecione uma escola</option>
+                    </select>
+                </div>
+                
+                <!-- Seletor de Turma -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Turma</label>
+                    <select id="turma-select" class="w-full border border-gray-300 rounded-full px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all" disabled>
+                        <option value="">Selecione uma turma</option>
+                    </select>
+                </div>
+                
+                <!-- Botão Continuar -->
+                <div class="flex items-end">
+                    <button id="carregar-dias-btn" class="w-full bg-primary text-white rounded-full py-3 px-4 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-all" disabled>
+                        Carregar Dias
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dias Disponíveis (Etapa 2) -->
+        <div id="dias-container" class="hidden animate-fade-in">
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Dias Disponíveis</h3>
+            <div class="bg-white rounded-lg shadow p-5 mb-6">
+                <div id="dias-disponiveis" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Os botões de dias serão inseridos aqui via JavaScript -->
+                </div>
+                <div id="sem-dias" class="hidden text-center py-6 text-gray-500">
+                    <i class="ph ph-calendar-x text-4xl mb-2"></i>
+                    <p>Não foram encontrados registros para esta turma</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <button id="voltar-selecao" class="text-primary hover:text-primary-dark">
+                    <i class="ph ph-arrow-left"></i> Voltar para seleção
+                </button>
+            </div>
+        </div>
+        
+        <!-- Lista de Alunos (Etapa 3) -->
+        <div id="chamada-container" class="hidden animate-fade-in">
+            <!-- Cabeçalho da Chamada -->
+            <div class="bg-white rounded-lg shadow p-5 mb-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div>
+                        <h3 id="chamada-titulo" class="text-xl font-semibold text-gray-800 mb-1">Lista de Frequência</h3>
+                        <p id="chamada-subtitulo" class="text-gray-600">Selecione uma data para ver os detalhes</p>
+                    </div>
+                    <button id="voltar-dias" class="mt-2 md:mt-0 text-primary hover:text-primary-dark text-sm">
+                        <i class="ph ph-arrow-left"></i> Voltar para calendário
+                    </button>
+                    
+                    <div class="mt-3 md:mt-0 flex flex-col md:flex-row md:items-center">
+                        <div class="bg-primary-light text-primary px-3 py-1 rounded-full mr-2 font-medium">
+                            <i class="ph ph-users"></i> <span id="chamada-quantidade">0</span> alunos
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista de Alunos -->
+            <div id="alunos-container" class="flex flex-col gap-2">
+                <!-- Os cards dos alunos serão inseridos aqui via JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Mensagem de Carregamento -->
+        <div id="loading" class="hidden">
+            <div class="flex items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        </div>
+        
+        <!-- Mensagem de Nenhum Resultado -->
+        <div id="no-results" class="hidden">
+            <div class="text-center py-12 text-gray-600 bg-white rounded-lg shadow p-6">
+                <i class="ph ph-magnifying-glass text-5xl text-gray-400 mb-4"></i>
+                <p class="text-xl font-medium">Nenhum aluno encontrado</p>
+                <p class="mt-2">Verifique os filtros ou tente outra data</p>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_nutri.js"></script>
+    
+    <!-- Fallback: iframe com navbar (oculto se JS alternativo funcionar) -->
+    <iframe id="navbar-iframe" src="navbar_nutri.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
+    
+    <script>
+        // Ocultar o iframe se o JS alternativo carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof adicionarBarraNavegacao === 'function') {
+                const iframe = document.getElementById('navbar-iframe');
+                if (iframe) iframe.style.display = 'none';
+            }
+        });
+    
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            },
+            
+            success(message) { this.show(message, 'success'); },
+            error(message) { this.show(message, 'error'); },
+            warning(message) { this.show(message, 'warning'); },
+            info(message) { this.show(message, 'info'); }
+        };
+    
+        // Estado da aplicação
+        const estadoApp = {
+            escolaId: null,
+            escolaNome: '',
+            turmaId: null,
+            turmaNome: '',
+            turmaPeriodo: '',
+            dataSelecionada: null,
+            diasDisponiveis: []
+        };
+        
+        // Verificação de Permissão e Tipo de Usuário
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é NUTRICIONISTA
+                if (userData.tipo !== 'NUTRICIONISTA') {
+                    console.error('Usuário não é NUTRICIONISTA');
+                    Toast.error('Acesso não autorizado para este perfil');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+                
+                // Inicializar Supabase
+                const supabase = createSupabaseClient();
+                
+                // Carregar escolas permitidas
+                await carregarEscolas(supabase, userData.id);
+                
+                // Configurar event listeners
+                configurarEventListeners(supabase, userData.id);
+                
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                Toast.error('Erro ao carregar a página. Por favor, tente novamente.');
+            }
+        });
+        
+        // Função para determinar o nível de acesso do usuário
+        async function determinarNivelAcesso(supabase, userId) {
+            try {
+                // Buscar todas as permissões do usuário
+                const [
+                    { data: permissoesCidade },
+                    { data: permissoesEscola },
+                    { data: permissoesTurma }
+                ] = await Promise.all([
+                    supabase.from('permissoes_cidade').select('cidade_id').eq('usuario_id', userId),
+                    supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userId),
+                    supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userId)
+                ]);
+
+                console.log('Permissões do usuário:', {
+                    permissoesCidade,
+                    permissoesEscola,
+                    permissoesTurma
+                });
+
+                // Determinar o nível de acesso
+                if (permissoesCidade?.length > 0) {
+                    return {
+                        nivel: 'CIDADE',
+                        ids: permissoesCidade.map(p => p.cidade_id)
+                    };
+                }
+                
+                if (permissoesEscola?.length > 0) {
+                    return {
+                        nivel: 'ESCOLA',
+                        ids: permissoesEscola.map(p => p.escola_id)
+                    };
+                }
+                
+                if (permissoesTurma?.length > 0) {
+                    return {
+                        nivel: 'TURMA',
+                        ids: permissoesTurma.map(p => p.turma_id)
+                    };
+                }
+
+                return { nivel: 'SEM_ACESSO', ids: [] };
+            } catch (error) {
+                console.error('Erro ao determinar nível de acesso:', error);
+                throw error;
+            }
+        }
+        
+        // Função para carregar escolas permitidas
+        async function carregarEscolas(supabase, userId) {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                console.log('Carregando escolas para usuário:', userId);
+
+                // Determinar o nível de acesso do usuário
+                const nivelAcesso = await determinarNivelAcesso(supabase, userId);
+                console.log('Nível de acesso do usuário:', nivelAcesso);
+
+                let escolasPermitidas = [];
+
+                switch (nivelAcesso.nivel) {
+                    case 'CIDADE':
+                        // Buscar todas as escolas das cidades permitidas
+                        const { data: escolasPorCidade } = await supabase
+                            .from('escolas')
+                            .select('id, nome, cidade_id')
+                            .in('cidade_id', nivelAcesso.ids)
+                            .is('soft_delete', null)
+                            .order('nome');
+                        
+                        escolasPermitidas = escolasPorCidade || [];
+                        break;
+
+                    case 'ESCOLA':
+                        // Buscar escolas específicas
+                        const { data: escolasEspecificas } = await supabase
+                            .from('escolas')
+                            .select('id, nome, cidade_id')
+                            .in('id', nivelAcesso.ids)
+                            .is('soft_delete', null)
+                            .order('nome');
+                        
+                        escolasPermitidas = escolasEspecificas || [];
+                        break;
+
+                    case 'TURMA':
+                        // Buscar escolas das turmas permitidas
+                        const { data: turmas } = await supabase
+                            .from('turmas')
+                            .select('escola_id')
+                            .in('id', nivelAcesso.ids);
+
+                        if (turmas?.length > 0) {
+                            const escolasIds = [...new Set(turmas.map(t => t.escola_id))];
+                            const { data: escolasDasTurmas } = await supabase
+                                .from('escolas')
+                                .select('id, nome, cidade_id')
+                                .in('id', escolasIds)
+                                .is('soft_delete', null)
+                                .order('nome');
+                            
+                            escolasPermitidas = escolasDasTurmas || [];
+                        }
+                        break;
+                }
+
+                // Atualizar select de escolas
+                const escolaSelect = document.getElementById('escola-select');
+                escolaSelect.innerHTML = '<option value="">Selecione uma escola</option>';
+
+                if (escolasPermitidas.length === 0) {
+                    Toast.warning('Você não tem permissões para nenhuma escola');
+                    document.getElementById('loading').classList.add('hidden');
+                    return;
+                }
+
+                escolasPermitidas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.dataset.nome = escola.nome;
+                    option.textContent = escola.nome;
+                    escolaSelect.appendChild(option);
+                });
+
+                // Se houver apenas uma escola, selecioná-la automaticamente
+                if (escolasPermitidas.length === 1) {
+                    console.log('Apenas uma escola encontrada. Selecionando automaticamente.');
+                    
+                    // Definir valores no estado antes de disparar o evento
+                    estadoApp.escolaId = escolasPermitidas[0].id;
+                    estadoApp.escolaNome = escolasPermitidas[0].nome;
+                    
+                    // Definir valor no select
+                    escolaSelect.value = escolasPermitidas[0].id;
+                    
+                    // Aguardar um momento para garantir que tudo está pronto
+                    setTimeout(async () => {
+                        console.log('Carregando turmas para a escola única após timeout');
+                        await carregarTurmas(supabase, userId, estadoApp.escolaId);
+                    }, 100);
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                Toast.error('Erro ao carregar escolas');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        // Função para carregar turmas permitidas
+        async function carregarTurmas(supabase, userId, escolaId) {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                console.log('Carregando turmas para escola ID:', escolaId);
+
+                // Habilitar o select de turma
+                const turmaSelect = document.getElementById('turma-select');
+                turmaSelect.disabled = false;
+
+                // Determinar o nível de acesso do usuário
+                const nivelAcesso = await determinarNivelAcesso(supabase, userId);
+                console.log('Nível de acesso do usuário:', nivelAcesso);
+
+                let turmasPermitidas = [];
+
+                // Query base com join para série
+                const queryBase = `
+                    id,
+                    nome,
+                    periodo,
+                    serie:serie_id (
+                        id,
+                        nome
+                    )
+                `;
+
+                switch (nivelAcesso.nivel) {
+                    case 'CIDADE':
+                        // Verificar se a escola pertence a uma cidade permitida
+                        const { data: escola } = await supabase
+                            .from('escolas')
+                            .select('cidade_id')
+                            .eq('id', escolaId)
+                            .single();
+
+                        if (escola && nivelAcesso.ids.includes(escola.cidade_id)) {
+                            // Buscar todas as turmas da escola com série
+                            const { data: turmasDaEscola } = await supabase
+                                .from('turmas')
+                                .select(queryBase)
+                                .eq('escola_id', escolaId)
+                                .order('nome');
+                            
+                            turmasPermitidas = turmasDaEscola || [];
+                        }
+                        break;
+
+                    case 'ESCOLA':
+                        // Verificar se tem permissão para esta escola
+                        if (nivelAcesso.ids.includes(parseInt(escolaId))) {
+                            // Buscar todas as turmas da escola com série
+                            const { data: turmasDaEscola } = await supabase
+                                .from('turmas')
+                                .select(queryBase)
+                                .eq('escola_id', escolaId)
+                                .order('nome');
+                            
+                            turmasPermitidas = turmasDaEscola || [];
+                        }
+                        break;
+
+                    case 'TURMA':
+                        console.log('Buscando turmas específicas para o usuário na escola:', escolaId);
+                        
+                        // Primeiro, buscar todas as turmas da escola com série
+                        const { data: todasTurmasDaEscola, error: turmasEscolaError } = await supabase
+                            .from('turmas')
+                            .select(queryBase)
+                            .eq('escola_id', parseInt(escolaId))
+                            .order('nome');
+                        
+                        if (turmasEscolaError) {
+                            console.error('Erro ao buscar turmas da escola:', turmasEscolaError);
+                            throw turmasEscolaError;
+                        }
+                        
+                        console.log('Todas as turmas da escola:', todasTurmasDaEscola);
+                        console.log('IDs de turmas com permissão:', nivelAcesso.ids);
+                        
+                        // Filtrar turmas permitidas manualmente para debugging
+                        turmasPermitidas = [];
+                        const turmasIdsPermitidas = nivelAcesso.ids.map(id => 
+                            typeof id === 'string' ? parseInt(id) : id
+                        );
+                        
+                        todasTurmasDaEscola?.forEach(turma => {
+                            const turmaId = typeof turma.id === 'string' ? parseInt(turma.id) : turma.id;
+                            const temPermissao = turmasIdsPermitidas.includes(turmaId);
+                            
+                            console.log(`Verificando turma: ${turma.id} (${turma.nome}) - Tem permissão: ${temPermissao}`);
+                            
+                            if (temPermissao) {
+                                turmasPermitidas.push(turma);
+                            }
+                        });
+                        
+                        console.log('Turmas filtradas após verificação manual:', turmasPermitidas);
+                        
+                        // Se não encontrou nenhuma, tentar com a query direta como fallback
+                        if (turmasPermitidas.length === 0) {
+                            console.log('Nenhuma turma encontrada manualmente. Tentando query direta...');
+                            
+                            // Converter todos os IDs para string para evitar problemas de tipo
+                            const idsString = nivelAcesso.ids.map(id => id.toString());
+                            
+                            const { data: turmasDiretas, error: turmasDiretasError } = await supabase
+                                .from('turmas')
+                                .select(queryBase)
+                                .eq('escola_id', parseInt(escolaId))
+                                .in('id', nivelAcesso.ids);
+                            
+                            if (turmasDiretasError) {
+                                console.error('Erro na query direta:', turmasDiretasError);
+                            } else {
+                                console.log('Resultado da query direta:', turmasDiretas);
+                                turmasPermitidas = turmasDiretas || [];
+                            }
+                        }
+                        
+                        break;
+                }
+
+                // Renderizar as turmas permitidas
+                renderizarTurmas(turmasPermitidas);
+
+            } catch (error) {
+                console.error('Erro ao carregar turmas:', error);
+                Toast.error('Erro ao carregar turmas');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        // Função auxiliar para renderizar turmas no select
+        function renderizarTurmas(turmas) {
+            const turmaSelect = document.getElementById('turma-select');
+            turmaSelect.innerHTML = '<option value="">Selecione uma turma</option>';
+            turmaSelect.disabled = false; // Garantir que o select está habilitado
+            
+            if (!turmas || turmas.length === 0) {
+                Toast.warning('Não foram encontradas turmas nesta escola');
+                document.getElementById('loading').classList.add('hidden');
+                return;
+            }
+            
+            turmas.forEach(turma => {
+                const option = document.createElement('option');
+                option.value = turma.id;
+                option.dataset.nome = turma.nome;
+                option.dataset.periodo = turma.periodo || 'Não informado';
+                option.textContent = `${turma.nome} - ${turma.serie?.nome || 'Série não informada'}`;
+                turmaSelect.appendChild(option);
+            });
+            
+            // Se houver apenas uma turma, selecioná-la automaticamente
+            if (turmas.length === 1) {
+                turmaSelect.value = turmas[0].id;
+                estadoApp.turmaId = turmas[0].id;
+                estadoApp.turmaNome = turmas[0].nome;
+                estadoApp.turmaPeriodo = turmas[0].periodo || 'Não informado';
+                
+                // Habilitar o botão de carregar dias
+                document.getElementById('carregar-dias-btn').disabled = false;
+                
+                // Disparar evento change
+                turmaSelect.dispatchEvent(new Event('change'));
+            }
+            
+            document.getElementById('loading').classList.add('hidden');
+        }
+        
+        // Função para carregar dias disponíveis para a turma
+        async function carregarDiasDisponiveis(supabase, turmaId) {
+            try {
+                // Mostrar loading
+                document.getElementById('loading').classList.remove('hidden');
+                
+                // Buscar dias com logs pela nova view
+                const { data, error } = await supabase
+                    .from('dias_com_logs')
+                    .select('*')
+                    .eq('turma_id', parseInt(turmaId))
+                    .order('data', { ascending: false });
+                
+                if (error) throw error;
+                
+                console.log('Dias disponíveis recebidos da view:', data);
+                
+                // Salvar no estado da aplicação
+                estadoApp.diasDisponiveis = data || [];
+                
+                // Esconder loading
+                document.getElementById('loading').classList.add('hidden');
+                
+                // Renderizar os dias no calendário
+                renderizarDiasDisponiveis(estadoApp.diasDisponiveis);
+                
+                // Mostrar container de dias
+                document.getElementById('selecao-container').classList.add('hidden');
+                document.getElementById('dias-container').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dias disponíveis:', error);
+                Toast.error('Erro ao carregar calendário');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        // Função para renderizar os dias disponíveis
+        function renderizarDiasDisponiveis(dias) {
+            const container = document.getElementById('dias-disponiveis');
+            const semDiasMsg = document.getElementById('sem-dias');
+            
+            container.innerHTML = '';
+            
+            if (!dias || dias.length === 0) {
+                semDiasMsg.classList.remove('hidden');
+                return;
+            }
+            
+            semDiasMsg.classList.add('hidden');
+            
+            dias.forEach(item => {
+                const dataObj = new Date(item.data + 'T00:00:00');
+                
+                const diaSemana = dataObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+                const dia = dataObj.getDate().toString().padStart(2, '0');
+                const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+                const ano = dataObj.getFullYear();
+                
+                const button = document.createElement('button');
+                button.className = 'bg-white rounded-lg p-4 hover:border-primary transition-all border border-gray-100 flex flex-col items-center';
+                button.dataset.data = item.data;
+                button.innerHTML = `
+                    <div class="text-sm text-gray-500 mb-1">${diaSemana}</div>
+                    <div class="text-xl font-bold text-primary mb-1">${dia}/${mes}</div>
+                    <div class="text-sm text-gray-400">${ano}</div>
+                    <div class="flex flex-col gap-2 mt-2 w-full">
+                        <div class="text-xs border border-green-500 text-green-600 px-2 py-0.5 rounded text-center">
+                            ${item.qtd_logs} presentes
+                        </div>
+                        <div class="text-xs border border-red-500 text-red-600 px-2 py-0.5 rounded text-center">
+                            ${item.total_alunos - item.qtd_logs} ausentes
+                        </div>
+                        <div class="text-xs border border-gray-200 text-gray-600 px-2 py-0.5 rounded text-center">
+                            Total: ${item.total_alunos}
+                        </div>
+                    </div>
+                `;
+                
+                button.addEventListener('click', () => {
+                    carregarFrequencia(
+                        createSupabaseClient(), 
+                        estadoApp.turmaId, 
+                        item.data,
+                        {
+                            escolaNome: estadoApp.escolaNome,
+                            turmaNome: estadoApp.turmaNome,
+                            turmaPeriodo: estadoApp.turmaPeriodo,
+                            data: `${dia}/${mes}/${ano}`,
+                            diaSemana,
+                            qtdPresentes: item.qtd_logs,
+                            qtdFaltantes: item.total_alunos - item.qtd_logs
+                        }
+                    );
+                });
+                
+                container.appendChild(button);
+            });
+        }
+        
+        // Função para criar card do aluno
+        function criarCardAluno(aluno, logsDoAluno = []) {
+            const itemLista = document.createElement('div');
+            itemLista.className = `bg-white rounded-lg p-2 flex items-center shadow-sm hover:bg-gray-50 cursor-pointer transition-colors ${logsDoAluno.length > 0 ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`;
+            
+            const logsOrdenados = [...logsDoAluno].sort((a, b) => 
+                new Date(a.hora_check || a.inserted_at) - new Date(b.hora_check || b.inserted_at)
+            );
+            
+            const primeiroLog = logsOrdenados[0];
+            const ultimoLog = logsOrdenados[logsOrdenados.length - 1];
+            
+            const formatarHora = (log) => {
+                if (!log) return null;
+                const data = new Date(log.hora_check || log.inserted_at);
+                return data.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+            
+            itemLista.innerHTML = `
+                <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mr-2">
+                    <img src="${aluno.foto_url || '/assets/img/avatar-placeholder.png'}" 
+                         alt="Foto do aluno" 
+                         class="w-full h-full object-cover"
+                         onerror="this.src='/assets/img/avatar-placeholder.png'">
+                </div>
+                <div class="flex-grow min-w-0">
+                    <h3 class="font-medium text-gray-800 text-sm truncate">${aluno.nome_completo}</h3>
+                    <div class="text-xs text-gray-500">
+                        ${logsDoAluno.length > 0 ? 'Presente' : 'Ausente'}
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 ml-auto text-xs">
+                    <div class="flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full ${primeiroLog ? 'bg-green-500' : 'bg-red-500'}"></span>
+                        <span>${formatarHora(primeiroLog) || '--:--'}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full ${ultimoLog && ultimoLog !== primeiroLog ? 'bg-green-500' : 'bg-red-500'}"></span>
+                        <span>${ultimoLog && ultimoLog !== primeiroLog ? formatarHora(ultimoLog) : '--:--'}</span>
+                    </div>
+                    <button class="text-primary hover:text-primary-dark ml-2" title="Ver ficha completa">
+                        <i class="ph ph-arrow-square-out text-lg"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Adicionar evento de clique para abrir a ficha do aluno
+            itemLista.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.location.href = `/nutricionista/ficha_aluno.html?id=${aluno.id}`;
+            });
+            
+            return itemLista;
+        }
+        
+        // Função para carregar frequência dos alunos
+        async function carregarFrequencia(supabase, turmaId, data, infoExibicao) {
+            try {
+                console.log('Iniciando carregamento de frequência:', {
+                    turmaId: turmaId,
+                    data: data,
+                    infoExibicao: infoExibicao
+                });
+                
+                // Salvar data selecionada
+                estadoApp.dataSelecionada = data;
+                
+                // Mostrar loading
+                document.getElementById('loading').classList.remove('hidden');
+                
+                // Esconder containers anteriores
+                document.getElementById('dias-container').classList.add('hidden');
+                document.getElementById('no-results').classList.add('hidden');
+                document.getElementById('chamada-container').classList.add('hidden');
+                
+                // Limpar container de alunos
+                document.getElementById('alunos-container').innerHTML = '';
+                
+                // Garantir que a data está no formato correto (YYYY-MM-DD)
+                const dataFormatada = data.split('T')[0];
+                console.log('Data formatada para consulta:', dataFormatada);
+                
+                // Criar datas de início e fim do dia
+                const startOfDay = new Date(dataFormatada);
+                startOfDay.setUTCHours(0, 0, 0, 0);
+                
+                const endOfDay = new Date(dataFormatada);
+                endOfDay.setUTCHours(23, 59, 59, 999);
+                
+                console.log('Período de busca:', {
+                    inicio: startOfDay.toISOString(),
+                    fim: endOfDay.toISOString()
+                });
+
+                // Primeiro, buscar todos os alunos da turma
+                const { data: alunos, error: alunosError } = await supabase
+                    .from('alunos')
+                    .select('id, nome_completo, foto_url')
+                    .eq('turma', parseInt(turmaId))
+                    .is('soft_delete', null)
+                    .order('nome_completo');
+                
+                if (alunosError) throw alunosError;
+                
+                console.log('Alunos encontrados na turma:', alunos ? alunos.length : 0);
+                
+                if (!alunos || alunos.length === 0) {
+                    throw new Error('Nenhum aluno encontrado na turma');
+                }
+
+                // Buscar logs da view_alunos_logs
+                const { data: logsView, error: logsError } = await supabase
+                    .from('view_alunos_logs')
+                    .select('*')
+                    .eq('turma_nome', estadoApp.turmaNome)
+                    .gte('hora_check', startOfDay.toISOString())
+                    .lte('hora_check', endOfDay.toISOString())
+                    .order('hora_check', { ascending: true });
+
+                if (logsError) throw logsError;
+
+                console.log('Logs encontrados na view:', logsView ? logsView.length : 0);
+
+                // Agrupar logs por aluno
+                const logsAgrupadosPorAluno = {};
+                
+                // Inicializar array vazio para cada aluno
+                alunos.forEach(aluno => {
+                    logsAgrupadosPorAluno[aluno.nome_completo] = [];
+                });
+                
+                // Adicionar logs aos alunos correspondentes
+                if (logsView) {
+                    logsView.forEach(log => {
+                        if (logsAgrupadosPorAluno.hasOwnProperty(log.nome_aluno)) {
+                            logsAgrupadosPorAluno[log.nome_aluno].push({
+                                hora_check: log.hora_check,
+                                foto_url: log.foto_aluno
+                            });
+                        }
+                    });
+                }
+                
+                // Calcular estatísticas de presença
+                const totalAlunos = alunos.length;
+                const alunosPresentes = new Set(logsView ? logsView.map(log => log.nome_aluno) : []).size;
+                const alunosFaltantes = totalAlunos - alunosPresentes;
+
+                // Esconder loading
+                document.getElementById('loading').classList.add('hidden');
+                
+                // Atualizar informações no cabeçalho
+                const dataObj = new Date(infoExibicao.data.split('/').reverse().join('-'));
+                const diaSemanaCompleto = dataObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+                
+                document.getElementById('chamada-titulo').innerHTML = `
+                    <div class="bg-white rounded-lg p-4 mb-4">
+                        <div class="mb-4">
+                            <h1 class="text-xl font-bold text-gray-800 mb-1">
+                                ${infoExibicao.turmaNome}
+                            </h1>
+                            <div class="text-sm text-gray-600">
+                                ${diaSemanaCompleto}, ${infoExibicao.data}
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                ${infoExibicao.escolaNome} - ${infoExibicao.turmaPeriodo}
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center border border-green-500 rounded-lg px-3 py-2">
+                                <i class="ph ph-check text-green-600 mr-2"></i>
+                                <span class="text-sm text-green-600">${alunosPresentes} presentes</span>
+                            </div>
+                            <div class="flex items-center border border-red-500 rounded-lg px-3 py-2">
+                                <i class="ph ph-x text-red-600 mr-2"></i>
+                                <span class="text-sm text-red-600">${alunosFaltantes} ausentes</span>
+                            </div>
+                            <div class="flex items-center border border-gray-200 rounded-lg px-3 py-2">
+                                <i class="ph ph-users text-gray-600 mr-2"></i>
+                                <span class="text-sm text-gray-600">Total: ${totalAlunos} alunos</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Esconder elementos não utilizados
+                document.getElementById('chamada-subtitulo').innerHTML = '';
+                document.getElementById('chamada-quantidade').innerHTML = '';
+
+                // Container de alunos
+                const container = document.getElementById('alunos-container');
+                container.className = 'flex flex-col gap-1';
+                
+                // Renderizar TODOS os alunos, com ou sem logs
+                alunos.forEach(aluno => {
+                    const logsDoAluno = logsAgrupadosPorAluno[aluno.nome_completo] || [];
+                    const itemLista = criarCardAluno(aluno, logsDoAluno);
+                    container.appendChild(itemLista);
+                });
+                
+                // Mostrar container de chamada
+                document.getElementById('chamada-container').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar frequência:', error);
+                Toast.error('Erro ao carregar dados de frequência');
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('no-results').classList.remove('hidden');
+            }
+        }
+        
+        // Configurar event listeners
+        function configurarEventListeners(supabase, userId) {
+            const escolaSelect = document.getElementById('escola-select');
+            const turmaSelect = document.getElementById('turma-select');
+            const carregarDiasBtn = document.getElementById('carregar-dias-btn');
+            const voltarSelecaoBtn = document.getElementById('voltar-selecao');
+            const voltarDiasBtn = document.getElementById('voltar-dias');
+            
+            // Quando selecionar uma escola
+            escolaSelect.addEventListener('change', async (event) => {
+                console.log('Evento change do select de escola disparado', event);
+                const escolaId = escolaSelect.value;
+                const escolaOption = escolaSelect.options[escolaSelect.selectedIndex];
+                
+                // Resetar select de turma
+                turmaSelect.innerHTML = '<option value="">Selecione uma turma</option>';
+                turmaSelect.disabled = true;
+                carregarDiasBtn.disabled = true;
+                
+                if (escolaId) {
+                    console.log(`Escola selecionada: ID=${escolaId}, Nome=${escolaOption.dataset.nome}`);
+                    estadoApp.escolaId = escolaId;
+                    estadoApp.escolaNome = escolaOption.dataset.nome;
+                    await carregarTurmas(supabase, userId, escolaId);
+                } else {
+                    estadoApp.escolaId = null;
+                    estadoApp.escolaNome = '';
+                }
+            });
+            
+            // Quando selecionar uma turma
+            turmaSelect.addEventListener('change', () => {
+                const turmaId = turmaSelect.value;
+                const turmaOption = turmaSelect.options[turmaSelect.selectedIndex];
+                
+                if (turmaId) {
+                    estadoApp.turmaId = turmaId;
+                    estadoApp.turmaNome = turmaOption.dataset.nome;
+                    estadoApp.turmaPeriodo = turmaOption.dataset.periodo;
+                    carregarDiasBtn.disabled = false;
+                } else {
+                    estadoApp.turmaId = null;
+                    estadoApp.turmaNome = '';
+                    estadoApp.turmaPeriodo = '';
+                    carregarDiasBtn.disabled = true;
+                }
+            });
+            
+            // Botão para carregar dias
+            carregarDiasBtn.addEventListener('click', async () => {
+                if (estadoApp.turmaId) {
+                    await carregarDiasDisponiveis(supabase, estadoApp.turmaId);
+                }
+            });
+            
+            // Botão para voltar à seleção
+            voltarSelecaoBtn.addEventListener('click', () => {
+                document.getElementById('dias-container').classList.add('hidden');
+                document.getElementById('selecao-container').classList.remove('hidden');
+            });
+            
+            // Botão para voltar aos dias
+            voltarDiasBtn.addEventListener('click', () => {
+                document.getElementById('chamada-container').classList.add('hidden');
+                document.getElementById('dias-container').classList.remove('hidden');
+                
+                // Recarregar os dias disponíveis para manter os dados atualizados
+                if (estadoApp.turmaId) {
+                    carregarDiasDisponiveis(supabase, estadoApp.turmaId);
+                }
+            });
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarNavbar();
+        });
+    </script>
+</body>
+</html> 

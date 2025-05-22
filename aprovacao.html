@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Aguardando Aprovação</title>
+    <meta name="description" content="Sistema OlharMais - Plataforma de gerenciamento">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    <link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/favicon/favicon.ico">
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="msapplication-config" content="/favicon/browserconfig.xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <div class="flex flex-col items-center justify-center min-h-[90vh]">
+            <!-- Logo -->
+            <h1 class="text-5xl font-extrabold logo-olharmais mb-6">OlharMais</h1>
+            
+            <!-- Ícone animado -->
+            <div class="text-primary mb-8 animate-pulse-slow">
+                <i class="ph-hourglass text-8xl"></i>
+            </div>
+            
+            <!-- Cabeçalho -->
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">Aguardando Aprovação</h2>
+                <p class="text-gray-600 mb-6">Seu cadastro está sendo analisado pela equipe do OlharMais.</p>
+                <p class="text-gray-600">Você receberá uma notificação via WhatsApp quando seu acesso for liberado.</p>
+            </div>
+            
+            <!-- Botão para voltar para login -->
+            <a href="/auth.html" class="bg-primary text-white py-4 px-8 rounded-full font-semibold text-lg hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 mt-4">
+                <i class="ph ph-arrow-left"></i>
+                <span>Voltar para Login</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html> 

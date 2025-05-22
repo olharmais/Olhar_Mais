@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Excluir Usuário</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preloader {
+            transition: opacity 0.3s ease-out;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-green {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-red {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-yellow {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+        <button id="closePreloader" class="absolute top-4 right-4 p-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300" title="Forçar fechamento">
+            <i class="ph ph-x"></i>
+        </button>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Loading principal -->
+    <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40 hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <a href="usuarios.html" class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Excluir Usuário</h1>
+            </div>
+        </div>
+
+        <!-- Estado vazio/erro -->
+        <div id="emptyState" class="hidden card p-12 text-center">
+            <i class="ph ph-warning-circle text-3xl text-amber-500 mb-4"></i>
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Usuário não encontrado</h2>
+            <p class="text-gray-600 mb-6">O usuário que você está procurando não existe ou foi removido.</p>
+            <a href="usuarios.html" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Voltar para lista de usuários
+            </a>
+        </div>
+
+        <!-- Card de Confirmação -->
+        <div id="confirmationCard" class="hidden card p-6 max-w-2xl mx-auto">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="ph ph-trash text-red-600 text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">Confirmar Exclusão</h2>
+                <p class="text-gray-600">Você está prestes a excluir o seguinte usuário:</p>
+            </div>
+
+            <div class="border-t border-b border-gray-200 py-4 my-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                        <img id="userAvatar" src="" alt="" class="w-full h-full object-cover hidden">
+                        <div id="userAvatarPlaceholder" class="w-full h-full flex items-center justify-center bg-blue-100 text-blue-600">
+                            <i class="ph ph-user text-2xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 id="userName" class="text-lg font-semibold text-gray-800">-</h3>
+                            <span id="userStatus" class="badge badge-green">-</span>
+                        </div>
+                        <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-sm text-gray-500">
+                            <span id="userType" class="flex items-center gap-1">
+                                <i class="ph ph-user-circle"></i> <span>-</span>
+                            </span>
+                            <span id="userWhatsapp" class="flex items-center gap-1">
+                                <i class="ph ph-whatsapp-logo"></i> <span>-</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 text-amber-500">
+                        <i class="ph ph-warning text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-amber-800 mb-1">Atenção!</h4>
+                        <p class="text-sm text-amber-700">
+                            Esta ação não pode ser desfeita. Todos os dados associados a este usuário serão permanentemente removidos.
+                            Se o usuário for um responsável, a associação com alunos será removida.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-3 justify-end">
+                <a href="usuarios.html" class="w-full sm:w-auto px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-center transition-colors">
+                    Cancelar
+                </a>
+                <button type="button" id="deleteBtn" class="w-full sm:w-auto px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-trash"></i>
+                    <span>Excluir Usuário</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicialização
+        let supabase;
+        let userId;
+        let userData;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM carregado, iniciando...");
+            
+            // Inicialização do preloader
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                console.log("Preloader encontrado, garantindo que esteja visível");
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+            }
+            
+            // Configurar botão de escape do preloader
+            document.getElementById('closePreloader').addEventListener('click', function() {
+                hidePreloader(true); // Esconder imediatamente
+            });
+            
+            try {
+                // Inicializar Supabase
+                console.log('Obtendo credenciais do Supabase...');
+                supabase = createSupabaseClient();
+                console.log('Supabase client created successfully');
+                
+                // Inicializar sidebar
+                initializeSidebar();
+                
+                // Obter ID do usuário da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                userId = urlParams.get('id');
+                
+                if (!userId) {
+                    showEmptyState('ID do usuário não fornecido');
+                    hidePreloader();
+                    return;
+                }
+                
+                // Configurar eventos
+                setupEventListeners();
+                
+                // Carregar dados do usuário
+                await loadUserData();
+                
+                // Esconder preloader após inicialização
+                hidePreloader();
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao inicializar a página. Por favor, recarregue.', 'error');
+                hidePreloader();
+            }
+        });
+        
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+        
+        // Configurar eventos
+        function setupEventListeners() {
+            // Botão de exclusão
+            document.getElementById('deleteBtn').addEventListener('click', deleteUser);
+        }
+        
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                className: "info",
+                style: {
+                    background: type === 'success' ? "linear-gradient(to right, #00b09b, #96c93d)" : "linear-gradient(to right, #ff5f6d, #ffc371)",
+                }
+            }).showToast();
+        }
+
+        // Função para mostrar loading
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+
+        // Função para esconder loading
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+        
+        // Funções para controlar o preloader
+        function showPreloader() {
+            console.log("Mostrando preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '1';
+                preloader.style.display = 'flex';
+                console.log("Preloader mostrado");
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        function hidePreloader(immediate = false) {
+            console.log("Escondendo preloader...");
+            const preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                if (immediate) {
+                    preloader.style.display = 'none';
+                    console.log("Preloader escondido imediatamente");
+                } else {
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                        console.log("Preloader escondido após transição");
+                    }, 300);
+                }
+            } else {
+                console.error("Elemento preloader não encontrado");
+            }
+        }
+        
+        // Função para mostrar estado vazio
+        function showEmptyState(message) {
+            const emptyState = document.getElementById('emptyState');
+            const confirmationCard = document.getElementById('confirmationCard');
+            
+            // Mostrar mensagem personalizada se fornecida
+            if (message) {
+                const paragraph = emptyState.querySelector('p');
+                if (paragraph) {
+                    paragraph.textContent = message;
+                }
+            }
+            
+            emptyState.classList.remove('hidden');
+            confirmationCard.classList.add('hidden');
+        }
+        
+        // Carregar dados do usuário
+        async function loadUserData() {
+            try {
+                showLoading();
+                
+                // Buscar dados do usuário
+                const { data: usuario, error } = await supabase
+                    .from('usuarios')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                if (!usuario) {
+                    showEmptyState('Usuário não encontrado');
+                    hideLoading();
+                    return;
+                }
+                
+                // Guardar dados do usuário
+                userData = usuario;
+                
+                // Preencher dados na tela
+                fillUserData(usuario);
+                
+                // Mostrar card de confirmação
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('confirmationCard').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados do usuário:', error);
+                showToast('Erro ao carregar dados: ' + error.message, 'error');
+                showEmptyState('Erro ao carregar dados do usuário');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Preencher dados do usuário
+        function fillUserData(usuario) {
+            // Nome completo
+            const nomeCompleto = `${usuario.nome || ''} ${usuario.sobrenome || ''}`.trim();
+            document.getElementById('userName').textContent = nomeCompleto || 'Nome não informado';
+            
+            // Tipo
+            document.getElementById('userType').querySelector('span').textContent = formatarTipo(usuario.tipo);
+            
+            // WhatsApp
+            if (usuario.whatsapp) {
+                document.getElementById('userWhatsapp').querySelector('span').textContent = formatarWhatsapp(usuario.whatsapp);
+                document.getElementById('userWhatsapp').classList.remove('hidden');
+            } else {
+                document.getElementById('userWhatsapp').classList.add('hidden');
+            }
+            
+            // Status
+            const statusElement = document.getElementById('userStatus');
+            statusElement.textContent = usuario.status || 'Não definido';
+            statusElement.className = `badge ${gerarStatusClass(usuario.status)}`;
+            
+            // Foto
+            if (usuario.foto_url) {
+                const avatar = document.getElementById('userAvatar');
+                avatar.src = usuario.foto_url;
+                avatar.alt = nomeCompleto;
+                avatar.classList.remove('hidden');
+                document.getElementById('userAvatarPlaceholder').classList.add('hidden');
+            } else {
+                document.getElementById('userAvatar').classList.add('hidden');
+                document.getElementById('userAvatarPlaceholder').classList.remove('hidden');
+            }
+        }
+        
+        // Formatar tipo
+        function formatarTipo(tipo) {
+            const tipos = {
+                'GESTOR': 'Gestor',
+                'PROFISSIONAL': 'Profissional',
+                'NUTRICIONISTA': 'Nutricionista',
+                'RESPONSAVEL': 'Responsável'
+            };
+            return tipos[tipo] || tipo || 'Não definido';
+        }
+        
+        // Formatar WhatsApp
+        function formatarWhatsapp(whatsapp) {
+            if (!whatsapp) return '';
+            
+            // Se começa com 55, formatar como brasileiro
+            if (whatsapp.startsWith('55') && whatsapp.length >= 12) {
+                const ddd = whatsapp.substring(2, 4);
+                const numero = whatsapp.substring(4);
+                
+                if (numero.length === 9) {
+                    return `(${ddd}) ${numero.substring(0, 5)}-${numero.substring(5)}`;
+                } else if (numero.length === 8) {
+                    return `(${ddd}) ${numero.substring(0, 4)}-${numero.substring(4)}`;
+                }
+            }
+            
+            return whatsapp;
+        }
+        
+        // Gerar classe de status
+        function gerarStatusClass(status) {
+            if (status === 'Ativo') return 'badge-green';
+            if (status === 'Inativo') return 'badge-red';
+            if (status === 'Suspenso') return 'badge-yellow';
+            return 'badge-gray';
+        }
+        
+        // Excluir usuário
+        async function deleteUser() {
+            try {
+                showLoading();
+                
+                // Desabilitar botão de exclusão durante o processo
+                const deleteBtn = document.getElementById('deleteBtn');
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '<div class="loading-spinner" style="width: 20px; height: 20px;"></div> <span>Excluindo...</span>';
+                
+                // Excluir usuário no Supabase
+                const { error } = await supabase
+                    .from('usuarios')
+                    .delete()
+                    .eq('id', userId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Mostrar mensagem de sucesso
+                showToast('Usuário excluído com sucesso!');
+                
+                // Redirecionar para lista de usuários após 1 segundo
+                setTimeout(() => {
+                    window.location.href = 'usuarios.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao excluir usuário:', error);
+                showToast('Erro ao excluir usuário: ' + error.message, 'error');
+                
+                // Reabilitar botão de exclusão
+                const deleteBtn = document.getElementById('deleteBtn');
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = '<i class="ph ph-trash"></i> <span>Excluir Usuário</span>';
+                
+                hideLoading();
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Visualizar Turma</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <div class="flex items-center gap-4">
+                <a href="turmas.html" class="text-gray-600 hover:text-blue-600 transition-colors">
+                    <i class="ph ph-arrow-left text-2xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Visualizar Turma</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="#" id="editButton" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <i class="ph ph-pencil"></i>
+                    Editar
+                </a>
+            </div>
+        </div>
+
+        <!-- Detalhes da Turma -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Informações Básicas -->
+            <div class="card p-6 animate-fade-in lg:col-span-2">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Informações da Turma</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nome -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Nome da Turma</label>
+                        <p id="nome" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Escola -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Escola</label>
+                        <p id="escola" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Série -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Série</label>
+                        <p id="serie" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Período -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Período</label>
+                        <p id="periodo" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                        <p id="status" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Data de Criação -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Data de Criação</label>
+                        <p id="created_at" class="text-gray-900">Carregando...</p>
+                    </div>
+
+                    <!-- Última Atualização -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Última Atualização</label>
+                        <p id="updated_at" class="text-gray-900">Carregando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card p-6 animate-fade-in">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Estatísticas</h2>
+                <div class="space-y-6">
+                    <!-- Total de Alunos -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Total de Alunos</label>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="ph ph-users text-blue-600"></i>
+                            </div>
+                            <p id="total_alunos" class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Vagas Disponíveis -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Vagas Disponíveis</label>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                <i class="ph ph-check-circle text-green-600"></i>
+                            </div>
+                            <p id="vagas_disponiveis" class="text-2xl font-semibold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alunos da Turma -->
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-6">Alunos Matriculados</h2>
+            
+            <!-- Campo de Busca -->
+            <div class="mb-4">
+                <div class="relative">
+                    <input type="text" 
+                           id="searchAlunos" 
+                           placeholder="Buscar alunos por nome ou matrícula..." 
+                           class="w-full px-4 py-2 pl-10 pr-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+            
+            <div id="alunosContainer" class="space-y-4">
+                <div id="loadingAlunos" class="py-4 text-center text-gray-500">
+                    <div class="loading-spinner mx-auto mb-2"></div>
+                    <p>Carregando alunos...</p>
+                </div>
+                
+                <div id="alunosGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Os alunos serão listados aqui -->
+                </div>
+                
+                <div id="semAlunos" class="py-8 text-center text-gray-500 hidden">
+                    <i class="ph ph-student text-4xl mb-2"></i>
+                    <p>Nenhum aluno matriculado nesta turma.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Função para formatar data
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Função para formatar período
+        function formatPeriodo(periodo) {
+            const periodos = {
+                'MANHA': 'Manhã',
+                'TARDE': 'Tarde',
+                'INTEGRAL': 'Integral'
+            };
+            return periodos[periodo] || periodo;
+        }
+
+        // Função para carregar alunos
+        async function carregarAlunos(turmaId, searchTerm = '') {
+            try {
+                let query = supabaseClient
+                    .from('alunos')
+                    .select(`
+                        id,
+                        nome_completo,
+                        foto_url,
+                        registro_aluno,
+                        escolas:escola_id (nome),
+                        series:serie (nome)
+                    `)
+                    .eq('turma', turmaId)
+                    .is('soft_delete', null)
+                    .order('nome_completo');
+                
+                // Aplicar filtro de busca se houver
+                if (searchTerm) {
+                    query = query.or(`nome_completo.ilike.%${searchTerm}%,registro_aluno.ilike.%${searchTerm}%`);
+                }
+                
+                const { data: alunos, error } = await query;
+                
+                if (error) throw error;
+                
+                // Ocultar loading
+                document.getElementById('loadingAlunos').classList.add('hidden');
+                
+                if (!alunos || alunos.length === 0) {
+                    document.getElementById('semAlunos').classList.remove('hidden');
+                    document.getElementById('alunosGrid').classList.add('hidden');
+                    return;
+                }
+                
+                const alunosGrid = document.getElementById('alunosGrid');
+                alunosGrid.innerHTML = '';
+                
+                alunos.forEach(aluno => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors';
+                    
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                                ${aluno.foto_url ? 
+                                    `<img src="${aluno.foto_url}" alt="${aluno.nome_completo}" class="w-full h-full object-cover">` :
+                                    `<div class="w-full h-full flex items-center justify-center">
+                                        <i class="ph ph-user text-gray-400 text-2xl"></i>
+                                    </div>`
+                                }
+                            </div>
+                            <div class="flex-grow">
+                                <h4 class="font-medium text-gray-900">${aluno.nome_completo}</h4>
+                                <p class="text-sm text-gray-500">Matrícula: ${aluno.registro_aluno || '-'}</p>
+                                <div class="mt-2 flex flex-col gap-1 text-sm">
+                                    <span class="text-gray-600">
+                                        <i class="ph ph-buildings text-gray-400 mr-1"></i>
+                                        ${aluno.escolas?.nome || 'Escola não definida'}
+                                    </span>
+                                    <span class="text-gray-600">
+                                        <i class="ph ph-book text-gray-400 mr-1"></i>
+                                        ${aluno.series?.nome || 'Série não definida'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    alunosGrid.appendChild(card);
+                });
+                
+                alunosGrid.classList.remove('hidden');
+                document.getElementById('semAlunos').classList.add('hidden');
+                
+            } catch (error) {
+                console.error('Erro ao carregar alunos:', error);
+                document.getElementById('loadingAlunos').innerHTML = `
+                    <div class="py-4 text-center text-red-500">
+                        <i class="ph ph-warning-circle text-xl mb-2"></i>
+                        <p>Erro ao carregar alunos.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Carregar dados da turma
+        async function loadTurma() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const turmaId = urlParams.get('id');
+
+                if (!turmaId) {
+                    showToast('ID da turma não fornecido', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'turmas.html';
+                    }, 1000);
+                    return;
+                }
+
+                // Configurar botão de edição
+                document.getElementById('editButton').href = `turmas_edit.html?id=${turmaId}`;
+
+                // Primeiro, buscar a turma para obter os IDs
+                const { data: turma, error: turmaError } = await supabaseClient
+                    .from('turmas')
+                    .select('*')
+                    .eq('id', turmaId)
+                    .single();
+
+                if (turmaError) throw turmaError;
+                if (!turma) {
+                    showToast('Turma não encontrada', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'turmas.html';
+                    }, 1000);
+                    return;
+                }
+
+                // Agora buscar os dados relacionados separadamente
+                const [
+                    { data: escola, error: escolaError },
+                    { data: serie, error: serieError }
+                ] = await Promise.all([
+                    supabaseClient
+                        .from('escolas')
+                        .select('nome')
+                        .eq('id', turma.escola_id)
+                        .single(),
+                    supabaseClient
+                        .from('series')
+                        .select('nome')
+                        .eq('id', turma.serie_id)
+                        .single()
+                ]);
+
+                if (escolaError) console.error('Erro ao carregar escola:', escolaError);
+                if (serieError) console.error('Erro ao carregar série:', serieError);
+
+                // Preencher informações básicas
+                document.getElementById('nome').textContent = turma.nome || '-';
+                document.getElementById('escola').textContent = escola?.nome || '-';
+                document.getElementById('serie').textContent = serie?.nome || '-';
+                document.getElementById('periodo').textContent = formatPeriodo(turma.periodo) || '-';
+                document.getElementById('status').textContent = turma.status || 'ATIVA';
+                document.getElementById('created_at').textContent = formatDate(turma.created_at);
+                document.getElementById('updated_at').textContent = formatDate(turma.updated_at);
+
+                // Buscar total de alunos
+                const { count: totalAlunos, error: alunosError } = await supabaseClient
+                    .from('alunos')
+                    .select('*', { count: 'exact' })
+                    .eq('turma', turmaId)
+                    .is('soft_delete', null);
+
+                if (alunosError) throw alunosError;
+
+                document.getElementById('total_alunos').textContent = totalAlunos || 0;
+                document.getElementById('vagas_disponiveis').textContent = totalAlunos || 0;
+
+                // Carregar alunos da turma
+                await carregarAlunos(turmaId);
+
+            } catch (error) {
+                console.error('Erro ao carregar dados da turma:', error);
+                showToast('Erro ao carregar dados da turma', 'error');
+            }
+        }
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para inicializar o sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar e carregar dados
+            initializeSidebar();
+            loadTurma();
+            
+            // Remover preloader após carregar
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 500);
+
+            // Adicionar evento de busca com debounce
+            const searchInput = document.getElementById('searchAlunos');
+            let debounceTimer;
+
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const turmaId = params.get('id');
+                    carregarAlunos(turmaId, e.target.value.trim());
+                }, 300);
+            });
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+    </script>
+</body>
+</html> 

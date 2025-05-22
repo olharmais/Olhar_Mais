@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Excluir Turma</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <div class="flex items-center gap-4">
+                <a href="turmas.html" class="text-gray-600 hover:text-blue-600 transition-colors">
+                    <i class="ph ph-arrow-left text-2xl"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Excluir Turma</h1>
+            </div>
+        </div>
+
+        <!-- Card de Confirmação -->
+        <div class="card p-6 animate-fade-in max-w-2xl mx-auto">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="ph ph-warning text-3xl text-red-600"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">Confirmar Exclusão</h2>
+                <p class="text-gray-600">Você está prestes a excluir esta turma. Esta ação não pode ser desfeita.</p>
+            </div>
+
+            <!-- Informações da Turma -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Nome da Turma</label>
+                        <p id="nome" class="text-gray-900">Carregando...</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Escola</label>
+                        <p id="escola" class="text-gray-900">Carregando...</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Série</label>
+                        <p id="serie" class="text-gray-900">Carregando...</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Período</label>
+                        <p id="periodo" class="text-gray-900">Carregando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aviso de Alunos -->
+            <div id="alunosWarning" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 hidden">
+                <div class="flex items-center gap-3">
+                    <i class="ph ph-warning-circle text-yellow-600 text-xl"></i>
+                    <p class="text-yellow-800">
+                        Esta turma possui <span id="totalAlunos" class="font-semibold">0</span> alunos matriculados. 
+                        Você precisa remover ou transferir os alunos antes de excluir a turma.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex justify-end gap-4">
+                <a href="turmas.html" class="px-6 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                </a>
+                <button id="deleteButton"
+                        class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph ph-trash"></i>
+                    Excluir Turma
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Função para formatar período
+        function formatPeriodo(periodo) {
+            const periodos = {
+                'MANHA': 'Manhã',
+                'TARDE': 'Tarde',
+                'INTEGRAL': 'Integral'
+            };
+            return periodos[periodo] || periodo;
+        }
+
+        // Carregar dados da turma
+        async function loadTurma() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const turmaId = urlParams.get('id');
+
+                if (!turmaId) {
+                    showToast('ID da turma não fornecido', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'turmas.html';
+                    }, 1000);
+                    return;
+                }
+
+                // Carregar dados da turma
+                const { data: turma, error: turmaError } = await supabaseClient
+                    .from('turmas')
+                    .select(`
+                        *,
+                        escolas!turmas_escola_id_fkey (nome),
+                        series!turmas_serie_id_fkey (nome)
+                    `)
+                    .eq('id', turmaId)
+                    .single();
+
+                if (turmaError) throw turmaError;
+
+                if (!turma) {
+                    showToast('Turma não encontrada', 'error');
+                    setTimeout(() => {
+                        window.location.href = '7.html';
+                    }, 1000);
+                    return;
+                }
+
+                // Preencher informações
+                document.getElementById('nome').textContent = turma.nome;
+                document.getElementById('escola').textContent = turma.escolas?.nome || '-';
+                document.getElementById('serie').textContent = turma.series?.nome || '-';
+                document.getElementById('periodo').textContent = formatPeriodo(turma.periodo);
+
+                // Verificar alunos
+                const { count: totalAlunos, error: alunosError } = await supabaseClient
+                    .from('alunos')
+                    .select('*', { count: 'exact' })
+                    .eq('turma', turmaId)
+                    .is('soft_delete', null);
+
+                if (alunosError) throw alunosError;
+
+                if (totalAlunos > 0) {
+                    document.getElementById('totalAlunos').textContent = totalAlunos;
+                    document.getElementById('alunosWarning').classList.remove('hidden');
+                    document.getElementById('deleteButton').disabled = true;
+                }
+
+                // Configurar botão de exclusão
+                document.getElementById('deleteButton').addEventListener('click', () => deleteTurma(turmaId));
+
+            } catch (error) {
+                showToast('Erro ao carregar dados da turma', 'error');
+                console.error('Erro:', error);
+            }
+        }
+
+        // Função para excluir turma
+        async function deleteTurma(turmaId) {
+            try {
+                const deleteButton = document.getElementById('deleteButton');
+                const originalContent = deleteButton.innerHTML;
+                
+                // Feedback visual durante o processo
+                deleteButton.disabled = true;
+                deleteButton.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-circle-notch ph-spin"></i>
+                        <span>Excluindo...</span>
+                    </div>
+                `;
+
+                const { error } = await supabaseClient
+                    .from('turmas')
+                    .update({ soft_delete: new Date().toISOString() })
+                    .eq('id', turmaId);
+
+                if (error) throw error;
+
+                // Toast de sucesso
+                Toastify({
+                    text: "Turma excluída com sucesso!",
+                    duration: 3000,
+                    gravity: "top",
+                    position: "right",
+                    style: {
+                        background: "#22c55e",
+                    },
+                    onClick: function(){}
+                }).showToast();
+
+                // Redirecionar após sucesso
+                setTimeout(() => {
+                    window.location.href = 'turmas.html';
+                }, 1000);
+
+            } catch (error) {
+                console.error('Erro ao excluir turma:', error);
+                
+                // Toast de erro
+                Toastify({
+                    text: "Erro ao excluir turma. Tente novamente.",
+                    duration: 3000,
+                    gravity: "top",
+                    position: "right",
+                    style: {
+                        background: "#ef4444",
+                    },
+                    onClick: function(){}
+                }).showToast();
+
+                // Restaurar botão
+                const deleteButton = document.getElementById('deleteButton');
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = '<i class="ph ph-trash"></i> Excluir Turma';
+            }
+        }
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para inicializar o sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar e carregar dados
+            initializeSidebar();
+            loadTurma();
+            
+            // Remover preloader após carregar
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 500);
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+    </script>
+</body>
+</html> 

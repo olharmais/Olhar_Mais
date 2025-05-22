@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Adicionar Dispositivo</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .form-input:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Loading principal -->
+    <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40 hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <a href="dispositivos.html" class="p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="ph ph-arrow-left text-gray-800"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Adicionar Dispositivo de Reconhecimento</h1>
+            </div>
+        </div>
+
+        <!-- Formulário -->
+        <div class="card p-6 md:p-8">
+            <form id="addDeviceForm" class="space-y-6">
+                <!-- ID do Dispositivo -->
+                <div>
+                    <label for="cameraId" class="block text-sm font-medium text-gray-700 mb-1">ID do Dispositivo *</label>
+                    <input type="text" id="cameraId" name="cameraId" required
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border"
+                        placeholder="Digite o identificador único do dispositivo">
+                </div>
+
+                <!-- Escola -->
+                <div>
+                    <label for="escolaId" class="block text-sm font-medium text-gray-700 mb-1">Escola *</label>
+                    <select id="escolaId" name="escolaId" required
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border">
+                        <option value="" disabled selected>Selecione uma escola</option>
+                    </select>
+                </div>
+
+                <!-- URL -->
+                <div>
+                    <label for="ipPorta" class="block text-sm font-medium text-gray-700 mb-1">IP:PORTA do dispositivo *</label>
+                    <input type="text" id="ipPorta" name="ipPorta" required
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border"
+                        placeholder="Exemplo: 192.168.1.100:001">
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                    <select id="status" name="status" required
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border">
+                        <option value="ATIVO">Ativo</option>
+                        <option value="INATIVO">Inativo</option>
+                        <option value="MANUTENCAO">Manutenção</option>
+                    </select>
+                </div>
+
+                <!-- Credenciais -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="login" class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                        <input type="text" id="login" name="login"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border"
+                            placeholder="Login para acesso ao dispositivo">
+                    </div>
+                    <div>
+                        <label for="senha" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <input type="password" id="senha" name="senha"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 px-3 py-2 border"
+                            placeholder="Senha para acesso ao dispositivo">
+                    </div>
+                </div>
+
+                <!-- Botões -->
+                <div class="flex flex-col md:flex-row justify-end space-y-3 md:space-y-0 md:space-x-3 pt-4">
+                    <a href="dispositivos.html" 
+                        class="w-full md:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-center">
+                        Cancelar
+                    </a>
+                    <button type="submit" 
+                        class="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Salvar Dispositivo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444"
+                }
+            }).showToast();
+        }
+
+        // Função para mostrar loading
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+
+        // Função para esconder loading
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Carregar escolas
+        async function loadSchools() {
+            try {
+                const { data: escolas, error } = await supabaseClient
+                    .from('escolas')
+                    .select('id, nome')
+                    .is('soft_delete', null)
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                const escolaSelect = document.getElementById('escolaId');
+                escolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    escolaSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                showToast('Erro ao carregar escolas', 'error');
+            }
+        }
+
+        // Função para obter sessão do dispositivo
+        async function getDeviceSession(ipPorta, login, senha) {
+            try {
+                const response = await fetch(`http://${ipPorta}/login.fcgi`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        login: login,
+                        password: senha
+                    })
+                });
+
+                const data = await response.json();
+                if (!data.session) {
+                    throw new Error('Sessão não retornada pelo dispositivo');
+                }
+                return data.session;
+            } catch (error) {
+                console.error('Erro ao obter sessão:', error);
+                throw new Error('Não foi possível conectar ao dispositivo. Verifique as credenciais e o IP.');
+            }
+        }
+
+        // Função para obter informações do dispositivo
+        async function getDeviceInfo(ipPorta, session) {
+            try {
+                const response = await fetch(`http://${ipPorta}/system_information.fcgi?session=${session}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: ''
+                });
+
+                const data = await response.json();
+                if (!data.device_id) {
+                    throw new Error('ID do dispositivo não retornado');
+                }
+                return data.device_id;
+            } catch (error) {
+                console.error('Erro ao obter informações do dispositivo:', error);
+                throw new Error('Não foi possível obter informações do dispositivo.');
+            }
+        }
+
+        // Adicionar dispositivo
+        async function addDevice(formData) {
+            try {
+                showLoading();
+
+                // Obter sessão e device_id
+                const ipPorta = formData.get('ipPorta');
+                const login = formData.get('login');
+                const senha = formData.get('senha');
+
+                let device_id = null;
+                try {
+                    const session = await getDeviceSession(ipPorta, login, senha);
+                    device_id = await getDeviceInfo(ipPorta, session);
+                } catch (error) {
+                    console.warn('Não foi possível obter device_id:', error);
+                    // Continua o cadastro mesmo sem o device_id
+                }
+
+                const newDevice = {
+                    camera_id: formData.get('cameraId'),
+                    escola_id: formData.get('escolaId'),
+                    ip: formData.get('ipPorta') || null,
+                    status: formData.get('status'),
+                    login: formData.get('login') || null,
+                    senha: formData.get('senha') || null,
+                    device_id: device_id,
+                    created_at: new Date().toISOString()
+                };
+
+                const { data, error } = await supabaseClient
+                    .from('dispositivos')
+                    .insert([newDevice]);
+
+                if (error) throw error;
+
+                showToast('Dispositivo adicionado com sucesso!');
+                
+                setTimeout(() => {
+                    window.location.href = 'dispositivos.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao adicionar dispositivo:', error);
+                hideLoading();
+                showToast('Erro ao adicionar dispositivo: ' + (error.message || error), 'error');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Inicializar sidebar
+                initializeSidebar();
+                
+                // Carregar escolas
+                await loadSchools();
+                
+                // Evento de submit do formulário
+                document.getElementById('addDeviceForm').addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(this);
+                    addDevice(formData);
+                });
+                
+                // Remover preloader
+                const preloader = document.querySelector('.preloader');
+                setTimeout(() => {
+                    preloader.style.opacity = '0';
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                    }, 200);
+                }, 500);
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao carregar o sistema. Por favor, recarregue a página.', 'error');
+            }
+        });
+    </script>
+</body>
+</html> 

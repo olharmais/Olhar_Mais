@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Alunos</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Estilos compartilhados -->
+    <link rel="stylesheet" href="shared.css">
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: rgb(6, 95, 70);
+        }
+        .badge-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: rgb(220, 38, 38);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Inclui o Sidebar -->
+    <div id="sidebar-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="transition-all duration-300 p-6 md:p-8 md:ml-64 page-transition">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 animate-slide-in">
+            <h1 class="text-2xl font-bold text-gray-800">Alunos</h1>
+            <a href="alunos_add.html" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <i class="ph ph-plus"></i>
+                Novo Aluno
+            </a>
+        </div>
+
+        <!-- Campo de busca -->
+        <div class="mb-6">
+            <div class="relative">
+                <input type="text" 
+                    id="searchInput" 
+                    class="w-full px-4 py-2 pl-10 pr-4 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" 
+                    placeholder="Buscar por nome, registro ou escola...">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <i class="ph ph-magnifying-glass text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card p-4 mb-6 animate-fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Busca por nome -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="busca">
+                        Buscar Aluno
+                    </label>
+                    <div class="relative">
+                        <input type="text" 
+                               id="busca" 
+                               class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                               placeholder="Digite o nome do aluno">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="ph ph-magnifying-glass text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escola -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="escola">
+                        Escola
+                    </label>
+                    <select id="escola" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as escolas</option>
+                    </select>
+                </div>
+
+                <!-- Série -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="serie">
+                        Série
+                    </label>
+                    <select id="serie" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as séries</option>
+                    </select>
+                </div>
+
+                <!-- Turma -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="turma">
+                        Turma
+                    </label>
+                    <select id="turma" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todas as turmas</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="status">
+                        Status
+                    </label>
+                    <select id="status" 
+                            class="w-full h-11 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <option value="">Todos os status</option>
+                        <option value="ATIVO">Ativo</option>
+                        <option value="INATIVO">Inativo</option>
+                    </select>
+                </div>
+
+                <!-- Botões de Filtro -->
+                <div class="flex items-end gap-2">
+                    <button id="aplicarFiltros" class="h-11 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                        <i class="ph ph-funnel"></i>
+                        Aplicar Filtros
+                    </button>
+                    <button id="limparFiltros" class="h-11 px-4 py-2 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+                        Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="card overflow-hidden animate-fade-in">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Aluno</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Escola</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Série</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Turma</th>
+                            <th class="text-left py-4 px-6 text-sm font-semibold text-gray-600">Status</th>
+                            <th class="text-right py-4 px-6 text-sm font-semibold text-gray-600">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alunosTableBody">
+                        <!-- Dados serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Estado vazio -->
+            <div id="emptyState" class="hidden py-12">
+                <div class="text-center">
+                    <i class="ph ph-student text-4xl text-gray-400"></i>
+                    <p class="mt-3 text-gray-500">Nenhum aluno encontrado</p>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingState" class="py-12">
+                <div class="text-center">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-3 text-gray-500">Carregando alunos...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paginação -->
+        <div class="flex justify-between items-center mt-6">
+            <p class="text-sm text-gray-600" id="paginationInfo">Exibindo 0 de 0 registros</p>
+            <div class="flex gap-2">
+                <button id="prevPage" class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph ph-caret-left"></i>
+                </button>
+                <button id="nextPage" class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ph ph-caret-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+        
+        // Variáveis de estado
+        let currentPage = 0;
+        let pageSize = 20;
+        let totalAlunos = 0;
+        let filtros = {};
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444",
+                }
+            }).showToast();
+        }
+
+        // Definição da classe Sidebar
+        class Sidebar {
+            constructor() {
+                this.sidebar = document.querySelector('.sidebar');
+                this.overlay = document.querySelector('.sidebar-overlay');
+                this.menuItems = document.querySelectorAll('.menu-item');
+                this.isActive = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.overlay?.addEventListener('click', () => this.close());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                });
+                
+                this.menuItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.location.href = href;
+                        
+                        if (window.innerWidth < 768) {
+                            this.close();
+                        }
+                    });
+                });
+            }
+            
+            toggle() {
+                if (window.innerWidth < 768) {
+                    this.isActive = !this.isActive;
+                    this.sidebar.classList.toggle('active');
+                    this.overlay.classList.toggle('active');
+                    this.dispatchToggleEvent();
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            close() {
+                if (window.innerWidth < 768) {
+                    this.isActive = false;
+                    this.sidebar.classList.remove('active');
+                    this.overlay.classList.remove('active');
+                    this.dispatchToggleEvent();
+                }
+            }
+            
+            dispatchToggleEvent() {
+                const event = new CustomEvent('sidebar-toggle', {
+                    detail: { 
+                        isActive: this.isActive,
+                        isMobile: window.innerWidth < 768
+                    }
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Função para carregar alunos
+        async function carregarAlunos() {
+            try {
+                const tableBody = document.getElementById('alunosTableBody');
+                const emptyState = document.getElementById('emptyState');
+                const loadingState = document.getElementById('loadingState');
+                
+                // Construir query base
+                let query = supabaseClient
+                    .from('alunos')
+                    .select(`
+                        *,
+                        escolas:escola_id(nome),
+                        turmas:turma(nome),
+                        series:serie(nome)
+                    `)
+                    .is('soft_delete', null)
+                    .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+
+                // Aplicar filtros
+                if (filtros.nome) {
+                    query = query.ilike('nome_completo', `%${filtros.nome}%`);
+                }
+                if (filtros.escola_id) {
+                    query = query.eq('escola_id', filtros.escola_id);
+                }
+                if (filtros.serie) {
+                    query = query.eq('serie', filtros.serie);
+                }
+                if (filtros.turma) {
+                    query = query.eq('turma', filtros.turma);
+                }
+                if (filtros.status) {
+                    query = query.eq('status', filtros.status);
+                }
+
+                const { data: alunos, error, count } = await query;
+
+                // Esconder loading
+                loadingState.classList.add('hidden');
+
+                if (error) throw error;
+
+                if (!alunos || alunos.length === 0) {
+                    tableBody.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    document.getElementById('paginationInfo').textContent = 'Exibindo 0 de 0 registros';
+                    return;
+                }
+
+                // Atualizar contagem total
+                if (count !== null) {
+                    totalAlunos = count;
+                    document.getElementById('paginationInfo').textContent = 
+                        `Exibindo ${currentPage * pageSize + 1}-${Math.min((currentPage + 1) * pageSize, totalAlunos)} de ${totalAlunos} registros`;
+                }
+
+                // Esconder estado vazio e mostrar dados
+                emptyState.classList.add('hidden');
+                
+                // Limpar tabela
+                tableBody.innerHTML = '';
+                
+                // Popular tabela com dados
+                alunos.forEach(aluno => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-200 hover:bg-gray-50';
+                    
+                    const statusBadgeClass = aluno.status === 'ATIVO' ? 'badge-success' : 'badge-danger';
+                    
+                    tr.innerHTML = `
+                        <td class="py-4 px-6">
+                            <div class="flex items-center">
+                                <img src="${aluno.foto_url || '/images/default-avatar.png'}" 
+                                     alt="${aluno.nome_completo}"
+                                     class="avatar mr-3"
+                                     onerror="this.src='/images/default-avatar.png'">
+                                <div>
+                                    <p class="font-medium text-gray-900">${aluno.nome_completo}</p>
+                                    <p class="text-xs text-gray-500">Matrícula: ${aluno.registro_aluno || '-'}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-6">${aluno.escolas?.nome || '-'}</td>
+                        <td class="py-4 px-6">${aluno.series?.nome || '-'}</td>
+                        <td class="py-4 px-6">${aluno.turmas?.nome || '-'}</td>
+                        <td class="py-4 px-6">
+                            <span class="badge ${statusBadgeClass}">
+                                ${aluno.status}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="alunos_ver.html?id=${aluno.id}" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="ph ph-eye text-lg"></i>
+                                </a>
+                                <a href="alunos_edit.html?id=${aluno.id}" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                </a>
+                                <a href="alunos_del.html?id=${aluno.id}" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </a>
+                                <button 
+                                    onclick="event.preventDefault(); enviarBoasVindas(${aluno.id}, '${aluno.nome_completo}');" 
+                                    class="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg transition-colors"
+                                    title="Enviar mensagem de boas-vindas">
+                                    <i class="ph ph-whatsapp-logo text-lg"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(tr);
+                });
+                
+                // Atualizar botões de paginação
+                document.getElementById('prevPage').disabled = currentPage === 0;
+                document.getElementById('nextPage').disabled = (currentPage + 1) * pageSize >= totalAlunos;
+                
+            } catch (error) {
+                console.error('Erro ao carregar alunos:', error);
+                showToast('Erro ao carregar alunos', 'error');
+                
+                // Esconder loading e mostrar estado vazio
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        // Carregar dados para selects
+        async function carregarFiltros() {
+            try {
+                // Carregar escolas
+                const { data: escolas, error: escolasError } = await supabaseClient
+                    .from('escolas')
+                    .select('id, nome')
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (escolasError) throw escolasError;
+
+                const escolaSelect = document.getElementById('escola');
+                escolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    escolaSelect.appendChild(option);
+                });
+
+                // Carregar séries
+                const { data: series, error: seriesError } = await supabaseClient
+                    .from('series')
+                    .select('id, nome')
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (seriesError) throw seriesError;
+
+                const serieSelect = document.getElementById('serie');
+                series.forEach(serie => {
+                    const option = document.createElement('option');
+                    option.value = serie.id;
+                    option.textContent = serie.nome;
+                    serieSelect.appendChild(option);
+                });
+
+                // Carregar turmas
+                const { data: turmas, error: turmasError } = await supabaseClient
+                    .from('turmas')
+                    .select('id, nome')
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (turmasError) throw turmasError;
+
+                const turmaSelect = document.getElementById('turma');
+                turmas.forEach(turma => {
+                    const option = document.createElement('option');
+                    option.value = turma.id;
+                    option.textContent = turma.nome;
+                    turmaSelect.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar filtros:', error);
+                showToast('Erro ao carregar opções de filtro', 'error');
+            }
+        }
+
+        // Função para aplicar filtros
+        function aplicarFiltros() {
+            const busca = document.getElementById('busca').value;
+            const escola = document.getElementById('escola').value;
+            const serie = document.getElementById('serie').value;
+            const turma = document.getElementById('turma').value;
+            const status = document.getElementById('status').value;
+            
+            // Resetar paginação
+            currentPage = 0;
+            
+            // Construir objeto de filtros
+            filtros = {};
+            
+            if (busca) filtros.nome = busca;
+            if (escola) filtros.escola_id = parseInt(escola);
+            if (serie) filtros.serie = serie;
+            if (turma) filtros.turma = turma;
+            if (status) filtros.status = status;
+            
+            // Recarregar dados
+            carregarAlunos();
+        }
+
+        // Função para limpar filtros
+        function limparFiltros() {
+            document.getElementById('busca').value = '';
+            document.getElementById('escola').selectedIndex = 0;
+            document.getElementById('serie').selectedIndex = 0;
+            document.getElementById('turma').selectedIndex = 0;
+            document.getElementById('status').selectedIndex = 0;
+            
+            // Resetar paginação e filtros
+            currentPage = 0;
+            filtros = {};
+            
+            // Recarregar dados
+            carregarAlunos();
+        }
+
+        // Inicializar sidebar
+        function initializeSidebar() {
+            fetch('sidebar_admin.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('sidebar-container').innerHTML = html;
+                    
+                    requestAnimationFrame(() => {
+                        const sidebarInstance = new Sidebar();
+                        updateLayout();
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar o sidebar:', error);
+                });
+        }
+
+        // Função para atualizar o layout
+        function updateLayout() {
+            const mainContent = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            if (!mainContent || !sidebar) return;
+
+            if (window.innerWidth >= 768) {
+                if (sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                } else {
+                    mainContent.classList.remove('md:ml-20');
+                    mainContent.classList.add('md:ml-64');
+                }
+            } else {
+                mainContent.classList.remove('md:ml-64', 'md:ml-20');
+            }
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloader = document.querySelector('.preloader');
+            
+            // Inicializar sidebar
+            initializeSidebar();
+            
+            // Carregar dados
+            carregarFiltros();
+            carregarAlunos();
+            
+            // Configurar botões de paginação
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 0) {
+                    currentPage--;
+                    carregarAlunos();
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if ((currentPage + 1) * pageSize < totalAlunos) {
+                    currentPage++;
+                    carregarAlunos();
+                }
+            });
+            
+            // Configurar botões de filtro
+            document.getElementById('aplicarFiltros').addEventListener('click', aplicarFiltros);
+            document.getElementById('limparFiltros').addEventListener('click', limparFiltros);
+            
+            // Remover preloader após carregar
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 300);
+            }, 800);
+        });
+
+        // Atualizar layout quando o sidebar mudar
+        document.addEventListener('sidebar-toggle', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Atualizar layout quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateLayout);
+        });
+
+        // Função para carregar alunos com busca
+        async function loadAlunos(searchTerm = '') {
+            try {
+                showLoading();
+                
+                let query = supabaseClient
+                    .from('alunos')
+                    .select(`
+                        *,
+                        escolas (
+                            nome
+                        ),
+                        turmas (
+                            nome,
+                            periodo
+                        ),
+                        series (
+                            nome
+                        )
+                    `)
+                    .is('soft_delete', null)
+                    .order('created_at', { ascending: false });
+                
+                // Aplicar filtro de busca se houver termo
+                if (searchTerm) {
+                    query = query.or(`nome_completo.ilike.%${searchTerm}%,registro_aluno.ilike.%${searchTerm}%,escolas.nome.ilike.%${searchTerm}%`);
+                }
+                
+                const { data: alunos, error } = await query;
+                
+                if (error) throw error;
+                
+                const tbody = document.querySelector('tbody');
+                tbody.innerHTML = '';
+                
+                if (alunos.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-gray-500">
+                                    <i class="ph ph-user-list text-4xl mb-2"></i>
+                                    <p class="text-lg font-medium">Nenhum aluno encontrado</p>
+                                    ${searchTerm ? `
+                                        <p class="text-sm mt-1">Tente buscar com outros termos</p>
+                                    ` : `
+                                        <p class="text-sm mt-1">Comece adicionando um novo aluno</p>
+                                    `}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                alunos.forEach(aluno => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    
+                    const statusClass = {
+                        'ATIVO': 'bg-green-100 text-green-700',
+                        'INATIVO': 'bg-gray-100 text-gray-700',
+                        'SUSPENSO': 'bg-amber-100 text-amber-700'
+                    }[aluno.status] || 'bg-gray-100 text-gray-700';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 flex-shrink-0">
+                                    ${aluno.foto_url ? `
+                                        <img class="h-10 w-10 rounded-full object-cover" src="${aluno.foto_url}" alt="${aluno.nome_completo}">
+                                    ` : `
+                                        <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <i class="ph ph-user text-gray-500"></i>
+                                        </div>
+                                    `}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="font-medium text-gray-900">${aluno.nome_completo}</div>
+                                    <div class="text-gray-500">${aluno.registro_aluno || '-'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${aluno.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${aluno.escolas?.nome || '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${aluno.series?.nome || '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${aluno.turmas?.nome || '-'}
+                            ${aluno.turmas?.periodo ? `<span class="text-xs text-gray-400">(${aluno.turmas.periodo})</span>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-end gap-2">
+                                <a href="alunos_ver.html?id=${aluno.id}" class="text-blue-600 hover:text-blue-900">
+                                    <i class="ph ph-eye"></i>
+                                </a>
+                                <a href="alunos_edit.html?id=${aluno.id}" class="text-blue-600 hover:text-blue-900">
+                                    <i class="ph ph-pencil-simple"></i>
+                                </a>
+                                <a href="alunos_del.html?id=${aluno.id}" class="text-red-600 hover:text-red-900">
+                                    <i class="ph ph-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar alunos:', error);
+                showToast('Erro ao carregar alunos: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Configurar busca com debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = e.target.value.trim();
+                
+                // Resetar paginação e atualizar filtros
+                currentPage = 0;
+                filtros = {
+                    ...filtros,
+                    nome: searchTerm
+                };
+                
+                // Recarregar dados
+                carregarAlunos();
+            }, 300);
+        });
+
+        /**
+         * Envia mensagem de boas-vindas para os responsáveis do aluno
+         * @param {number} alunoId - ID do aluno
+         * @param {string} nomeAluno - Nome do aluno
+         */
+        async function enviarBoasVindas(alunoId, nomeAluno) {
+            try {
+                // Mostrar toast de carregamento
+                showToast('Enviando mensagem...', 'info');
+                
+                // Buscar contatos dos responsáveis
+                const { data: aluno, error } = await supabaseClient
+                    .from('alunos')
+                    .select('contato1_whatsapp, contato2_whatsapp')
+                    .eq('id', alunoId)
+                    .single();
+                    
+                if (error) throw error;
+                
+                if (!aluno.contato1_whatsapp && !aluno.contato2_whatsapp) {
+                    showToast('Aluno não possui contatos de responsáveis cadastrados', 'error');
+                    return;
+                }
+                
+                // Montar mensagem de boas-vindas
+                const mensagem = `
+Olá! Sejam bem-vindos ao OlharMais 👁
+
+*INSTRUÇÕES PARA VOCÊ MONITORAR SEU FILHO(A) ${nomeAluno} E ALGUMAS CÂMERAS DA CIDADE ATRAVÉS DE NOSSO APP*
+
+1. Acesse: https://olharmais.com.br
+2. Digite seu número de WhatsApp
+3. Você receberá um código de acesso
+4. Entre com esse código e pronto!
+
+Por favor, não responda esta mensagem. Em caso de dúvidas, entre em contato com a escola.
+
+Atenciosamente,
+Equipe OlharMais
+`;
+
+                // Obter credenciais do WhatsApp da configuração
+                const WHATSAPP_API_URL = getWhatsappApiUrl();
+                const WHATSAPP_API_KEY = getWhatsappApiKey();
+                
+                // Contadores para controle de envio
+                let enviados = 0;
+                let erros = 0;
+                
+                // Função para enviar mensagem para um contato
+                async function enviarParaContato(whatsapp) {
+                    if (!whatsapp) return;
+                    
+                    // Formatar número do WhatsApp
+                    let numero = whatsapp.replace(/\D/g, '');
+                    if (!numero.startsWith('55')) {
+                        numero = '55' + numero;
+                    }
+                    
+                    try {
+                        const response = await fetch(WHATSAPP_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': WHATSAPP_API_KEY,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                jid: numero,
+                                message: mensagem
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            enviados++;
+                            console.log(`Mensagem enviada com sucesso para ${numero}`);
+                        } else {
+                            erros++;
+                            console.error('Erro ao enviar mensagem:', result);
+                        }
+                    } catch (error) {
+                        erros++;
+                        console.error('Erro ao enviar mensagem:', error);
+                    }
+                }
+                
+                // Enviar para ambos os contatos (se existirem)
+                const promises = [];
+                if (aluno.contato1_whatsapp) {
+                    promises.push(enviarParaContato(aluno.contato1_whatsapp));
+                }
+                if (aluno.contato2_whatsapp) {
+                    promises.push(enviarParaContato(aluno.contato2_whatsapp));
+                }
+                
+                // Aguardar envio das mensagens
+                await Promise.all(promises);
+                
+                // Mostrar resultado
+                if (enviados > 0 && erros === 0) {
+                    showToast(`Mensagem enviada com sucesso para ${enviados} contato(s)`, 'success');
+                } else if (enviados > 0 && erros > 0) {
+                    showToast(`Mensagem enviada para ${enviados} contato(s), mas houve ${erros} erro(s)`, 'warning');
+                } else {
+                    showToast('Não foi possível enviar a mensagem', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao enviar mensagem:', error);
+                showToast('Erro ao enviar mensagem: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

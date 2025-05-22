@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor de Cadastro Automático - ControlID</title>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Estilo básico -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0055a4;
+            margin-top: 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .status.error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .status.success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+        .status.info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .log-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+        }
+        .log-time {
+            color: #888;
+            margin-right: 10px;
+        }
+        .log-error {
+            color: #dc3545;
+        }
+        .log-success {
+            color: #28a745;
+        }
+        .log-info {
+            color: #17a2b8;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .controls button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #startBtn {
+            background-color: #10b981;
+            color: white;
+        }
+        #startBtn:hover:not(:disabled) {
+            background-color: #059669;
+        }
+        #stopBtn {
+            background-color: #ef4444;
+            color: white;
+        }
+        #stopBtn:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+        #checkNowBtn, #clearLogsBtn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        #checkNowBtn:hover:not(:disabled), #clearLogsBtn:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr.success {
+            background-color: #e8f5e9;
+        }
+        tr.pending {
+            background-color: #fff8e1;
+        }
+        tr.error {
+            background-color: #ffebee;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 50px;
+            font-size: 12px;
+            color: white;
+        }
+        .badge-success {
+            background-color: #28a745;
+        }
+        .badge-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .badge-error {
+            background-color: #dc3545;
+        }
+        .counter {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .counter-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0055a4;
+        }
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            background-color: #4caf50;
+            width: 0;
+            transition: width 0.3s;
+        }
+        .settings-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        .settings-container input {
+            font-size: 14px;
+            padding-right: 2.5rem;
+        }
+        .settings-container input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        .settings-container label {
+            color: #374151;
+            font-weight: 500;
+        }
+        #saveSettings {
+            background: linear-gradient(to bottom right, #3b82f6, #2563eb);
+            transition: all 0.2s;
+        }
+        #saveSettings:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        /* Estilos para os botões e controles */
+        .controls-container {
+            margin-top: 1rem;
+        }
+        .control-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-width: 120px;
+            transition: all 0.2s;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .control-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .start-btn {
+            background-color: #10b981;
+            color: white;
+        }
+        .start-btn:hover:not(:disabled) {
+            background-color: #059669;
+        }
+        .stop-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+        .stop-btn:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+        .action-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .action-btn:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        /* Estilos para o container de configurações */
+        .config-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+        }
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .config-header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .save-btn {
+            background-color: #0055a4;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+        .save-btn:hover {
+            background-color: #003d7a;
+        }
+        .config-form {
+            padding: 15px 20px;
+        }
+        .config-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .config-row:last-child {
+            margin-bottom: 0;
+        }
+        .config-row label {
+            width: 170px;
+            font-weight: 500;
+            color: #555;
+        }
+        .config-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            max-width: 150px;
+        }
+        .config-row input:focus {
+            outline: none;
+            border-color: #0055a4;
+            box-shadow: 0 0 0 2px rgba(0, 85, 164, 0.1);
+        }
+        /* Ajustes para os status */
+        .status {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+        }
+        /* Estilos para os controles */
+        .controls-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .ctrl-btn {
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .ctrl-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .start-btn {
+            background-color: #10b981;
+            color: white;
+        }
+        .start-btn:hover:not(:disabled) {
+            background-color: #059669;
+        }
+        .stop-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+        .stop-btn:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+        .check-btn, .clear-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .check-btn:hover:not(:disabled), .clear-btn:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Servidor de Cadastro Automático - ControlID</h1>
+            <div>
+                <span id="lastUpdate"></span>
+            </div>
+        </div>
+
+        <!-- Seção de configurações -->
+        <div class="config-card">
+            <div class="config-header">
+                <h2>Configurações do Servidor</h2>
+                <button id="saveSettings" class="save-btn">
+                    <i class="ph ph-floppy-disk"></i>
+                    Salvar
+                </button>
+            </div>
+            
+            <div class="config-form">
+                <div class="config-row">
+                    <label for="startTime">Horário de Início:</label>
+                    <input type="time" id="startTime">
+                </div>
+                
+                <div class="config-row">
+                    <label for="endTime">Horário de Término:</label>
+                    <input type="time" id="endTime">
+                </div>
+                
+                <div class="config-row">
+                    <label for="updateInterval">Intervalo (segundos):</label>
+                    <input type="number" id="updateInterval" min="10" max="3600">
+                </div>
+            </div>
+        </div>
+
+        <div id="statusContainer"></div>
+
+        <!-- Botões de controle -->
+        <div class="controls-panel">
+            <button id="startBtn" class="ctrl-btn start-btn">
+                <i class="ph ph-play"></i>
+                Iniciar Servidor
+            </button>
+            <button id="stopBtn" class="ctrl-btn stop-btn" disabled>
+                <i class="ph ph-stop"></i>
+                Parar Servidor
+            </button>
+            <button id="checkNowBtn" class="ctrl-btn check-btn">
+                <i class="ph ph-arrows-clockwise"></i>
+                Verificar Agora
+            </button>
+            <button id="clearLogsBtn" class="ctrl-btn clear-btn">
+                <i class="ph ph-trash"></i>
+                Limpar Logs
+            </button>
+        </div>
+
+        <div class="counter">
+            <p>Próxima verificação em:</p>
+            <div class="counter-value" id="countdown">30</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <h2>Registros para Processamento</h2>
+                <div id="tableContainer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Aluno</th>
+                                <th>Dispositivo</th>
+                                <th>Status</th>
+                                <th>Data Cadastro</th>
+                                <th>Mensagem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrosTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center;">Carregando dados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <h2>Logs</h2>
+        <div class="log-container" id="logContainer">
+            <div class="log-item log-info">
+                <span class="log-time">[00:00:00]</span>
+                <span>Servidor pronto para iniciar...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações do Supabase
+        const SUPABASE_URL = 'https://ammtxituvicldtyoqmir.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbXR4aXR1dmljbGR0eW9xbWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDU0MTEsImV4cCI6MjA1OTg4MTQxMX0.K5cZh6KRxAGJDbU_ACE0MGFavPv5N0fL11KkCs0E9A8';
+        
+        // Configurações do WhatsApp
+        const WHATSAPP_API_URL = 'https://7017.bubblewhats.com/send-message';
+        const WHATSAPP_API_KEY = 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx';
+
+        // Configurações do servidor
+        const CHECK_INTERVAL = 30000; // 30 segundos entre verificações
+        let timer = null;
+        let countdown = null;
+        let isServerRunning = false;
+        let processing = false;
+        
+        // Cliente Supabase
+        let supabaseClient;
+
+        // Elementos DOM
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const checkNowBtn = document.getElementById('checkNowBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+        const statusContainer = document.getElementById('statusContainer');
+        const logContainer = document.getElementById('logContainer');
+        const registrosTable = document.getElementById('registrosTable');
+        const lastUpdateElem = document.getElementById('lastUpdate');
+        const countdownElem = document.getElementById('countdown');
+        const progressBar = document.getElementById('progressBar');
+
+        // Configurações padrão
+        const DEFAULT_SETTINGS = {
+            startTime: '08:00',
+            endTime: '18:00',
+            updateInterval: 30 // segundos
+        };
+
+        // Função para carregar configurações do localStorage
+        function loadSettings() {
+            const settings = localStorage.getItem('serverSettings');
+            if (settings) {
+                return JSON.parse(settings);
+            }
+            return DEFAULT_SETTINGS;
+        }
+
+        // Função para salvar configurações no localStorage
+        function saveSettings() {
+            const settings = {
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                updateInterval: parseInt(document.getElementById('updateInterval').value)
+            };
+            
+            // Validações
+            if (settings.updateInterval < 10) {
+                showToast('O intervalo mínimo é de 10 segundos', 'error');
+                return;
+            }
+            
+            if (settings.updateInterval > 3600) {
+                showToast('O intervalo máximo é de 3600 segundos', 'error');
+                return;
+            }
+            
+            localStorage.setItem('serverSettings', JSON.stringify(settings));
+            showToast('Configurações salvas com sucesso!');
+            
+            // Atualizar intervalo de verificação
+            updateCheckInterval(settings.updateInterval);
+            
+            // Forçar uma verificação imediata
+            if (isServerRunning) {
+                checkForNewRegistros();
+            }
+            
+            return settings;
+        }
+
+        // Função para verificar se está dentro do horário de funcionamento
+        function isWithinOperatingHours() {
+            const settings = loadSettings();
+            const now = new Date();
+            const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                               now.getMinutes().toString().padStart(2, '0');
+            
+            return currentTime >= settings.startTime && currentTime <= settings.endTime;
+        }
+
+        // Função para atualizar o intervalo de verificação
+        function updateCheckInterval(seconds) {
+            const ms = seconds * 1000;
+            
+            if (timer) {
+                clearInterval(timer);
+            }
+            
+            if (countdown) {
+                clearInterval(countdown);
+            }
+            
+            if (isServerRunning) {
+                CHECK_INTERVAL = ms; // Atualiza a constante global
+                timer = setInterval(checkForNewRegistros, ms);
+                startCountdown();
+            }
+        }
+
+        // Função auxiliar para criar um delay
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Função para iniciar o servidor
+        function startServer() {
+            if (isServerRunning) return;
+            
+            if (!isWithinOperatingHours()) {
+                showToast('Servidor fora do horário de funcionamento!', 'error');
+                addLog('Tentativa de iniciar servidor fora do horário de funcionamento', 'error');
+                return;
+            }
+            
+            isServerRunning = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            addLog('Servidor iniciado. Verificando conforme intervalo configurado.', 'info');
+            mostrarStatus('Servidor em execução', 'info');
+            
+            // Carregar configurações salvas
+            const settings = loadSettings();
+            
+            // Fazer primeira verificação imediatamente
+            checkForNewRegistros();
+            
+            // Configurar verificação periódica com o intervalo salvo
+            updateCheckInterval(settings.updateInterval);
+        }
+
+        // Função para parar o servidor
+        function stopServer() {
+            if (!isServerRunning) return;
+            
+            isServerRunning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            if (timer) clearInterval(timer);
+            if (countdown) clearInterval(countdown);
+            
+            addLog('Servidor parado.', 'info');
+            mostrarStatus('Servidor parado', 'error');
+            countdownElem.textContent = CHECK_INTERVAL / 1000;
+            progressBar.style.width = '0%';
+        }
+
+        // Iniciar contagem regressiva
+        function startCountdown() {
+            if (countdown) {
+                clearInterval(countdown);
+            }
+            
+            const settings = loadSettings();
+            let secondsLeft = settings.updateInterval;
+            countdownElem.textContent = secondsLeft;
+            progressBar.style.width = '0%';
+            
+            countdown = setInterval(() => {
+                secondsLeft--;
+                countdownElem.textContent = secondsLeft;
+                const progress = 100 - ((secondsLeft / settings.updateInterval) * 100);
+                progressBar.style.width = `${progress}%`;
+                
+                if (secondsLeft <= 0) {
+                    // Em vez de recarregar a página, apenas iniciamos uma nova verificação
+                    if (isServerRunning && !processing) {
+                        checkForNewRegistros();
+                    } else {
+                        // Reiniciar o contador se não pudermos verificar agora
+                        secondsLeft = settings.updateInterval;
+                        countdownElem.textContent = secondsLeft;
+                        progressBar.style.width = '0%';
+                    }
+                }
+            }, 1000);
+        }
+
+        // Verificar novos registros
+        async function checkForNewRegistros() {
+            if (processing) {
+                addLog('Já existe um processamento em andamento, aguardando...', 'info');
+                return;
+            }
+            
+            processing = true;
+            const agora = new Date();
+            lastUpdateElem.textContent = `Última verificação: ${agora.toLocaleTimeString()}`;
+            
+            try {
+                addLog('Verificando novos registros...', 'info');
+                
+                // Buscar registros não cadastrados
+                const { data: registros, error } = await supabaseClient
+                    .from('aluno_dispositivo')
+                    .select(`
+                        id,
+                        aluno,
+                        id_dispositivo,
+                        id_do_aluno_no_dispositivo,
+                        alunos (id, nome_completo, foto_url),
+                        dispositivos (id, camera_id, ip, login, senha)
+                    `)
+                    .is('id_do_aluno_no_dispositivo', null)
+                    .order('id', { ascending: true });
+                
+                if (error) throw error;
+                
+                if (registros && registros.length > 0) {
+                    addLog(`Encontrados ${registros.length} registros pendentes.`, 'info');
+                    mostrarStatus(`Processando ${registros.length} registros pendentes...`, 'info');
+                    atualizarTabelaRegistros(registros);
+                    
+                    // Processar registros sequencialmente
+                    for (const registro of registros) {
+                        await processarRegistro(registro);
+                    }
+                    
+                    mostrarStatus('Processamento concluído', 'success');
+                } else {
+                    addLog('Nenhum registro pendente encontrado.', 'info');
+                    mostrarStatus('Servidor em execução - Nenhum registro pendente', 'info');
+                    atualizarTabelaRegistros([]);
+                }
+            } catch (error) {
+                addLog(`Erro ao verificar registros: ${error.message}`, 'error');
+                mostrarStatus(`Erro: ${error.message}`, 'error');
+            } finally {
+                processing = false;
+                
+                // Reiniciar countdown
+                if (isServerRunning) {
+                    startCountdown();
+                }
+            }
+        }
+
+        // Processar um registro individual
+        async function processarRegistro(registro) {
+            try {
+                if (!registro.dispositivos || !registro.alunos) {
+                    throw new Error('Dados do dispositivo ou aluno incompletos');
+                }
+                
+                const aluno = registro.alunos;
+                const dispositivo = registro.dispositivos;
+                
+                addLog(`Processando registro ID ${registro.id} - Aluno: ${aluno.nome_completo} - Dispositivo: ${dispositivo.camera_id}`, 'info');
+                
+                // 1. Conectar ao dispositivo
+                addLog(`Conectando ao dispositivo ${dispositivo.ip}...`, 'info');
+                const session = await connectToDevice(dispositivo.ip, dispositivo.login, dispositivo.senha);
+                await delay(1000); // Espera 1 segundo
+                
+                // 2. Configurar monitor
+                addLog('Configurando monitor do dispositivo...', 'info');
+                await setupMonitor(dispositivo.ip, session);
+                await delay(1000); // Espera 1 segundo
+                
+                // 3. Criar usuário
+                addLog(`Criando usuário no dispositivo para ${aluno.nome_completo}...`, 'info');
+                const deviceUserId = await createUserInDevice(dispositivo.ip, session, aluno.nome_completo, aluno.id);
+                await delay(1000); // Espera 1 segundo
+                
+                // Log adicional para debug
+                addLog(`Usuário criado com ID ${deviceUserId} no dispositivo`, 'info');
+                
+                // 4. Enviar foto (se existir)
+                if (aluno.foto_url) {
+                    addLog('Enviando foto do aluno para o dispositivo...', 'info');
+                    await delay(1000); // Espera 1 segundo antes de iniciar o upload
+                    await uploadImageToDevice(dispositivo.ip, session, deviceUserId, aluno.foto_url);
+                } else {
+                    addLog('Nenhuma foto disponível para o aluno.', 'info');
+                }
+                
+                await delay(1000); // Espera 1 segundo antes de atualizar o registro
+                
+                // Atualizar registro como processado
+                const { error: updateError } = await supabaseClient
+                    .from('aluno_dispositivo')
+                    .update({
+                        id_do_aluno_no_dispositivo: deviceUserId.toString()
+                    })
+                    .eq('id', registro.id);
+                
+                if (updateError) throw updateError;
+                
+                // Enviar mensagem WhatsApp
+                if (registro.numero_de_quem_cadastrou) {
+                    const message = `✅ Cadastro realizado com sucesso!\n\n👨‍🎓 Aluno: ${aluno.nome_completo}\n📹 Dispositivo: ${dispositivo.camera_id}\n⏱️ Data: ${new Date().toLocaleString()}`;
+                    await enviarMensagemWhatsApp(registro.numero_de_quem_cadastrou, message);
+                }
+                
+                addLog(`Registro ID ${registro.id} processado com sucesso!`, 'success');
+                return true;
+            } catch (error) {
+                addLog(`Erro ao processar registro ID ${registro.id}: ${error.message}`, 'error');
+                
+                // Em caso de erro, não alterar id_do_aluno_no_dispositivo para que fique pendente
+                // Optionally, registre o erro em outra tabela ou log
+                
+                return false;
+            }
+        }
+
+        // FUNÇÕES DE COMUNICAÇÃO COM A API CONTROLID
+
+        // 1. Conectar ao dispositivo e obter sessão
+        async function connectToDevice(ipAddress, login, password) {
+            try {
+                addLog(`Conectando ao dispositivo ${ipAddress}...`, 'info');
+                
+                // Adicionar porta padrão se não estiver especificada
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                const response = await fetch(`http://${ipAddressWithPort}/login.fcgi`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        login: login || 'admin',
+                        password: password || 'admin'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Erro ao conectar: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.session) {
+                    throw new Error('Sessão não recebida do dispositivo');
+                }
+                
+                addLog(`Conexão estabelecida com sucesso. Session: ${data.session.substring(0, 10)}...`, 'success');
+                return data.session;
+            } catch (error) {
+                addLog(`Erro ao conectar: ${error.message}`, 'error');
+                throw new Error(`Falha na conexão: ${error.message}`);
+            }
+        }
+        
+        // 2. Configurar o monitor
+        async function setupMonitor(ipAddress, session) {
+            try {
+                // Adicionar porta padrão se não estiver especificada
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                const response = await fetch(`http://${ipAddressWithPort}/set_configuration.fcgi?session=${session}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        monitor: {
+                            request_timeout: "5000",
+                            hostname: "https://fqia6z1078.execute-api.us-east-1.amazonaws.com",
+                            port: "443",
+                            path: "dev/log"
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Erro ao configurar monitor: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                addLog('Monitor configurado com sucesso', 'success');
+                return data;
+            } catch (error) {
+                addLog(`Erro ao configurar monitor: ${error.message}`, 'error');
+                throw new Error(`Falha na configuração do monitor: ${error.message}`);
+            }
+        }
+        
+        // 3. Criar usuário no dispositivo
+        async function createUserInDevice(ipAddress, session, userName, alunoId) {
+            try {
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                // Aqui vamos usar o ID do Supabase diretamente como ID do usuário no dispositivo
+                const response = await fetch(`http://${ipAddressWithPort}/create_objects.fcgi?session=${session}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        object: "users",
+                        values: [
+                            {
+                                id: parseInt(alunoId), // Forçando o ID do usuário no dispositivo
+                                name: userName,
+                                registration: alunoId.toString(),
+                                password: "123456",
+                                salt: ""
+                            }
+                        ]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Erro ao criar usuário: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Agora vamos retornar o ID que definimos (alunoId)
+                addLog(`Usuário criado com sucesso. ID no dispositivo: ${alunoId}`, 'success');
+                return alunoId;
+            } catch (error) {
+                addLog(`Erro ao criar usuário: ${error.message}`, 'error');
+                throw new Error(`Falha ao criar usuário: ${error.message}`);
+            }
+        }
+        
+        // 4. Fazer upload da imagem para o dispositivo
+        async function uploadImageToDevice(ipAddress, session, userId, imageUrl) {
+            try {
+                // Adicionar porta padrão se não estiver especificada
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                // Buscar a imagem
+                const imageResponse = await fetch(imageUrl);
+                if (!imageResponse.ok) {
+                    throw new Error(`Erro ao buscar imagem: ${imageResponse.status}`);
+                }
+                
+                const imageBlob = await imageResponse.blob();
+                const processedImage = await preprocessImage(imageBlob);
+                
+                // Preparar para upload
+                const arrayBuffer = await processedImage.arrayBuffer();
+                const timestamp = Math.floor(Date.now() / 1000);
+                
+                // Fazer o upload
+                const uploadUrl = `http://${ipAddressWithPort}/user_set_image.fcgi?user_id=${userId}&timestamp=${timestamp}&match=0&session=${session}`;
+                
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    body: new Uint8Array(arrayBuffer)
+                });
+                
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    throw new Error(`Erro ao fazer upload da imagem: ${uploadResponse.status} - ${errorText}`);
+                }
+                
+                const uploadData = await uploadResponse.json();
+                
+                if (uploadData.success === false) {
+                    const errorMessage = uploadData.errors ? uploadData.errors.map(err => `${err.code}: ${err.message}`).join(', ') : 'Erro desconhecido';
+                    throw new Error(`Falha no cadastro da imagem: ${errorMessage}`);
+                }
+                
+                addLog('Imagem enviada com sucesso para o dispositivo', 'success');
+                return uploadData;
+            } catch (error) {
+                addLog(`Erro ao fazer upload da imagem: ${error.message}`, 'error');
+                throw new Error(`Falha no upload da imagem: ${error.message}`);
+            }
+        }
+        
+        // Pré-processar imagem
+        async function preprocessImage(imageBlob) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const img = new Image();
+                    
+                    img.onload = function() {
+                        // Criar um canvas para redimensionar a imagem
+                        const canvas = document.createElement('canvas');
+                        
+                        // Definir dimensões para atender aos critérios da Control ID
+                        const TARGET_WIDTH = 480;
+                        const TARGET_HEIGHT = 640;
+                        
+                        canvas.width = TARGET_WIDTH;
+                        canvas.height = TARGET_HEIGHT;
+                        
+                        // Preencher o fundo com branco
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Calcular a proporção para manter a relação de aspecto
+                        let scale, offsetX = 0, offsetY = 0;
+                        
+                        if (img.width / img.height > TARGET_WIDTH / TARGET_HEIGHT) {
+                            // Imagem mais larga que o alvo
+                            scale = TARGET_HEIGHT / img.height;
+                            offsetX = (TARGET_WIDTH - (img.width * scale)) / 2;
+                        } else {
+                            // Imagem mais alta que o alvo
+                            scale = TARGET_WIDTH / img.width;
+                            offsetY = (TARGET_HEIGHT - (img.height * scale)) / 2;
+                        }
+                        
+                        // Desenhar a imagem centralizada
+                        ctx.drawImage(
+                            img, 
+                            offsetX, 
+                            offsetY, 
+                            img.width * scale, 
+                            img.height * scale
+                        );
+                        
+                        // Melhorar contraste e nitidez
+                        ctx.filter = 'contrast(110%) saturate(110%) brightness(105%)';
+                        ctx.drawImage(canvas, 0, 0);
+                        
+                        // Converter para Blob
+                        canvas.toBlob(function(blob) {
+                            resolve(blob);
+                        }, 'image/jpeg', 0.9);
+                    };
+                    
+                    img.onerror = function() {
+                        reject(new Error('Erro ao carregar imagem para pré-processamento'));
+                    };
+                    
+                    img.src = URL.createObjectURL(imageBlob);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        // Enviar mensagem WhatsApp
+        async function enviarMensagemWhatsApp(whatsapp, mensagem) {
+            try {
+                // Garantir que o número esteja no formato correto
+                let phoneNumber = whatsapp.replace(/\D/g, '');
+                if (!phoneNumber.startsWith('55')) {
+                    phoneNumber = '55' + phoneNumber;
+                }
+                
+                const response = await fetch(WHATSAPP_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': WHATSAPP_API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        jid: phoneNumber,
+                        message: mensagem
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addLog(`Mensagem enviada para ${whatsapp}`, 'success');
+                return data;
+            } catch (error) {
+                addLog(`Erro ao enviar mensagem WhatsApp: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // FUNÇÕES DE INTERFACE
+        
+        // Adicionar log
+        function addLog(message, type = 'info') {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.innerHTML = `<span class="log-time">[${timeString}]</span> <span>${message}</span>`;
+            
+            logContainer.appendChild(logItem);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Mostrar status
+        function mostrarStatus(message, type = 'info') {
+            statusContainer.innerHTML = '';
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            
+            statusContainer.appendChild(statusDiv);
+        }
+        
+        // Atualizar tabela de registros
+        function atualizarTabelaRegistros(registros) {
+            if (!registros || registros.length === 0) {
+                registrosTable.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum registro pendente encontrado</td></tr>';
+                return;
+            }
+            
+            registrosTable.innerHTML = '';
+            
+            registros.forEach(registro => {
+                const tr = document.createElement('tr');
+                tr.className = registro.id_do_aluno_no_dispositivo === null ? 'pending' : registro.id_do_aluno_no_dispositivo === true ? 'success' : 'error';
+                
+                // Formatação de data
+                const dataFormatada = registro.data_cadastro ? new Date(registro.data_cadastro).toLocaleString() : '-';
+                
+                // Status como badge
+                let statusBadge = `<span class="badge badge-pending">Pendente</span>`;
+                if (registro.id_do_aluno_no_dispositivo === true) {
+                    statusBadge = `<span class="badge badge-success">Cadastrado</span>`;
+                } else if (registro.id_do_aluno_no_dispositivo === false) {
+                    statusBadge = `<span class="badge badge-error">Erro</span>`;
+                }
+                
+                tr.innerHTML = `
+                    <td>${registro.id}</td>
+                    <td>${registro.alunos?.nome_completo || 'N/A'}</td>
+                    <td>${registro.dispositivos?.camera_id || 'N/A'} (${registro.dispositivos?.ip || 'N/A'})</td>
+                    <td>${statusBadge}</td>
+                    <td>${dataFormatada}</td>
+                    <td>${registro.erro_cadastro || '-'}</td>
+                `;
+                
+                registrosTable.appendChild(tr);
+            });
+        }
+        
+        // Event Listeners
+        startBtn.addEventListener('click', startServer);
+        stopBtn.addEventListener('click', stopServer);
+        checkNowBtn.addEventListener('click', checkForNewRegistros);
+        clearLogsBtn.addEventListener('click', () => {
+            logContainer.innerHTML = '';
+            addLog('Logs limpos.', 'info');
+        });
+        
+        // Adicionar verificação periódica do horário de funcionamento
+        setInterval(() => {
+            if (isServerRunning && !isWithinOperatingHours()) {
+                addLog('Horário de funcionamento encerrado. Parando servidor...', 'info');
+                stopServer();
+            }
+        }, 60000); // Verificar a cada minuto
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Carregar configurações salvas
+            const settings = loadSettings();
+            document.getElementById('startTime').value = settings.startTime;
+            document.getElementById('endTime').value = settings.endTime;
+            document.getElementById('updateInterval').value = settings.updateInterval;
+            
+            // Adicionar evento para salvar configurações
+            document.getElementById('saveSettings').addEventListener('click', saveSettings);
+            
+            // Inicializar cliente Supabase
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            addLog('Servidor iniciado. Aguardando comando para verificar registros...', 'info');
+            mostrarStatus('Servidor pronto', 'info');
+            
+            // Iniciar servidor automaticamente apenas se estiver dentro do horário
+            if (isWithinOperatingHours()) {
+                startServer();
+            } else {
+                addLog('Fora do horário de funcionamento configurado', 'info');
+                mostrarStatus('Fora do horário de funcionamento', 'info');
+            }
+            
+            // Verificação de conexão com Supabase
+            try {
+                const { data, error } = await supabaseClient
+                    .from('aluno_dispositivo')
+                    .select('id')
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                addLog('Conexão com o Supabase estabelecida com sucesso.', 'success');
+            } catch (error) {
+                addLog(`Erro ao conectar com o Supabase: ${error.message}`, 'error');
+                mostrarStatus('Erro na conexão com o banco de dados', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
