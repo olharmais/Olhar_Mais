@@ -1,0 +1,23 @@
+{
+  "name": "olhar_mais",
+  "version": "1.0.0",
+  "main": "check-icons.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olharmais/Olhar_Mais.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/olharmais/Olhar_Mais/issues"
+  },
+  "homepage": "https://github.com/olharmais/Olhar_Mais#readme",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  }
+}
