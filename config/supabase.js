@@ -1,11 +1,9 @@
-// Importar configurações de ambiente
-const env = require('./env');
-
 // Configurações do Supabase
 function getSupabaseCredentials() {
+    // Retorna as credenciais do localStorage ou variáveis de ambiente da Vercel
     return {
-        url: window.env?.SUPABASE_URL,
-        key: window.env?.SUPABASE_ANON_KEY,
+        url: localStorage.getItem('SUPABASE_URL'),
+        key: localStorage.getItem('SUPABASE_ANON_KEY'),
         options: {
             db: {
                 schema: 'public'
@@ -21,9 +19,10 @@ function getSupabaseCredentials() {
 
 // Configurações do WhatsApp
 function getWhatsappCredentials() {
+    // Retorna as credenciais do localStorage
     return {
-        apiUrl: window.env?.WHATSAPP_API_URL,
-        apiKey: window.env?.WHATSAPP_API_KEY
+        apiUrl: localStorage.getItem('WHATSAPP_API_URL'),
+        apiKey: localStorage.getItem('WHATSAPP_API_KEY')
     };
 }
 
@@ -96,10 +95,12 @@ function logout() {
 /**
  * Cria e retorna um cliente do Supabase com as credenciais configuradas
  * @returns {object} Cliente do Supabase inicializado
- * @throws {Error} Se a biblioteca do Supabase não estiver carregada
  */
 function createSupabaseClient() {
     const credentials = getSupabaseCredentials();
+    if (!credentials.url || !credentials.key) {
+        throw new Error('Credenciais do Supabase não encontradas');
+    }
     return supabase.createClient(credentials.url, credentials.key, credentials.options);
 }
 
@@ -123,7 +124,7 @@ async function testSupabaseConnection() {
  * @returns {string} URL completa da API do WhatsApp
  */
 function getWhatsappApiUrl() {
-    return env.whatsappApiUrl;
+    return localStorage.getItem('WHATSAPP_API_URL');
 }
 
 /**
@@ -131,7 +132,7 @@ function getWhatsappApiUrl() {
  * @returns {string} Chave de API do WhatsApp
  */
 function getWhatsappApiKey() {
-    return env.whatsappApiKey;
+    return localStorage.getItem('WHATSAPP_API_KEY');
 }
 
 /**
@@ -139,34 +140,19 @@ function getWhatsappApiKey() {
  * @returns {string} URL base da API do WhatsApp
  */
 function getWhatsappBaseUrl() {
-    return env.whatsappApiUrl.split('/send-message')[0];
+    return localStorage.getItem('WHATSAPP_API_URL').split('/send-message')[0];
 }
 
-// Exportar para uso em módulos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        getSupabaseCredentials,
-        getWhatsappCredentials,
-        createSupabaseClient,
-        testSupabaseConnection,
-        getWhatsappBaseUrl,
-        getWhatsappApiUrl,
-        getWhatsappApiKey,
-        limparSessaoEsair,
-        logout
-    };
-} else {
-    // Exportar para uso no navegador
-    window.getSupabaseCredentials = getSupabaseCredentials;
-    window.getWhatsappCredentials = getWhatsappCredentials;
-    window.createSupabaseClient = createSupabaseClient;
-    window.testSupabaseConnection = testSupabaseConnection;
-    window.getWhatsappBaseUrl = getWhatsappBaseUrl;
-    window.getWhatsappApiUrl = getWhatsappApiUrl;
-    window.getWhatsappApiKey = getWhatsappApiKey;
-    window.limparSessaoEsair = limparSessaoEsair;
-    window.logout = logout;
-}
+// Exportar para uso no navegador
+window.getSupabaseCredentials = getSupabaseCredentials;
+window.getWhatsappCredentials = getWhatsappCredentials;
+window.createSupabaseClient = createSupabaseClient;
+window.testSupabaseConnection = testSupabaseConnection;
+window.getWhatsappBaseUrl = getWhatsappBaseUrl;
+window.getWhatsappApiUrl = getWhatsappApiUrl;
+window.getWhatsappApiKey = getWhatsappApiKey;
+window.limparSessaoEsair = limparSessaoEsair;
+window.logout = logout;
 
 // Alertar no console se o arquivo for carregado corretamente
 console.log('✅ ok');

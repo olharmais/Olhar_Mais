@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teste Variáveis de Ambiente</title>
-    <script>
-        // As variáveis de ambiente serão injetadas aqui pela Vercel
-        window.env = window.env || {};
-    </script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="config/supabase.js"></script>
     <style>
@@ -35,21 +31,110 @@
             color: #856404;
             margin-bottom: 20px;
         }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
     <h1>Teste de Variáveis de Ambiente</h1>
     
     <div class="warning">
-        ⚠️ Esta página só funcionará corretamente se as variáveis de ambiente estiverem configuradas na Vercel.
+        ⚠️ Esta é uma página de teste. Use-a apenas para verificar se as variáveis de ambiente estão funcionando.
         <br>
-        Se você está vendo erros, verifique se todas as variáveis foram configuradas corretamente.
+        As credenciais inseridas aqui são temporárias e serão apagadas ao fechar a página.
     </div>
 
-    <div id="results"></div>
+    <form id="credentialsForm">
+        <div class="form-group">
+            <label for="supabaseUrl">SUPABASE_URL:</label>
+            <input type="text" id="supabaseUrl" placeholder="https://seu-projeto.supabase.co">
+        </div>
+        <div class="form-group">
+            <label for="supabaseKey">SUPABASE_ANON_KEY:</label>
+            <input type="password" id="supabaseKey" placeholder="sua-chave-aqui">
+        </div>
+        <div class="form-group">
+            <label for="whatsappUrl">WHATSAPP_API_URL:</label>
+            <input type="text" id="whatsappUrl" placeholder="https://api-whatsapp.com/send-message">
+        </div>
+        <div class="form-group">
+            <label for="whatsappKey">WHATSAPP_API_KEY:</label>
+            <input type="password" id="whatsappKey" placeholder="sua-chave-aqui">
+        </div>
+        <button type="submit">Salvar e Testar</button>
+        <button type="button" onclick="limparCredenciais()">Limpar Credenciais</button>
+    </form>
+
+    <div class="test-section">
+        <h2>Resultados do Teste</h2>
+        <div id="results"></div>
+    </div>
 
     <script>
         const results = document.getElementById('results');
+        const form = document.getElementById('credentialsForm');
+
+        // Carregar credenciais salvas
+        document.getElementById('supabaseUrl').value = localStorage.getItem('SUPABASE_URL') || '';
+        document.getElementById('supabaseKey').value = localStorage.getItem('SUPABASE_ANON_KEY') || '';
+        document.getElementById('whatsappUrl').value = localStorage.getItem('WHATSAPP_API_URL') || '';
+        document.getElementById('whatsappKey').value = localStorage.getItem('WHATSAPP_API_KEY') || '';
+
+        function limparCredenciais() {
+            localStorage.removeItem('SUPABASE_URL');
+            localStorage.removeItem('SUPABASE_ANON_KEY');
+            localStorage.removeItem('WHATSAPP_API_URL');
+            localStorage.removeItem('WHATSAPP_API_KEY');
+            form.reset();
+            results.innerHTML = '';
+            addStatus('✅ Credenciais removidas com sucesso!', true);
+        }
+
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            
+            // Salvar credenciais temporariamente
+            localStorage.setItem('SUPABASE_URL', document.getElementById('supabaseUrl').value);
+            localStorage.setItem('SUPABASE_ANON_KEY', document.getElementById('supabaseKey').value);
+            localStorage.setItem('WHATSAPP_API_URL', document.getElementById('whatsappUrl').value);
+            localStorage.setItem('WHATSAPP_API_KEY', document.getElementById('whatsappKey').value);
+
+            // Limpar resultados anteriores
+            results.innerHTML = '';
+            
+            // Executar testes
+            showEnvVars();
+            testSupabase();
+            testWhatsApp();
+        };
 
         function addStatus(message, isSuccess) {
             const div = document.createElement('div');
@@ -132,11 +217,6 @@
                 }
             }
         }
-
-        // Executar os testes
-        showEnvVars();
-        testSupabase();
-        testWhatsApp();
     </script>
 </body>
 </html> 
