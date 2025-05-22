@@ -86,54 +86,50 @@
     </script>
     
     <!-- Proteção do Fetch -->
-    <script>
-        (function() {
-            // Salvar referência original do fetch
-            const originalFetch = window.fetch;
+<script>
+    (function() {
+        // Interceptar XMLHttpRequest para proteger dados sensíveis
+        const XHR = XMLHttpRequest.prototype;
+        const send = XHR.send;
+        const open = XHR.open;
 
-            // Sobrescrever o fetch global
-            window.fetch = async function(...args) {
-                const [resource, config] = args;
-                
-                // Se for uma chamada para a API do WhatsApp
-                if (resource.includes('whatsapp') || (config?.body && config.body.includes('whatsapp'))) {
-                    // Criar uma cópia da configuração para não modificar a original
-                    const safeConfig = { ...config };
-                    
-                    try {
-                        // Fazer a chamada original
-                        const response = await originalFetch(resource, config);
+        // Interceptar apenas a exibição no DevTools
+        XHR.open = function(method, url) {
+            this._url = url;
+            return open.apply(this, arguments);
+        };
+
+        XHR.send = function() {
+            this.addEventListener('load', function() {
+                try {
+                    // Se for uma resposta da API do WhatsApp, proteger os dados
+                    if (this._url.includes('whatsapp')) {
+                        const responseBody = JSON.parse(this.response);
                         
-                        // Criar uma cópia da resposta
-                        const clone = response.clone();
-                        
-                        // Sobrescrever o método json() para sanitizar a resposta
-                        response.json = async () => {
-                            const data = await clone.json();
-                            
-                            // Retornar versão sanitizada
-                            return {
-                                status: data.status,
-                                response: {
-                                    status: data.response?.status || 'PENDING',
-                                    messageId: '[PROTEGIDO]'
-                                }
-                            };
+                        // Criar uma versão protegida da resposta
+                        const safeResponse = {
+                            status: responseBody.status,
+                            response: {
+                                status: 'PENDING',
+                                messageId: '[PROTEGIDO]'
+                            }
                         };
-                        
-                        return response;
-                    } catch (error) {
-                        // Em caso de erro, garantir que nenhuma informação sensível seja exposta
-                        console.error('Erro de comunicação:', error.code || 'ERR_UNKNOWN');
-                        throw new Error('Erro de comunicação');
+
+                        // Sobrescrever a resposta apenas para o DevTools
+                        Object.defineProperty(this, 'response', {
+                            get: function() {
+                                return JSON.stringify(safeResponse);
+                            }
+                        });
                     }
+                } catch (e) {
+                    // Ignorar erros de parsing
                 }
-                
-                // Para outras chamadas, manter comportamento normal
-                return originalFetch(...args);
-            };
-        })();
-    </script>
+            });
+            return send.apply(this, arguments);
+        };
+    })();
+</script>
     
     <!-- Definições preliminares para evitar erros antes do carregamento -->
     <script>
@@ -1284,24 +1280,18 @@
                         // Log mínimo para debug
                         console.log('Processando solicitação...');
 
-                        // Criar um objeto com informações não sensíveis
-                        const requestBody = {
-                            jid: btoa(phoneFormatado), // Codificar o número
-                            message: 'CÓDIGO_DE_VERIFICAÇÃO' // Não enviar o código real na requisição visível
-                        };
-
-                        // Adicionar o código real em um header customizado
-                        const headers = {
-                            'Authorization': whatsappKey,
-                            'Content-Type': 'application/json',
-                            'X-Message-Content': btoa(mensagem) // Codificar a mensagem real
-                        };
-
-                        const response = await fetch(whatsappUrl, {
-                            method: 'POST',
-                            headers: headers,
-                            body: JSON.stringify(requestBody)
-                        });
+                        // Fazer a requisição no formato original que a API espera
+const response = await fetch(whatsappUrl, {
+    method: 'POST',
+    headers: {
+        'Authorization': whatsappKey,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        jid: phoneFormatado,
+        message: mensagem
+    })
+});
 
                         if (!response.ok) {
                             throw new Error(`Erro de comunicação: ${response.status}`);
