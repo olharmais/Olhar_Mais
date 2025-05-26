@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Fotos dos Alunos</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- Supabase Config -->
+    <script src="/config/supabase.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Preloader -->
+    <div class="preloader fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Header Fixo -->
+    <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-40">
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-bold text-gray-800">OlharMais</h1>
+                <div class="flex items-center space-x-2">
+                    <button id="btnFiltros" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <i class="ph ph-funnel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Painel de Filtros (inicialmente oculto) -->
+    <div id="painelFiltros" class="fixed inset-x-0 top-[57px] bg-white shadow-md transform -translate-y-full transition-transform duration-300 z-30">
+        <div class="p-4 space-y-4">
+            <!-- Seleção de Colégio -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Colégio</label>
+                <select id="selectEscola" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Selecione um colégio</option>
+                </select>
+            </div>
+
+            <!-- Busca por Nome -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Aluno</label>
+                <div class="relative">
+                    <input type="text" 
+                           id="searchAluno" 
+                           class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Nome do aluno...">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <!-- Filtro de Fotos -->
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700">Apenas alunos sem foto</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="filterSemFoto" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="pt-[73px] px-4 pb-6">
+        <!-- Loading -->
+        <div id="mainLoading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40 hidden">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Contador de Alunos -->
+        <div class="flex items-center justify-between mb-4">
+            <div class="text-sm text-gray-600">
+                Total: <span id="totalAlunos" class="font-medium">0</span> alunos
+            </div>
+            <div class="text-sm text-gray-600">
+                Exibindo: <span id="alunosExibidos" class="font-medium">0</span> alunos
+            </div>
+        </div>
+
+        <!-- Grid de Alunos -->
+        <div id="alunosGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <!-- Os cards dos alunos serão inseridos aqui via JavaScript -->
+        </div>
+
+        <!-- Mensagem de Nenhum Aluno -->
+        <div id="semAlunos" class="hidden text-center py-8 text-gray-500">
+            Nenhum aluno encontrado
+        </div>
+    </main>
+
+    <script>
+        // Verificar se está logado
+        function verificarLogin() {
+            const logado = sessionStorage.getItem('logado');
+            if (logado !== 'true') {
+                window.location.href = 'login.html';
+                return;
+            }
+        }
+
+        // Verificar login ao carregar a página
+        document.addEventListener('DOMContentLoaded', verificarLogin);
+
+        // Inicializar cliente Supabase
+        const supabaseClient = createSupabaseClient();
+        
+        // Estado global
+        let escolas = [];
+        let alunos = [];
+        let filtrosAbertos = false;
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444"
+                }
+            }).showToast();
+        }
+
+        // Funções de Loading
+        function showLoading() {
+            document.getElementById('mainLoading').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('mainLoading').classList.add('hidden');
+        }
+
+        // Toggle do painel de filtros
+        document.getElementById('btnFiltros').addEventListener('click', () => {
+            const painel = document.getElementById('painelFiltros');
+            filtrosAbertos = !filtrosAbertos;
+            
+            if (filtrosAbertos) {
+                painel.classList.remove('-translate-y-full');
+            } else {
+                painel.classList.add('-translate-y-full');
+            }
+        });
+
+        // Carregar escolas
+        async function carregarEscolas() {
+            try {
+                const { data: escolasData, error } = await supabaseClient
+                    .from('escolas')
+                    .select('id, nome')
+                    .order('nome');
+
+                if (error) throw error;
+
+                escolas = escolasData;
+                
+                // Preencher select de escolas
+                const selectEscola = document.getElementById('selectEscola');
+                selectEscola.innerHTML = '<option value="">Selecione um colégio</option>';
+                
+                escolas.forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola.id;
+                    option.textContent = escola.nome;
+                    selectEscola.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar escolas:', error);
+                showToast('Erro ao carregar escolas: ' + error.message, 'error');
+            }
+        }
+
+        // Carregar alunos
+        async function carregarAlunos(escolaId = '') {
+            try {
+                showLoading();
+
+                let query = supabaseClient
+                    .from('alunos')
+                    .select(`
+                        id,
+                        nome_completo,
+                        foto_url,
+                        serie,
+                        turma,
+                        escola_id,
+                        escolas (
+                            nome
+                        )
+                    `)
+                    .order('nome_completo');
+
+                if (escolaId) {
+                    query = query.eq('escola_id', escolaId);
+                }
+
+                const { data: alunosData, error } = await query;
+
+                if (error) throw error;
+
+                alunos = alunosData;
+                filtrarEExibirAlunos();
+            } catch (error) {
+                console.error('Erro ao carregar alunos:', error);
+                showToast('Erro ao carregar alunos: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Função para verificar se é uma foto padrão
+        function isFotoPadrao(url) {
+            if (!url) return true;
+            
+            const fotosDefault = [
+                'freepik.com',
+                'circulo-azul-com-usuario-branco',
+                '78370-4707'
+            ];
+            
+            return fotosDefault.some(padrao => url.toLowerCase().includes(padrao.toLowerCase()));
+        }
+
+        // Filtrar e exibir alunos
+        function filtrarEExibirAlunos() {
+            const termoBusca = document.getElementById('searchAluno').value.toLowerCase().trim();
+            const apenasAlunosSemFoto = document.getElementById('filterSemFoto').checked;
+            
+            const alunosFiltrados = alunos.filter(aluno => {
+                const matchesNome = !termoBusca || 
+                    (aluno.nome_completo && aluno.nome_completo.toLowerCase().includes(termoBusca));
+                
+                const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
+                const matchesFoto = !apenasAlunosSemFoto || (apenasAlunosSemFoto && semFotoValida);
+                
+                return matchesNome && matchesFoto;
+            });
+
+            // Atualizar contadores
+            document.getElementById('totalAlunos').textContent = alunos.length;
+            document.getElementById('alunosExibidos').textContent = alunosFiltrados.length;
+
+            const gridAlunos = document.getElementById('alunosGrid');
+            const semAlunos = document.getElementById('semAlunos');
+
+            if (alunosFiltrados.length === 0) {
+                gridAlunos.classList.add('hidden');
+                semAlunos.classList.remove('hidden');
+                return;
+            }
+
+            gridAlunos.classList.remove('hidden');
+            semAlunos.classList.add('hidden');
+
+            gridAlunos.innerHTML = alunosFiltrados.map(aluno => {
+                const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
+                
+                return `
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="relative">
+                            <div class="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                                ${!semFotoValida
+                                    ? `<img src="${aluno.foto_url}" alt="${aluno.nome_completo}" class="w-full h-full object-cover">` 
+                                    : `<i class="ph ph-user text-4xl text-gray-400"></i>`
+                                }
+                            </div>
+                            <button onclick="alterarFoto('${aluno.id}')" 
+                                    class="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg hover:bg-gray-50 flex items-center justify-center">
+                                <i class="ph ph-camera text-gray-700"></i>
+                            </button>
+                        </div>
+                        <div class="p-3">
+                            <h3 class="font-medium text-gray-900 text-sm line-clamp-2">${aluno.nome_completo || 'Sem nome'}</h3>
+                            <p class="text-gray-500 text-xs mt-1">
+                                ${aluno.serie}º Ano - Turma ${aluno.turma}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Função para alterar foto
+        async function alterarFoto(alunoId) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    showLoading();
+
+                    // Upload da foto para o bucket
+                    const fileName = `aluno_${alunoId}_${Date.now()}.jpg`;
+                    const filePath = `alunos/${fileName}`;
+
+                    const { error: uploadError } = await supabaseClient
+                        .storage
+                        .from('fotos_alunos')
+                        .upload(filePath, file, {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+
+                    if (uploadError) throw uploadError;
+
+                    // Obter URL pública
+                    const { data: publicUrlData } = supabaseClient
+                        .storage
+                        .from('fotos_alunos')
+                        .getPublicUrl(filePath);
+
+                    // Atualizar URL da foto e marcar para atualizar no dispositivo
+                    const { error: updateError } = await supabaseClient
+                        .from('alunos')
+                        .update({
+                            foto_url: publicUrlData.publicUrl,
+                            mudar_no_dispositivo: true,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', alunoId);
+
+                    if (updateError) throw updateError;
+
+                    showToast('Foto atualizada com sucesso!');
+                    
+                    // Recarregar alunos
+                    await carregarAlunos(document.getElementById('selectEscola').value);
+                } catch (error) {
+                    console.error('Erro ao atualizar foto:', error);
+                    showToast('Erro ao atualizar foto: ' + error.message, 'error');
+                } finally {
+                    hideLoading();
+                }
+            };
+
+            input.click();
+        }
+
+        // Event Listeners
+        document.getElementById('selectEscola').addEventListener('change', (e) => {
+            carregarAlunos(e.target.value);
+        });
+
+        document.getElementById('searchAluno').addEventListener('input', () => {
+            filtrarEExibirAlunos();
+        });
+
+        document.getElementById('filterSemFoto').addEventListener('change', () => {
+            filtrarEExibirAlunos();
+        });
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await carregarEscolas();
+                await carregarAlunos();
+
+                // Remover preloader
+                const preloader = document.querySelector('.preloader');
+                setTimeout(() => {
+                    preloader.style.opacity = '0';
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                    }, 200);
+                }, 500);
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showToast('Erro ao carregar o sistema', 'error');
+            }
+        });
+    </script>
+</body>
+</html> 
