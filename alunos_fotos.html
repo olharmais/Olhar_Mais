@@ -258,6 +258,12 @@
                         escola_id,
                         escolas (
                             nome
+                        ),
+                        series (
+                            nome
+                        ),
+                        turmas (
+                            nome
                         )
                     `)
                     .order('nome_completo');
@@ -271,7 +277,7 @@
                 if (error) throw error;
 
                 alunos = alunosData;
-                await carregarFiltros(escolaId);
+                await carregarFiltros();
                 filtrarEExibirAlunos();
             } catch (error) {
                 console.error('Erro ao carregar alunos:', error);
@@ -281,56 +287,59 @@
             }
         }
 
-        // Carregar séries e turmas para os filtros
-        async function carregarFiltros(escolaId = '') {
+        // Carregar séries e turmas para os filtros baseado nos alunos carregados
+        async function carregarFiltros() {
             try {
-                // Carregar séries
-                let seriesQuery = supabaseClient
-                    .from('series')
-                    .select('id, nome')
-                    .eq('status', 'ATIVA')
-                    .is('soft_delete', null)
-                    .order('nome');
+                // Extrair séries e turmas únicas dos alunos carregados
+                const seriesUnicas = new Map();
+                const turmasUnicas = new Map();
 
-                if (escolaId) {
-                    seriesQuery = seriesQuery.eq('escola_id', escolaId);
-                }
-
-                const { data: series, error: seriesError } = await seriesQuery;
-                if (seriesError) throw seriesError;
-
-                // Carregar turmas
-                let turmasQuery = supabaseClient
-                    .from('turmas')
-                    .select('id, nome')
-                    .eq('status', 'ATIVA')
-                    .is('soft_delete', null)
-                    .order('nome');
-
-                if (escolaId) {
-                    turmasQuery = turmasQuery.eq('escola_id', escolaId);
-                }
-
-                const { data: turmas, error: turmasError } = await turmasQuery;
-                if (turmasError) throw turmasError;
+                alunos.forEach(aluno => {
+                    if (aluno.serie && aluno.series) {
+                        seriesUnicas.set(aluno.serie, aluno.series.nome);
+                    }
+                    if (aluno.turma && aluno.turmas) {
+                        turmasUnicas.set(aluno.turma, aluno.turmas.nome);
+                    }
+                });
 
                 // Preencher select de séries
                 const selectSerie = document.getElementById('selectSerie');
                 selectSerie.innerHTML = '<option value="">Todas as séries</option>';
-                series.forEach(serie => {
+                
+                Array.from(seriesUnicas.entries()).sort((a, b) => a[1].localeCompare(b[1])).forEach(([serieId, serieNome]) => {
+                    // Encontrar turmas para esta série
+                    const turmasDestaSerie = alunos
+                        .filter(aluno => aluno.serie === serieId && aluno.turmas)
+                        .map(aluno => aluno.turmas.nome)
+                        .filter((turma, index, arr) => turma && arr.indexOf(turma) === index)
+                        .sort();
+                    
+                    const turmasTexto = turmasDestaSerie.length > 0 ? ` (${turmasDestaSerie.join(', ')})` : '';
+                    
                     const option = document.createElement('option');
-                    option.value = serie.id;
-                    option.textContent = serie.nome;
+                    option.value = serieId;
+                    option.textContent = `${serieNome}${turmasTexto}`;
                     selectSerie.appendChild(option);
                 });
 
                 // Preencher select de turmas
                 const selectTurma = document.getElementById('selectTurma');
                 selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                turmas.forEach(turma => {
+                
+                Array.from(turmasUnicas.entries()).sort((a, b) => a[1].localeCompare(b[1])).forEach(([turmaId, turmaNome]) => {
+                    // Encontrar séries para esta turma
+                    const seriesDestaTurma = alunos
+                        .filter(aluno => aluno.turma === turmaId && aluno.series)
+                        .map(aluno => aluno.series.nome)
+                        .filter((serie, index, arr) => serie && arr.indexOf(serie) === index)
+                        .sort();
+                    
+                    const seriesTexto = seriesDestaTurma.length > 0 ? ` (${seriesDestaTurma.join(', ')})` : '';
+                    
                     const option = document.createElement('option');
-                    option.value = turma.id;
-                    option.textContent = turma.nome;
+                    option.value = turmaId;
+                    option.textContent = `${turmaNome}${seriesTexto}`;
                     selectTurma.appendChild(option);
                 });
 
@@ -367,8 +376,8 @@
                 const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
                 const matchesFoto = !apenasAlunosSemFoto || (apenasAlunosSemFoto && semFotoValida);
                 
-                const matchesSerie = !serieSelecionada || aluno.serie === parseInt(serieSelecionada);
-                const matchesTurma = !turmaSelecionada || aluno.turma === parseInt(turmaSelecionada);
+                const matchesSerie = !serieSelecionada || aluno.serie == serieSelecionada;
+                const matchesTurma = !turmaSelecionada || aluno.turma == turmaSelecionada;
                 
                 return matchesNome && matchesFoto && matchesSerie && matchesTurma;
             });
@@ -389,19 +398,13 @@
             gridAlunos.classList.remove('hidden');
             semAlunos.classList.add('hidden');
 
-            // Buscar nomes das séries e turmas para exibição
+            // Exibir alunos
             gridAlunos.innerHTML = alunosFiltrados.map(aluno => {
                 const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
                 
-                // Buscar nome da série
-                const selectSerie = document.getElementById('selectSerie');
-                const optionSerie = Array.from(selectSerie.options).find(opt => opt.value == aluno.serie);
-                const nomeSerie = optionSerie ? optionSerie.textContent : `${aluno.serie}º Ano`;
-                
-                // Buscar nome da turma
-                const selectTurma = document.getElementById('selectTurma');
-                const optionTurma = Array.from(selectTurma.options).find(opt => opt.value == aluno.turma);
-                const nomeTurma = optionTurma ? optionTurma.textContent : `Turma ${aluno.turma}`;
+                // Usar os nomes das séries e turmas
+                const nomeSerie = aluno.series ? aluno.series.nome : 'Série não informada';
+                const nomeTurma = aluno.turmas ? aluno.turmas.nome : 'Turma não informada';
                 
                 return `
                     <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -490,6 +493,12 @@
 
         // Event Listeners
         document.getElementById('selectEscola').addEventListener('change', (e) => {
+            // Limpar filtros ao trocar de escola
+            document.getElementById('selectSerie').value = '';
+            document.getElementById('selectTurma').value = '';
+            document.getElementById('searchAluno').value = '';
+            document.getElementById('filterSemFoto').checked = false;
+            
             carregarAlunos(e.target.value);
         });
 
