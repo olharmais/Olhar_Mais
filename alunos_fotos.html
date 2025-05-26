@@ -291,15 +291,21 @@
         async function carregarFiltros() {
             try {
                 // Extrair séries e turmas únicas dos alunos carregados
-                const seriesUnicas = new Map();
-                const turmasUnicas = new Map();
+                const seriesUnicas = new Map(); // ID -> {id, nome}
+                const turmasUnicas = new Map(); // ID -> {id, nome}
 
                 alunos.forEach(aluno => {
                     if (aluno.serie && aluno.series) {
-                        seriesUnicas.set(aluno.serie, aluno.series.nome);
+                        seriesUnicas.set(aluno.serie, {
+                            id: aluno.serie,
+                            nome: aluno.series.nome
+                        });
                     }
                     if (aluno.turma && aluno.turmas) {
-                        turmasUnicas.set(aluno.turma, aluno.turmas.nome);
+                        turmasUnicas.set(aluno.turma, {
+                            id: aluno.turma,
+                            nome: aluno.turmas.nome
+                        });
                     }
                 });
 
@@ -307,19 +313,19 @@
                 const selectSerie = document.getElementById('selectSerie');
                 selectSerie.innerHTML = '<option value="">Todas as séries</option>';
                 
-                Array.from(seriesUnicas.entries()).sort((a, b) => a[1].localeCompare(b[1])).forEach(([serieId, serieNome]) => {
+                Array.from(seriesUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome)).forEach(serie => {
                     // Encontrar turmas para esta série
                     const turmasDestaSerie = alunos
-                        .filter(aluno => aluno.serie === serieId && aluno.turmas)
+                        .filter(aluno => aluno.serie === serie.id && aluno.turmas)
                         .map(aluno => aluno.turmas.nome)
-                        .filter((turma, index, arr) => turma && arr.indexOf(turma) === index)
+                        .filter((nome, index, arr) => nome && arr.indexOf(nome) === index)
                         .sort();
                     
                     const turmasTexto = turmasDestaSerie.length > 0 ? ` (${turmasDestaSerie.join(', ')})` : '';
                     
                     const option = document.createElement('option');
-                    option.value = serieId;
-                    option.textContent = `${serieNome}${turmasTexto}`;
+                    option.value = serie.id;
+                    option.textContent = `${serie.nome}${turmasTexto}`;
                     selectSerie.appendChild(option);
                 });
 
@@ -327,19 +333,19 @@
                 const selectTurma = document.getElementById('selectTurma');
                 selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
                 
-                Array.from(turmasUnicas.entries()).sort((a, b) => a[1].localeCompare(b[1])).forEach(([turmaId, turmaNome]) => {
+                Array.from(turmasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome)).forEach(turma => {
                     // Encontrar séries para esta turma
                     const seriesDestaTurma = alunos
-                        .filter(aluno => aluno.turma === turmaId && aluno.series)
+                        .filter(aluno => aluno.turma === turma.id && aluno.series)
                         .map(aluno => aluno.series.nome)
-                        .filter((serie, index, arr) => serie && arr.indexOf(serie) === index)
+                        .filter((nome, index, arr) => nome && arr.indexOf(nome) === index)
                         .sort();
                     
                     const seriesTexto = seriesDestaTurma.length > 0 ? ` (${seriesDestaTurma.join(', ')})` : '';
                     
                     const option = document.createElement('option');
-                    option.value = turmaId;
-                    option.textContent = `${turmaNome}${seriesTexto}`;
+                    option.value = turma.id;
+                    option.textContent = `${turma.nome}${seriesTexto}`;
                     selectTurma.appendChild(option);
                 });
 
@@ -402,9 +408,9 @@
             gridAlunos.innerHTML = alunosFiltrados.map(aluno => {
                 const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
                 
-                // Usar os nomes das séries e turmas
-                const nomeSerie = aluno.series ? aluno.series.nome : 'Série não informada';
-                const nomeTurma = aluno.turmas ? aluno.turmas.nome : 'Turma não informada';
+                // Formatação usando os nomes das séries e turmas
+                const nomeSerie = aluno.series?.nome || 'Série não informada';
+                const nomeTurma = aluno.turmas?.nome || 'Turma não informada';
                 
                 return `
                     <div class="bg-white rounded-lg shadow overflow-hidden">
