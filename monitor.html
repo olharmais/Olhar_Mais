@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Monitor Público</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+        
+        .metric-card {
+            background: #ffffff;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        }
+        
+        .metric-card-1::before {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+        }
+        
+        .metric-card-2::before {
+            background: linear-gradient(90deg, #ec4899, #db2777);
+        }
+        
+        .metric-card-3::before {
+            background: linear-gradient(90deg, #06b6d4, #0891b2);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .log-item {
+            background: #ffffff;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f1f5f9;
+        }
+        
+        .log-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #3b82f6, #2563eb);
+            border-radius: 16px 0 0 16px;
+        }
+        
+        .log-item:hover {
+            background: #f8fafc;
+            transform: translateX(8px);
+            border-color: #e2e8f0;
+        }
+        
+        .login-overlay {
+            background: rgba(248, 250, 252, 0.98);
+        }
+        
+        .login-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
+        }
+        
+        .icon-bg {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border-radius: 12px;
+        }
+        
+        .chart-container {
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 16px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .status-online {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+        
+        /* Responsividade mobile */
+        @media (max-width: 640px) {
+            .glass-card {
+                margin: 0.75rem;
+                padding: 1rem;
+            }
+            
+            .metric-card {
+                padding: 1rem;
+            }
+            
+            .log-item {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+    
+    <script>
+        // Configuração do Tailwind
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#667eea',
+                        'secondary': '#764ba2'
+                    }
+                }
+            }
+        }
+        
+        // Definir funções básicas para evitar erros antes do carregamento
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window._configLoading = true;
+        
+        // IIFE para encapsular todas as variáveis sensíveis
+        (function() {
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        // Marcar como carregado
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        const loadingElement = document.getElementById('loading-config');
+                        if (loadingElement) {
+                            loadingElement.style.display = 'none';
+                        }
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar configurações:', error);
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+</head>
+<body>
+    <!-- Tela de carregamento inicial -->
+    <div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 20px; color: #64748b; font-family: Inter, sans-serif; font-size: 16px; text-align: center; padding: 0 20px;">Carregando configurações...</p>
+    </div>
+
+    <!-- Overlay de Login -->
+    <div id="loginOverlay" class="fixed inset-0 login-overlay flex items-center justify-center z-50">
+        <div class="login-card p-8 max-w-md w-full mx-4">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    <span class="text-gradient">OlharMais</span>
+                </h1>
+                <p class="text-gray-500">Monitor Público</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha de Acesso</label>
+                    <input type="password" id="passwordInput" 
+                           class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Digite a senha">
+                </div>
+                
+                <button type="submit" 
+                        class="w-full btn-primary py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
+                    Acessar Monitor
+                </button>
+            </form>
+            
+            <div id="loginError" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                Senha incorreta. Tente novamente.
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div id="mainContent" class="hidden min-h-screen">
+        <!-- Header -->
+        <header class="glass-card mx-3 mt-3 p-4 md:p-6 fade-in">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+                        <span class="text-gradient">OlharMais</span> Monitor
+                    </h1>
+                    <p class="text-gray-500 text-sm md:text-base">Observação em tempo real</p>
+                </div>
+                <div class="mt-3 md:mt-0 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div class="text-gray-500 text-xs md:text-sm">
+                        Última atualização: <span id="lastUpdate" class="font-medium text-gray-700">--:--</span>
+                    </div>
+                    <button id="refreshBtn" class="btn-primary px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 text-sm">
+                        <i class="ph ph-arrows-clockwise"></i>
+                        <span>Atualizar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Container Principal -->
+        <div class="max-w-7xl mx-auto px-3 py-4">
+            <!-- Cards de Métricas -->
+            <div class="grid grid-cols-3 gap-3 md:gap-6 mb-6 md:mb-8">
+                <!-- Total de Colégios -->
+                <div class="metric-card metric-card-1 p-3 md:p-6 fade-in">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="icon-bg p-2 md:p-3 rounded-lg mb-2 md:mb-4">
+                            <i class="ph ph-buildings text-lg md:text-2xl"></i>
+                        </div>
+                        <h3 class="text-xs md:text-lg font-medium text-gray-600 mb-1">Colégios</h3>
+                        <p class="text-lg md:text-3xl font-bold text-gray-800 mb-1 md:mb-2" id="totalColegios">--</p>
+                        <div class="text-xs md:text-sm text-gray-500 text-center">
+                            <i class="ph ph-trend-up mr-1 text-blue-500"></i>
+                            <span id="colegiosInfo" class="hidden md:inline">Carregando...</span>
+                            <span class="md:hidden">Ativas</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total de Turmas -->
+                <div class="metric-card metric-card-2 p-3 md:p-6 fade-in">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="icon-bg p-2 md:p-3 rounded-lg mb-2 md:mb-4" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                            <i class="ph ph-chalkboard-teacher text-lg md:text-2xl"></i>
+                        </div>
+                        <h3 class="text-xs md:text-lg font-medium text-gray-600 mb-1">Turmas</h3>
+                        <p class="text-lg md:text-3xl font-bold text-gray-800 mb-1 md:mb-2" id="totalTurmas">--</p>
+                        <div class="text-xs md:text-sm text-gray-500 text-center">
+                            <i class="ph ph-users-three mr-1 text-pink-500"></i>
+                            <span id="turmasInfo" class="hidden md:inline">Carregando...</span>
+                            <span class="md:hidden">Ativas</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total de Séries -->
+                <div class="metric-card metric-card-3 p-3 md:p-6 fade-in">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="icon-bg p-2 md:p-3 rounded-lg mb-2 md:mb-4" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                            <i class="ph ph-book-bookmark text-lg md:text-2xl"></i>
+                        </div>
+                        <h3 class="text-xs md:text-lg font-medium text-gray-600 mb-1">Séries</h3>
+                        <p class="text-lg md:text-3xl font-bold text-gray-800 mb-1 md:mb-2" id="totalSeries">--</p>
+                        <div class="text-xs md:text-sm text-gray-500 text-center">
+                            <i class="ph ph-books mr-1 text-cyan-500"></i>
+                            <span id="seriesInfo" class="hidden md:inline">Carregando...</span>
+                            <span class="md:hidden">Ativas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico Geral -->
+            <div class="glass-card p-4 md:p-6 mb-6 md:mb-8 fade-in">
+                <h2 class="text-lg md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center">
+                    <i class="ph ph-chart-bar text-blue-500 mr-2"></i>Visão Geral do Sistema
+                </h2>
+                <div class="chart-container p-3 md:p-4">
+                    <canvas id="overviewChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Log de Acessos -->
+            <div class="glass-card p-4 md:p-6 fade-in">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
+                    <div class="flex items-center space-x-3">
+                        <h2 class="text-lg md:text-2xl font-bold text-gray-800 flex items-center">
+                            <i class="ph ph-clock-clockwise text-blue-500 mr-2"></i>Log de Acessos
+                        </h2>
+                        <button id="refreshLogsBtn" class="btn-secondary px-2 py-1 rounded-lg transition-all flex items-center space-x-1 text-xs hover:scale-105">
+                            <i class="ph ph-arrows-clockwise"></i>
+                            <span class="hidden sm:inline">Atualizar Lista</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between md:justify-end space-x-4 mt-2 md:mt-0">
+                        <div class="text-gray-500 text-xs md:text-sm">
+                            Hoje: <span id="totalAcessosHoje" class="font-medium text-gray-800">--</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="pulse-animation">
+                                <div class="w-2 h-2 md:w-3 md:h-3 status-online rounded-full"></div>
+                            </div>
+                            <span class="text-gray-500 text-xs md:text-sm">Online</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Logs -->
+                <div id="logsContainer" class="space-y-2 md:space-y-3 max-h-80 md:max-h-96 overflow-y-auto">
+                    <!-- Loading -->
+                    <div class="flex items-center justify-center py-8">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+
+                <!-- Paginação -->
+                <div class="flex items-center justify-between mt-4 md:mt-6 pt-3 md:pt-4 border-t border-gray-100">
+                    <div class="text-gray-500 text-xs md:text-sm">
+                        <span id="showingCount">0</span> de <span id="totalCount">0</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="prevBtn" class="btn-secondary px-2 py-1 md:px-3 md:py-1 rounded transition-colors disabled:opacity-50 text-xs md:text-sm" disabled>
+                            <i class="ph ph-caret-left"></i>
+                        </button>
+                        <button id="nextBtn" class="btn-secondary px-2 py-1 md:px-3 md:py-1 rounded transition-colors disabled:opacity-50 text-xs md:text-sm" disabled>
+                            <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let supabaseClient = null;
+        let currentPage = 0;
+        const pageSize = 10;
+        let totalLogs = 0;
+        let overviewChart = null;
+
+        // Função para mostrar toast
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: type === 'success' ? "#22c55e" : "#ef4444"
+                }
+            }).showToast();
+        }
+
+        // Função de login
+        function handleLogin(event) {
+            event.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (password === 'service') {
+                // Login bem-sucedido
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                
+                // Inicializar o sistema
+                initializeSystem();
+            } else {
+                // Senha incorreta
+                errorDiv.classList.remove('hidden');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+
+        // Função para inicializar o sistema
+        async function initializeSystem() {
+            console.log('Inicializando sistema...');
+            
+            // Aguardar carregamento das configurações
+            while (window._configLoading) {
+                console.log('Aguardando carregamento das configurações...');
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            console.log('Configurações carregadas, criando cliente Supabase...');
+            supabaseClient = createSupabaseClient();
+            if (!supabaseClient) {
+                console.error('Falha ao criar cliente Supabase');
+                showToast('Erro ao conectar com o banco de dados', 'error');
+                return;
+            }
+            
+            console.log('Cliente Supabase criado com sucesso');
+            
+            // Carregar dados iniciais
+            console.log('Carregando dados iniciais...');
+            await loadData();
+            
+            // Configurar auto-refresh a cada 30 segundos
+            console.log('Configurando auto-refresh...');
+            setInterval(loadData, 30000);
+            
+            console.log('Sistema inicializado com sucesso!');
+        }
+
+        // Função para carregar todos os dados
+        async function loadData() {
+            try {
+                await Promise.all([
+                    loadMetrics(),
+                    loadChart(),
+                    loadLogs()
+                ]);
+                
+                // Atualizar timestamp
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = 
+                    now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                showToast('Erro ao carregar dados', 'error');
+            }
+        }
+
+        // Função para carregar métricas
+        async function loadMetrics() {
+            try {
+                console.log('Carregando métricas...');
+                
+                const [
+                    { data: escolas, error: escolasError },
+                    { data: turmas, error: turmasError },
+                    { data: series, error: seriesError }
+                ] = await Promise.all([
+                    supabaseClient.from('escolas').select('id').is('soft_delete', null),
+                    supabaseClient.from('turmas').select('id').is('soft_delete', null),
+                    supabaseClient.from('series').select('id').is('soft_delete', null)
+                ]);
+
+                console.log('Dados carregados:', { escolas, turmas, series });
+                
+                if (escolasError) console.error('Erro escolas:', escolasError);
+                if (turmasError) console.error('Erro turmas:', turmasError);
+                if (seriesError) console.error('Erro series:', seriesError);
+
+                // Atualizar cards
+                document.getElementById('totalColegios').textContent = escolas?.length || 0;
+                document.getElementById('colegiosInfo').textContent = 'Escolas monitoradas';
+                
+                document.getElementById('totalTurmas').textContent = turmas?.length || 0;
+                document.getElementById('turmasInfo').textContent = 'Turmas ativas';
+                
+                document.getElementById('totalSeries').textContent = series?.length || 0;
+                document.getElementById('seriesInfo').textContent = 'Séries cadastradas';
+                
+                console.log('Métricas atualizadas com sucesso');
+                
+            } catch (error) {
+                console.error('Erro ao carregar métricas:', error);
+                
+                // Fallback: tentar buscar sem filtro soft_delete
+                try {
+                    console.log('Tentando fallback sem filtro soft_delete...');
+                    
+                    const [
+                        { data: escolas },
+                        { data: turmas },
+                        { data: series }
+                    ] = await Promise.all([
+                        supabaseClient.from('escolas').select('id'),
+                        supabaseClient.from('turmas').select('id'),
+                        supabaseClient.from('series').select('id')
+                    ]);
+
+                    // Atualizar cards
+                    document.getElementById('totalColegios').textContent = escolas?.length || 0;
+                    document.getElementById('colegiosInfo').textContent = 'Escolas monitoradas';
+                    
+                    document.getElementById('totalTurmas').textContent = turmas?.length || 0;
+                    document.getElementById('turmasInfo').textContent = 'Turmas ativas';
+                    
+                    document.getElementById('totalSeries').textContent = series?.length || 0;
+                    document.getElementById('seriesInfo').textContent = 'Séries cadastradas';
+                    
+                    console.log('Fallback executado com sucesso');
+                    
+                } catch (fallbackError) {
+                    console.error('Erro no fallback das métricas:', fallbackError);
+                    
+                    // Valores padrão em caso de erro total
+                    document.getElementById('totalColegios').textContent = '--';
+                    document.getElementById('colegiosInfo').textContent = 'Erro ao carregar';
+                    
+                    document.getElementById('totalTurmas').textContent = '--';
+                    document.getElementById('turmasInfo').textContent = 'Erro ao carregar';
+                    
+                    document.getElementById('totalSeries').textContent = '--';
+                    document.getElementById('seriesInfo').textContent = 'Erro ao carregar';
+                }
+            }
+        }
+
+        // Função para carregar gráfico
+        async function loadChart() {
+            try {
+                console.log('Carregando dados do gráfico...');
+                
+                const [
+                    { data: escolas, error: escolasError },
+                    { data: turmas, error: turmasError },
+                    { data: series, error: seriesError },
+                    { data: alunos, error: alunosError },
+                    { data: dispositivos, error: dispositivosError }
+                ] = await Promise.all([
+                    supabaseClient.from('escolas').select('id').is('soft_delete', null),
+                    supabaseClient.from('turmas').select('id').is('soft_delete', null),
+                    supabaseClient.from('series').select('id').is('soft_delete', null),
+                    supabaseClient.from('alunos').select('id').is('soft_delete', null),
+                    supabaseClient.from('dispositivos').select('id, status').is('soft_delete', null)
+                ]);
+
+                console.log('Dados do gráfico carregados:', { 
+                    escolas: escolas?.length, 
+                    turmas: turmas?.length, 
+                    series: series?.length, 
+                    alunos: alunos?.length, 
+                    dispositivos: dispositivos?.length 
+                });
+
+                const ctx = document.getElementById('overviewChart').getContext('2d');
+                
+                const data = {
+                    labels: ['Colégios', 'Turmas', 'Séries', 'Alunos', 'Dispositivos'],
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: [
+                            escolas?.length || 0,
+                            turmas?.length || 0,
+                            series?.length || 0,
+                            alunos?.length || 0,
+                            dispositivos?.length || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',  // Azul
+                            'rgba(236, 72, 153, 0.8)',  // Rosa
+                            'rgba(6, 182, 212, 0.8)',   // Ciano
+                            'rgba(34, 197, 94, 0.8)',   // Verde
+                            'rgba(245, 158, 11, 0.8)'   // Laranja
+                        ],
+                        borderColor: [
+                            'rgb(37, 99, 235)',     // Azul escuro
+                            'rgb(219, 39, 119)',    // Rosa escuro
+                            'rgb(8, 145, 178)',     // Ciano escuro
+                            'rgb(22, 163, 74)',     // Verde escuro
+                            'rgb(217, 119, 6)'      // Laranja escuro
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                };
+
+                const config = {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#64748b'
+                                },
+                                grid: {
+                                    color: '#f1f5f9'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#64748b'
+                                },
+                                grid: {
+                                    color: '#f1f5f9'
+                                }
+                            }
+                        }
+                    }
+                };
+
+                if (overviewChart) {
+                    overviewChart.destroy();
+                }
+                
+                overviewChart = new Chart(ctx, config);
+                console.log('Gráfico criado com sucesso');
+                
+            } catch (error) {
+                console.error('Erro ao carregar gráfico:', error);
+                
+                // Fallback: criar gráfico com dados padrão
+                try {
+                    console.log('Criando gráfico com dados padrão...');
+                    
+                    const ctx = document.getElementById('overviewChart').getContext('2d');
+                    
+                    const data = {
+                        labels: ['Colégios', 'Turmas', 'Séries', 'Alunos', 'Dispositivos'],
+                        datasets: [{
+                            label: 'Quantidade',
+                            data: [0, 0, 0, 0, 0],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)',  // Azul
+                                'rgba(236, 72, 153, 0.8)',  // Rosa
+                                'rgba(6, 182, 212, 0.8)',   // Ciano
+                                'rgba(34, 197, 94, 0.8)',   // Verde
+                                'rgba(245, 158, 11, 0.8)'   // Laranja
+                            ],
+                            borderColor: [
+                                'rgb(37, 99, 235)',     // Azul escuro
+                                'rgb(219, 39, 119)',    // Rosa escuro
+                                'rgb(8, 145, 178)',     // Ciano escuro
+                                'rgb(22, 163, 74)',     // Verde escuro
+                                'rgb(217, 119, 6)'      // Laranja escuro
+                            ],
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    };
+
+                    const config = {
+                        type: 'bar',
+                        data: data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#64748b'
+                                    },
+                                    grid: {
+                                        color: '#f1f5f9'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#64748b'
+                                    },
+                                    grid: {
+                                        color: '#f1f5f9'
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    if (overviewChart) {
+                        overviewChart.destroy();
+                    }
+                    
+                    overviewChart = new Chart(ctx, config);
+                    console.log('Gráfico padrão criado');
+                    
+                } catch (fallbackError) {
+                    console.error('Erro ao criar gráfico padrão:', fallbackError);
+                }
+            }
+        }
+
+        // Função para carregar logs
+        async function loadLogs() {
+            try {
+                // Buscar total de logs de hoje usando a view_alunos_logs
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                const amanha = new Date(hoje);
+                amanha.setDate(amanha.getDate() + 1);
+
+                // Buscar todos os logs e filtrar manualmente por data (como no código de referência)
+                const { data: todosLogs } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('hora_check');
+                
+                // Filtrar manualmente os registros de hoje
+                const logsHoje = todosLogs?.filter(log => {
+                    const dataLog = new Date(log.hora_check);
+                    return dataLog >= hoje && dataLog < amanha;
+                }) || [];
+                
+                document.getElementById('totalAcessosHoje').textContent = logsHoje.length;
+
+                // Buscar logs recentes com paginação usando a view_alunos_logs
+                const { data: logs, count } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('*', { count: 'exact' })
+                    .order('hora_check', { ascending: false })
+                    .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+
+                totalLogs = count || 0;
+                renderLogs(logs || []);
+                updatePagination();
+                
+            } catch (error) {
+                console.error('Erro ao carregar logs:', error);
+                // Tentar fallback com tabela logs normal
+                try {
+                    console.log('Tentando fallback com tabela logs...');
+                    
+                    // Buscar total de logs de hoje
+                    const hoje = new Date();
+                    hoje.setHours(0, 0, 0, 0);
+                    const amanha = new Date(hoje);
+                    amanha.setDate(amanha.getDate() + 1);
+
+                    const { count: totalHoje } = await supabaseClient
+                        .from('logs')
+                        .select('*', { count: 'exact', head: true })
+                        .gte('created_at', hoje.toISOString())
+                        .lt('created_at', amanha.toISOString());
+
+                    document.getElementById('totalAcessosHoje').textContent = totalHoje || 0;
+
+                    // Buscar logs recentes com join manual
+                    const { data: logs, count } = await supabaseClient
+                        .from('logs')
+                        .select(`
+                            *,
+                            alunos (
+                                nome_completo,
+                                foto_url,
+                                escolas (nome),
+                                series (nome),
+                                turmas (nome)
+                            )
+                        `, { count: 'exact' })
+                        .order('created_at', { ascending: false })
+                        .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+
+                    totalLogs = count || 0;
+                    renderLogsFallback(logs || []);
+                    updatePagination();
+                    
+                } catch (fallbackError) {
+                    console.error('Erro no fallback:', fallbackError);
+                    renderLogs([]);
+                }
+            }
+        }
+
+        // Função para renderizar logs (versão principal)
+        function renderLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            
+            if (!logs.length) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="ph ph-clock text-3xl md:text-4xl mb-2"></i>
+                        <p class="text-sm md:text-base">Nenhum acesso registrado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = logs.map(log => {
+                const dataLog = new Date(log.hora_check);
+                const horario = dataLog.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="log-item p-3 md:p-4">
+                        <div class="flex items-center space-x-3 md:space-x-4">
+                            <div class="flex-shrink-0">
+                                <img src="${log.foto_aluno || '/images/default-avatar.png'}" 
+                                     alt="${log.nome_aluno || 'Aluno'}"
+                                     class="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-blue-100"
+                                     onerror="this.src='/images/default-avatar.png'">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-gray-800 font-medium truncate text-sm md:text-base">
+                                    ${log.nome_aluno || 'Aluno não identificado'}
+                                </h4>
+                                <p class="text-gray-600 text-xs md:text-sm truncate">
+                                    ${log.nome_colégio || 'Escola não identificada'}
+                                </p>
+                                <p class="text-gray-500 text-xs hidden md:block">
+                                    ${log.serie || ''} ${log.turma || ''} - ${log.cidade || ''}
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 text-right">
+                                <p class="text-gray-700 text-xs md:text-sm font-medium">${horario}</p>
+                                <div class="flex items-center justify-end mt-1">
+                                    <div class="w-1.5 h-1.5 md:w-2 md:h-2 status-online rounded-full mr-1 md:mr-2"></div>
+                                    <span class="text-green-600 text-xs">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Função para renderizar logs (versão fallback)
+        function renderLogsFallback(logs) {
+            const container = document.getElementById('logsContainer');
+            
+            if (!logs.length) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="ph ph-clock text-3xl md:text-4xl mb-2"></i>
+                        <p class="text-sm md:text-base">Nenhum acesso registrado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = logs.map(log => {
+                const dataLog = new Date(log.created_at);
+                const horario = dataLog.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="log-item p-3 md:p-4">
+                        <div class="flex items-center space-x-3 md:space-x-4">
+                            <div class="flex-shrink-0">
+                                <img src="${log.alunos?.foto_url || '/images/default-avatar.png'}" 
+                                     alt="${log.alunos?.nome_completo || 'Aluno'}"
+                                     class="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-blue-100"
+                                     onerror="this.src='/images/default-avatar.png'">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-gray-800 font-medium truncate text-sm md:text-base">
+                                    ${log.alunos?.nome_completo || 'Aluno não identificado'}
+                                </h4>
+                                <p class="text-gray-600 text-xs md:text-sm truncate">
+                                    ${log.alunos?.escolas?.nome || 'Escola não identificada'}
+                                </p>
+                                <p class="text-gray-500 text-xs hidden md:block">
+                                    ${log.alunos?.series?.nome || ''} ${log.alunos?.turmas?.nome || ''}
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 text-right">
+                                <p class="text-gray-700 text-xs md:text-sm font-medium">${horario}</p>
+                                <div class="flex items-center justify-end mt-1">
+                                    <div class="w-1.5 h-1.5 md:w-2 md:h-2 status-online rounded-full mr-1 md:mr-2"></div>
+                                    <span class="text-green-600 text-xs">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Função para atualizar paginação
+        function updatePagination() {
+            const showing = Math.min((currentPage + 1) * pageSize, totalLogs);
+            document.getElementById('showingCount').textContent = showing;
+            document.getElementById('totalCount').textContent = totalLogs;
+            
+            document.getElementById('prevBtn').disabled = currentPage === 0;
+            document.getElementById('nextBtn').disabled = showing >= totalLogs;
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            
+            // Refresh button geral
+            document.getElementById('refreshBtn').addEventListener('click', async function() {
+                const btn = this;
+                const icon = btn.querySelector('i');
+                
+                icon.classList.add('animate-spin');
+                btn.disabled = true;
+                
+                await loadData();
+                
+                setTimeout(() => {
+                    icon.classList.remove('animate-spin');
+                    btn.disabled = false;
+                }, 1000);
+            });
+
+            // Refresh button dos logs
+            document.getElementById('refreshLogsBtn').addEventListener('click', async function() {
+                const btn = this;
+                const icon = btn.querySelector('i');
+                
+                icon.classList.add('animate-spin');
+                btn.disabled = true;
+                
+                // Resetar paginação
+                currentPage = 0;
+                
+                // Recarregar apenas os logs
+                await loadLogs();
+                
+                setTimeout(() => {
+                    icon.classList.remove('animate-spin');
+                    btn.disabled = false;
+                }, 1000);
+
+                // Mostrar toast de confirmação
+                showToast('Lista de logs atualizada!', 'success');
+            });
+            
+            // Pagination
+            document.getElementById('prevBtn').addEventListener('click', function() {
+                if (currentPage > 0) {
+                    currentPage--;
+                    loadLogs();
+                }
+            });
+            
+            document.getElementById('nextBtn').addEventListener('click', function() {
+                if ((currentPage + 1) * pageSize < totalLogs) {
+                    currentPage++;
+                    loadLogs();
+                }
+            });
+            
+            // Focus no input de senha
+            document.getElementById('passwordInput').focus();
+        });
+    </script>
+</body>
+</html> 
