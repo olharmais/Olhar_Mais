@@ -526,6 +526,137 @@
             }).join('');
         }
 
+        // Função para obter sessão do dispositivo
+        async function getDeviceSession(ipAddress, login, password) {
+            try {
+                const ipAddressWithPort = ipAddress.includes(':') ? ipAddress : `${ipAddress}:80`;
+                
+                const response = await fetch(`http://${ipAddressWithPort}/login.fcgi`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        login: login || 'admin',
+                        password: password || 'admin'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao obter sessão do dispositivo');
+                }
+
+                const data = await response.json();
+                if (!data.session) {
+                    throw new Error('Sessão não retornada pelo dispositivo');
+                }
+
+                return data.session;
+            } catch (error) {
+                console.error('Erro ao obter sessão:', error);
+                throw new Error('Não foi possível conectar ao dispositivo');
+            }
+        }
+
+        // Função para excluir usuário do dispositivo
+        async function excluirUsuarioDispositivo(dispositivo, idNoDispositivo) {
+            const ipAddressWithPort = dispositivo.ip.includes(':') ? dispositivo.ip : `${dispositivo.ip}:80`;
+            let retryCount = 0;
+            const maxRetries = 2;
+
+            while (retryCount <= maxRetries) {
+                try {
+                    // Obter nova sessão
+                    const session = await getDeviceSession(
+                        dispositivo.ip,
+                        dispositivo.login || 'admin',
+                        dispositivo.senha || 'admin'
+                    );
+
+                    // Primeiro, vamos verificar se o usuário existe no dispositivo
+                    const loadResponse = await fetch(`http://${ipAddressWithPort}/load_objects.fcgi?session=${session}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            object: "users",
+                            where: {
+                                users: {
+                                    registration: idNoDispositivo.toString()
+                                }
+                            }
+                        })
+                    });
+
+                    if (!loadResponse.ok) {
+                        throw new Error(`Erro ao verificar usuário: ${await loadResponse.text()}`);
+                    }
+
+                    const loadData = await loadResponse.json();
+                    if (!loadData.users || loadData.users.length === 0) {
+                        console.log(`Usuário ${idNoDispositivo} não encontrado no dispositivo ${dispositivo.ip}`);
+                        return { success: true }; // Retorna sucesso pois o usuário já não existe
+                    }
+
+                    const userId = loadData.users[0].id;
+
+                    // Excluir usuário do dispositivo usando destroy_objects
+                    const response = await fetch(`http://${ipAddressWithPort}/destroy_objects.fcgi?session=${session}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            object: "users",
+                            where: {
+                                users: {
+                                    registration: idNoDispositivo.toString()
+                                }
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log(`Usuário ${idNoDispositivo} excluído com sucesso do dispositivo ${dispositivo.ip}`);
+                        return { success: true };
+                    }
+
+                    const errorText = await response.text();
+                    console.log('Erro na tentativa', retryCount + 1, ':', errorText);
+                    
+                    if (response.status === 503 || 
+                        errorText.includes('offline') || 
+                        errorText.includes('session') || 
+                        errorText.includes('unauthorized')) {
+                        if (retryCount < maxRetries) {
+                            console.log('Tentando novamente com nova sessão...');
+                            retryCount++;
+                            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                            continue;
+                        }
+                    }
+                    
+                    throw new Error(errorText || 'Erro ao excluir usuário');
+
+                } catch (error) {
+                    console.error(`Tentativa ${retryCount + 1} falhou:`, error);
+                    
+                    if (retryCount < maxRetries && 
+                        (error.message.includes('sessão') || 
+                         error.message.includes('offline') || 
+                         error.message.includes('503') ||
+                         error.message.includes('unauthorized'))) {
+                        retryCount++;
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                        continue;
+                    }
+                    
+                    throw error;
+                }
+            }
+        }
+
         // Função para alterar foto
         async function alterarFoto(alunoId) {
             const input = document.createElement('input');
@@ -538,6 +669,84 @@
 
                 try {
                     showLoading();
+
+                    // Primeiro, buscar dados do aluno para saber a escola
+                    const { data: aluno, error: alunoError } = await supabaseClient
+                        .from('alunos')
+                        .select('id, escola_id')
+                        .eq('id', alunoId)
+                        .single();
+
+                    if (alunoError) throw alunoError;
+
+                    // Buscar todos os dispositivos ativos da escola com seus dados completos
+                    const { data: dispositivos, error: dispositivosError } = await supabaseClient
+                        .from('dispositivos')
+                        .select('*')
+                        .eq('escola_id', aluno.escola_id)
+                        .eq('status', 'ATIVO')
+                        .is('soft_delete', null);
+
+                    if (dispositivosError) throw dispositivosError;
+
+                    // Buscar registros existentes na aluno_dispositivo
+                    const { data: registrosExistentes, error: registrosError } = await supabaseClient
+                        .from('aluno_dispositivo')
+                        .select('id_dispositivo')
+                        .eq('aluno', alunoId);
+
+                    if (registrosError) throw registrosError;
+
+                    // Tentar excluir o usuário de cada dispositivo existente usando o ID do aluno como registration
+                    let falhasExclusao = [];
+                    for (const registro of registrosExistentes) {
+                        const dispositivo = dispositivos.find(d => d.id === registro.id_dispositivo);
+                        if (dispositivo) {
+                            try {
+                                await excluirUsuarioDispositivo(dispositivo, alunoId);
+                                console.log(`Usuário excluído com sucesso do dispositivo ${dispositivo.ip}`);
+                            } catch (error) {
+                                console.error(`Erro ao excluir usuário do dispositivo ${dispositivo.ip}:`, error);
+                                falhasExclusao.push({
+                                    dispositivo: dispositivo.ip,
+                                    erro: error.message
+                                });
+                            }
+                        }
+                    }
+
+                    // Se houve falhas na exclusão, mostrar mensagem e interromper o processo
+                    if (falhasExclusao.length > 0) {
+                        const mensagensErro = falhasExclusao.map(f => `${f.dispositivo}: ${f.erro}`).join('\n');
+                        showToast(`Não foi possível excluir o usuário de alguns dispositivos. Por favor, tente novamente.\nErros:\n${mensagensErro}`, 'error');
+                        return;
+                    }
+
+                    // Buscar whatsapp do usuário logado
+                    const usuarioId = '1b84f6c8-7a6e-404b-aca6-874b676d7bd8';
+                    const { data: userData, error: userError } = await supabaseClient
+                        .from('usuarios')
+                        .select('whatsapp')
+                        .eq('id', usuarioId)
+                        .single();
+
+                    if (userError) throw userError;
+
+                    // Criar registros para dispositivos novos
+                    if (dispositivos.length > 0) {
+                        const novosRegistros = dispositivos.map(dispositivo => ({
+                            id_dispositivo: dispositivo.id,
+                            aluno: alunoId,
+                            escola: aluno.escola_id,
+                            numero_de_quem_cadastrou: userData.whatsapp
+                        }));
+
+                        const { error: insertError } = await supabaseClient
+                            .from('aluno_dispositivo')
+                            .insert(novosRegistros);
+
+                        if (insertError) throw insertError;
+                    }
 
                     // Upload da foto para o bucket
                     const fileName = `aluno_${alunoId}_${Date.now()}.jpg`;
