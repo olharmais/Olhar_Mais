@@ -49,10 +49,11 @@
     <script src="/config/supabase.js" type="module"></script>
     
     <style>
+ 
         body {
             background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
             min-height: 100vh;
-            max-width: 500px;
+            max-width: auto;
             margin: 0 auto; /* Centraliza o conteúdo */
             overflow-x: hidden; /* Evita rolagem horizontal */
         }
@@ -189,10 +190,15 @@
 
         /* Modal de Stories */
         .stories-modal {
+            max-width: 500px;
+            margin: auto;
             position: fixed;
             inset: 0;
             z-index: 99999;
             background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             display: none;
         }
 

@@ -59,6 +59,9 @@
             <div class="flex items-center justify-between">
                 <h1 class="text-xl font-bold text-gray-800">OlharMais</h1>
                 <div class="flex items-center space-x-2">
+                    <button id="btnCadastrar" class="p-2 text-blue-600 hover:bg-blue-100 rounded-lg">
+                        <i class="ph ph-plus"></i>
+                    </button>
                     <button id="btnFiltros" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
                         <i class="ph ph-funnel"></i>
                     </button>
@@ -66,6 +69,92 @@
             </div>
         </div>
     </header>
+
+    <!-- Modal de Cadastro -->
+    <div id="modalCadastro" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">Cadastrar Novo Aluno</h2>
+                        <button id="btnFecharModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="ph ph-x text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <form id="formCadastro" class="space-y-6">
+                        <!-- Informações Escolares -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Informações Escolares</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="hidden" id="escola_id" name="escola_id" value="21">
+                                <div>
+                                    <label for="turma" class="block text-sm font-medium text-gray-700 mb-2">Turma *</label>
+                                    <select id="turma" name="turma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Selecione uma turma</option>
+                                    </select>
+                                    <p class="text-sm text-gray-500 mt-1" id="serie_info"></p>
+                                </div>
+                                <input type="hidden" id="serie" name="serie">
+                                <div>
+                                    <label for="registro_aluno" class="block text-sm font-medium text-gray-700 mb-2">RA (Registro Aluno) *</label>
+                                    <input type="text" id="registro_aluno" name="registro_aluno" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite o RA">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dados Pessoais -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Dados Pessoais</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                                    <input type="text" id="nome_completo" name="nome_completo" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite o nome completo">
+                                </div>
+                                <div>
+                                    <label for="data_nascimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento *</label>
+                                    <input type="date" id="data_nascimento" name="data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label for="genero" class="block text-sm font-medium text-gray-700 mb-2">Sexo *</label>
+                                    <select id="genero" name="genero" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Selecione o sexo</option>
+                                        <option value="M">Masculino</option>
+                                        <option value="F">Feminino</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Foto -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Foto do Aluno</h3>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer" onclick="document.getElementById('foto_aluno').click()">
+                                    <img id="preview_foto" src="" alt="" class="w-full h-full object-cover rounded-lg hidden">
+                                    <div id="placeholder_foto" class="text-center">
+                                        <i class="ph ph-user text-4xl text-gray-400"></i>
+                                        <p class="text-sm text-gray-500 mt-2">Clique para adicionar</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="foto_aluno" name="foto" accept="image/*" class="hidden" required>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="flex justify-end space-x-3 pt-6 border-t">
+                            <button type="button" id="btnCancelar" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                Cadastrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Painel de Filtros (inicialmente oculto) -->
     <div id="painelFiltros" class="fixed inset-x-0 top-[57px] bg-white shadow-md transform -translate-y-full transition-transform duration-300 z-30">
@@ -522,6 +611,198 @@
 
         document.getElementById('filterSemFoto').addEventListener('change', () => {
             filtrarEExibirAlunos();
+        });
+
+        // Controles do Modal de Cadastro
+        const modal = document.getElementById('modalCadastro');
+        const btnCadastrar = document.getElementById('btnCadastrar');
+        const btnFecharModal = document.getElementById('btnFecharModal');
+        const btnCancelar = document.getElementById('btnCancelar');
+        const formCadastro = document.getElementById('formCadastro');
+        const fotoAluno = document.getElementById('foto_aluno');
+        const previewFoto = document.getElementById('preview_foto');
+        const placeholderFoto = document.getElementById('placeholder_foto');
+
+        // Abrir modal
+        btnCadastrar.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            carregarDadosEscola();
+        });
+
+        // Fechar modal
+        [btnFecharModal, btnCancelar].forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                formCadastro.reset();
+                previewFoto.classList.add('hidden');
+                placeholderFoto.classList.remove('hidden');
+            });
+        });
+
+        // Preview da foto
+        fotoAluno.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewFoto.src = e.target.result;
+                    previewFoto.classList.remove('hidden');
+                    placeholderFoto.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Carregar dados da escola
+        async function carregarDadosEscola() {
+            try {
+                // Carregar turmas com suas séries
+                const { data: turmas, error: turmasError } = await supabaseClient
+                    .from('turmas')
+                    .select(`
+                        id, 
+                        nome,
+                        serie_id,
+                        series (
+                            id,
+                            nome
+                        )
+                    `)
+                    .eq('escola_id', 21)
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (turmasError) throw turmasError;
+
+                const selectTurma = document.getElementById('turma');
+                selectTurma.innerHTML = '<option value="">Selecione uma turma</option>';
+                turmas.forEach(turma => {
+                    const option = document.createElement('option');
+                    option.value = turma.id;
+                    option.textContent = `${turma.nome} - ${turma.series?.nome || 'Série não informada'}`;
+                    option.dataset.serieId = turma.serie_id;
+                    option.dataset.serieNome = turma.series?.nome || 'Série não informada';
+                    selectTurma.appendChild(option);
+                });
+
+                // Event listener para atualizar informação da série
+                selectTurma.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const serieInfo = document.getElementById('serie_info');
+                    const serieInput = document.getElementById('serie');
+                    
+                    if (this.value) {
+                        const serieNome = selectedOption.dataset.serieNome;
+                        serieInfo.textContent = `Série: ${serieNome}`;
+                        serieInput.value = selectedOption.dataset.serieId;
+                    } else {
+                        serieInfo.textContent = '';
+                        serieInput.value = '';
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar dados da escola:', error);
+                showToast('Erro ao carregar dados da escola', 'error');
+            }
+        }
+
+        // Cadastrar aluno
+        formCadastro.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                showLoading();
+
+                const formData = new FormData(formCadastro);
+                const alunoData = {
+                    nome_completo: formData.get('nome_completo'),
+                    registro_aluno: formData.get('registro_aluno'),
+                    escola_id: 21,
+                    genero: formData.get('genero'),
+                    data_nascimento: formData.get('data_nascimento'),
+                    turma: parseInt(formData.get('turma')),
+                    serie: parseInt(formData.get('serie'))
+                };
+
+                // Upload da foto
+                const fotoFile = document.getElementById('foto_aluno').files[0];
+                if (fotoFile) {
+                    const fileName = `aluno_${Date.now()}.jpg`;
+                    const filePath = `alunos/${fileName}`;
+
+                    const { error: uploadError } = await supabaseClient
+                        .storage
+                        .from('fotos_alunos')
+                        .upload(filePath, fotoFile, {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: publicUrlData } = supabaseClient
+                        .storage
+                        .from('fotos_alunos')
+                        .getPublicUrl(filePath);
+
+                    alunoData.foto_url = publicUrlData.publicUrl;
+                }
+
+                // Inserir aluno
+                const { data: aluno, error: alunoError } = await supabaseClient
+                    .from('alunos')
+                    .insert([alunoData])
+                    .select()
+                    .single();
+
+                if (alunoError) throw alunoError;
+
+                // Buscar dispositivos da escola
+                const { data: dispositivos, error: dispositivosError } = await supabaseClient
+                    .from('dispositivos')
+                    .select('id')
+                    .eq('escola_id', 21)
+                    .eq('status', 'ATIVO')
+                    .is('soft_delete', null);
+
+                if (dispositivosError) throw dispositivosError;
+
+                // ID fixo do usuário para cadastro
+                const usuarioId = '1b84f6c8-7a6e-404b-aca6-874b676d7bd8';
+
+                // Buscar whatsapp do usuário
+                const { data: userData, error: userError } = await supabaseClient
+                    .from('usuarios')
+                    .select('whatsapp')
+                    .eq('id', usuarioId)
+                    .single();
+
+                if (userError) throw userError;
+
+                // Inserir em aluno_dispositivo para cada dispositivo
+                for (const dispositivo of dispositivos) {
+                    await supabaseClient
+                        .from('aluno_dispositivo')
+                        .insert({
+                            id_dispositivo: dispositivo.id,
+                            aluno: aluno.id,
+                            escola: 21,
+                            numero_de_quem_cadastrou: userData.whatsapp
+                        });
+                }
+
+                showToast('Aluno cadastrado com sucesso!');
+                modal.classList.add('hidden');
+                formCadastro.reset();
+                carregarAlunos('21'); // Recarregar lista de alunos
+
+            } catch (error) {
+                console.error('Erro ao cadastrar aluno:', error);
+                showToast('Erro ao cadastrar aluno: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
         });
 
         // Inicialização
