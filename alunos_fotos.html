@@ -548,6 +548,14 @@
 
                     if (alunoError) throw alunoError;
 
+                    // Excluir todos os registros existentes do aluno na tabela aluno_dispositivo
+                    const { error: deleteError } = await supabaseClient
+                        .from('aluno_dispositivo')
+                        .delete()
+                        .eq('aluno', alunoId);
+
+                    if (deleteError) throw deleteError;
+
                     // Buscar todos os dispositivos ativos da escola
                     const { data: dispositivos, error: dispositivosError } = await supabaseClient
                         .from('dispositivos')
@@ -557,22 +565,6 @@
                         .is('soft_delete', null);
 
                     if (dispositivosError) throw dispositivosError;
-
-                    // Buscar registros existentes na aluno_dispositivo
-                    const { data: registrosExistentes, error: registrosError } = await supabaseClient
-                        .from('aluno_dispositivo')
-                        .select('id_dispositivo')
-                        .eq('aluno', alunoId);
-
-                    if (registrosError) throw registrosError;
-
-                    // Criar array com IDs dos dispositivos que já têm registro
-                    const dispositivosExistentes = registrosExistentes.map(reg => reg.id_dispositivo);
-
-                    // Filtrar dispositivos que não têm registro
-                    const dispositivosNovos = dispositivos.filter(disp => 
-                        !dispositivosExistentes.includes(disp.id)
-                    );
 
                     // Buscar whatsapp do usuário logado
                     const usuarioId = '1b84f6c8-7a6e-404b-aca6-874b676d7bd8';
@@ -584,9 +576,9 @@
 
                     if (userError) throw userError;
 
-                    // Criar registros para dispositivos novos
-                    if (dispositivosNovos.length > 0) {
-                        const novosRegistros = dispositivosNovos.map(dispositivo => ({
+                    // Criar novos registros para todos os dispositivos
+                    if (dispositivos.length > 0) {
+                        const novosRegistros = dispositivos.map(dispositivo => ({
                             id_dispositivo: dispositivo.id,
                             aluno: alunoId,
                             escola: aluno.escola_id,
