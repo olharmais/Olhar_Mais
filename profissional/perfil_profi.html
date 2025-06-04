@@ -548,7 +548,8 @@
             codigoNovo: '',
             whatsappAtual: '',
             whatsappNovo: '',
-            fotoUrl: ''
+            fotoUrl: '',
+            userId: null
         };
         
         // Variável global para armazenar a instância da máscara
@@ -561,7 +562,6 @@
                 mask: '(00) 00000-0000',
                 lazy: false,
                 onComplete: function() {
-                    // Callback quando a máscara está completa
                     console.log('Máscara completa:', this.value);
                 }
             });
@@ -576,7 +576,15 @@
                     return;
                 }
 
+                // Guardar ID do usuário no estado
+                estadoApp.userId = userSession.id;
+
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    console.warn('Cliente Supabase não disponível, tentando novamente em 1s...');
+                    setTimeout(carregarPerfil, 1000);
+                    return;
+                }
                 
                 // Buscar dados atualizados do usuário
                 const { data: userData, error } = await supabase
@@ -601,6 +609,7 @@
                     // Aplicar máscara ao WhatsApp
                     whatsappMask = aplicarMascaraWhatsApp(whatsappInput);
                     whatsappMask.value = whatsapp;
+                    estadoApp.whatsappAtual = whatsapp;
                 } else {
                     whatsappMask = aplicarMascaraWhatsApp(whatsappInput);
                 }
@@ -621,9 +630,6 @@
             }
         }
 
-        // Carregar perfil quando a página carregar
-        window.addEventListener('DOMContentLoaded', carregarPerfil);
-        
         // Função para lidar com erros no carregamento da foto
         function handleProfilePictureError(imgElement) {
             // Remover classe de loading
@@ -653,10 +659,35 @@
                 fotoPerfilWrapper.classList.add('loading');
                 errorElement.style.display = 'none';
                 
-                // Tentar carregar a foto
-                const { data: { publicUrl } } = await supabase
+                const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
+
+                // Primeiro verificar se o arquivo existe
+                const { data: fileExists, error: listError } = await supabase
                     .storage
-                    .from('avatars')
+                    .from('profile-photos')
+                    .list('', {
+                        limit: 1,
+                        search: `${userId}.png`
+                    });
+
+                if (listError) {
+                    throw listError;
+                }
+
+                // Se não encontrou o arquivo ou a lista está vazia
+                if (!fileExists || fileExists.length === 0) {
+                    console.log('Foto de perfil não encontrada, usando imagem padrão');
+                    handleProfilePictureError(fotoPerfilElement);
+                    return;
+                }
+
+                // Agora sim, pegar a URL pública
+                const { data: { publicUrl } } = supabase
+                    .storage
+                    .from('profile-photos')
                     .getPublicUrl(`${userId}.png`);
                     
                 if (publicUrl) {
@@ -664,9 +695,11 @@
                     const img = new Image();
                     img.onload = function() {
                         fotoPerfilElement.src = publicUrl;
-                        // O evento onload do elemento img principal removerá a classe loading
+                        estadoApp.fotoUrl = publicUrl;
+                        fotoPerfilWrapper.classList.remove('loading');
                     };
                     img.onerror = function() {
+                        console.error('Erro ao carregar imagem da URL:', publicUrl);
                         handleProfilePictureError(fotoPerfilElement);
                     };
                     img.src = publicUrl;
@@ -698,30 +731,46 @@
                 if (file.size > 5 * 1024 * 1024) {
                     throw new Error('A imagem deve ter no máximo 5MB.');
                 }
-                
-                const userId = estadoApp.userId;
+
+                const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
+
+                // Verificar se já existe uma foto e removê-la
+                const { data: existingFiles } = await supabase
+                    .storage
+                    .from('profile-photos')
+                    .list('', {
+                        limit: 1,
+                        search: `${estadoApp.userId}.png`
+                    });
+
+                if (existingFiles && existingFiles.length > 0) {
+                    await supabase
+                        .storage
+                        .from('profile-photos')
+                        .remove([`${estadoApp.userId}.png`]);
+                }
                 
                 // Fazer upload
                 const { error: uploadError } = await supabase
                     .storage
-                    .from('avatars')
-                    .upload(`${userId}.png`, file, {
+                    .from('profile-photos')
+                    .upload(`${estadoApp.userId}.png`, file, {
                         cacheControl: '3600',
                         upsert: true
                     });
 
                 if (uploadError) throw uploadError;
                 
-                // Recarregar a foto
-                await carregarFotoPerfil(userId);
+                // Aguardar um momento para o arquivo estar disponível
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                // Atualizar URL no estado
-                const { data: { publicUrl } } = await supabase
-                    .storage
-                    .from('avatars')
-                    .getPublicUrl(`${userId}.png`);
-                    
-                estadoApp.fotoUrl = publicUrl;
+                // Recarregar a foto
+                await carregarFotoPerfil(estadoApp.userId);
+                
+                Toast.success('Foto atualizada com sucesso!');
                 
             } catch (error) {
                 console.error('Erro ao fazer upload da foto:', error);
@@ -730,8 +779,25 @@
                 setTimeout(() => {
                     errorElement.style.display = 'none';
                 }, 3000);
+                Toast.error('Erro ao atualizar foto. Tente novamente.');
+            } finally {
+                fotoPerfilWrapper.classList.remove('loading');
             }
         }
+
+        // Aguardar carregamento das configurações antes de inicializar
+        function inicializarPagina() {
+            if (window._configLoading) {
+                console.log('Aguardando carregamento das configurações...');
+                setTimeout(inicializarPagina, 100);
+                return;
+            }
+            console.log('Configurações carregadas, iniciando página...');
+            carregarPerfil();
+        }
+
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', inicializarPagina);
 
         // Evento de clique na foto para upload
         document.querySelector('.profile-picture-wrapper').addEventListener('click', function() {
