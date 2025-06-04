@@ -7,6 +7,132 @@
     <meta name="description" content="OlharMais - Perfil Nutricionista">
     <meta name="theme-color" content="#005ae2">
     
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+
+                        // Definir funções do WhatsApp com as chaves corretas da Lambda
+                        window.getWhatsappApiUrl = function() {
+                            return _config.WHATSAPP_API_URL1;
+                        };
+                        
+                        window.getWhatsappApiKey = function() {
+                            return _config.WHATSAPP_API_KEY1;
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+    
     <!-- Favicons -->
     <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon/favicon.ico" sizes="any">
@@ -41,12 +167,6 @@
             }
         }
     </script>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Config -->
-    <script src="/config/supabase.js"></script>
     
     <!-- IMask para máscaras -->
     <script src="https://unpkg.com/imask"></script>
@@ -112,6 +232,87 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Estilos para o container da foto de perfil */
+        .profile-picture-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .profile-picture-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .profile-picture-wrapper.loading .profile-picture-overlay {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .profile-picture {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .profile-picture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #005ae2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .profile-picture-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 51, 51, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            z-index: 2;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hover effect */
+        .profile-picture-wrapper:hover .profile-picture-overlay {
+            opacity: 1;
+            visibility: visible;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="font-sans">
@@ -139,23 +340,23 @@
         <form id="perfil-form" class="bg-white rounded-lg shadow p-6">
             <!-- Foto de Perfil -->
             <div class="mb-8 flex flex-col items-center">
-                <label for="foto-input" class="cursor-pointer">
-                    <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 mb-3 relative group">
-                        <img id="foto-perfil" src="/assets/img/avatar-placeholder.png" alt="Foto de perfil" 
-                             class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i class="ph ph-camera text-white text-2xl"></i>
+                <div class="profile-picture-container">
+                    <div class="profile-picture-wrapper">
+                        <img id="foto-perfil" src="/assets/img/avatar-placeholder.png" alt="Foto de perfil" class="profile-picture" onload="this.parentElement.classList.remove('loading')" onerror="handleProfilePictureError(this)">
+                        <div class="profile-picture-overlay">
+                            <div class="loading-spinner"></div>
                         </div>
-                        <!-- Loading Overlay -->
-                        <div id="foto-loading" class="loading-overlay hidden">
-                            <i class="ph ph-spinner loading-spinner"></i>
+                    </div>
+                    <div class="profile-picture-error" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                        </svg>
+                        <span>Erro ao carregar foto</span>
                         </div>
                     </div>
                     <span class="text-primary hover:text-primary-dark text-sm flex items-center justify-center gap-1">
                         <i class="ph ph-camera"></i> <span id="texto-alterar-foto">Alterar foto</span>
                     </span>
-                </label>
-                <input type="file" id="foto-input" class="hidden" accept="image/*">
             </div>
             
             <!-- Dados Pessoais -->
@@ -429,58 +630,137 @@
         // Carregar perfil quando a página carregar
         window.addEventListener('DOMContentLoaded', carregarPerfil);
         
-        // Upload de foto com loading
-        document.getElementById('foto-input').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // Função para lidar com erros no carregamento da foto
+        function handleProfilePictureError(imgElement) {
+            // Remover classe de loading
+            imgElement.parentElement.classList.remove('loading');
+            
+            // Mostrar mensagem de erro
+            const errorElement = document.querySelector('.profile-picture-error');
+            errorElement.style.display = 'flex';
+            
+            // Definir imagem padrão
+            imgElement.src = '/assets/img/avatar-placeholder.png';
+            
+            // Esconder erro após 3 segundos
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // Função para carregar a foto de perfil
+        async function carregarFotoPerfil(userId) {
+            const fotoPerfilWrapper = document.querySelector('.profile-picture-wrapper');
+            const fotoPerfilElement = document.getElementById('foto-perfil');
+            const errorElement = document.querySelector('.profile-picture-error');
             
             try {
-                // Mostrar loading
-                const loadingOverlay = document.getElementById('foto-loading');
-                const textoAlterarFoto = document.getElementById('texto-alterar-foto');
-                loadingOverlay.classList.remove('hidden');
-                textoAlterarFoto.textContent = 'Enviando foto...';
+                // Adicionar classe de loading
+                fotoPerfilWrapper.classList.add('loading');
+                errorElement.style.display = 'none';
                 
-                const supabase = createSupabaseClient();
+                // Tentar carregar a foto
+                const { data: { publicUrl } } = await supabase
+                    .storage
+                    .from('avatars')
+                    .getPublicUrl(`${userId}.png`);
+                    
+                if (publicUrl) {
+                    // Pré-carregar a imagem
+                    const img = new Image();
+                    img.onload = function() {
+                        fotoPerfilElement.src = publicUrl;
+                        // O evento onload do elemento img principal removerá a classe loading
+                    };
+                    img.onerror = function() {
+                        handleProfilePictureError(fotoPerfilElement);
+                    };
+                    img.src = publicUrl;
+                } else {
+                    handleProfilePictureError(fotoPerfilElement);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar foto de perfil:', error);
+                handleProfilePictureError(fotoPerfilElement);
+            }
+        }
+
+        // Função para fazer upload da foto de perfil
+        async function uploadFotoPerfil(file) {
+            const fotoPerfilWrapper = document.querySelector('.profile-picture-wrapper');
+            const errorElement = document.querySelector('.profile-picture-error');
+            
+            try {
+                // Adicionar classe de loading
+                fotoPerfilWrapper.classList.add('loading');
+                errorElement.style.display = 'none';
                 
-                // Criar nome único para o arquivo
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}.${fileExt}`;
+                // Verificar se é uma imagem
+                if (!file.type.startsWith('image/')) {
+                    throw new Error('Por favor, selecione uma imagem.');
+                }
                 
-                // Upload do arquivo
-                const { data, error } = await supabase.storage
-                    .from('profile-photos')
-                    .upload(fileName, file);
+                // Verificar tamanho (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    throw new Error('A imagem deve ter no máximo 5MB.');
+                }
                 
-                if (error) throw error;
+                const userId = estadoApp.userId;
                 
-                // Obter URL pública
-                const { data: { publicUrl } } = supabase.storage
-                    .from('profile-photos')
-                    .getPublicUrl(fileName);
+                // Fazer upload
+                const { error: uploadError } = await supabase
+                    .storage
+                    .from('avatars')
+                    .upload(`${userId}.png`, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
                 
-                // Atualizar foto no perfil e no banco
-                document.getElementById('foto-perfil').src = publicUrl;
+                // Recarregar a foto
+                await carregarFotoPerfil(userId);
+                
+                // Atualizar URL no estado
+                const { data: { publicUrl } } = await supabase
+                    .storage
+                    .from('avatars')
+                    .getPublicUrl(`${userId}.png`);
+                    
                 estadoApp.fotoUrl = publicUrl;
-
-                // Atualizar URL no banco de dados
-                const { error: updateError } = await supabase
-                    .from('usuarios')
-                    .update({ foto_url: publicUrl })
-                    .eq('id', JSON.parse(localStorage.getItem('user_session')).id);
-
-                if (updateError) throw updateError;
-                
-                Toast.success('Foto atualizada com sucesso');
                 
             } catch (error) {
                 console.error('Erro ao fazer upload da foto:', error);
-                Toast.error('Erro ao atualizar foto. Tente novamente.');
-            } finally {
-                // Ocultar loading e restaurar texto
-                document.getElementById('foto-loading').classList.add('hidden');
-                document.getElementById('texto-alterar-foto').textContent = 'Alterar foto';
+                errorElement.textContent = error.message || 'Erro ao fazer upload da foto';
+                errorElement.style.display = 'flex';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 3000);
             }
+        }
+
+        // Evento de clique na foto para upload
+        document.querySelector('.profile-picture-wrapper').addEventListener('click', function() {
+            // Criar input file invisível
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+            
+            // Adicionar ao DOM
+            document.body.appendChild(input);
+            
+            // Evento de mudança
+            input.onchange = async function() {
+                if (this.files && this.files[0]) {
+                    await uploadFotoPerfil(this.files[0]);
+                }
+                // Remover input
+                document.body.removeChild(input);
+            };
+            
+            // Simular clique
+            input.click();
         });
         
         // Funções para manipulação dos modais

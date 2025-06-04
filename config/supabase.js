@@ -1,7 +1,7 @@
 // Configurações do Supabase
 const supabaseConfig = {
-    url: 'https://ammtxituvicldtyoqmir.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbXR4aXR1dmljbGR0eW9xbWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDU0MTEsImV4cCI6MjA1OTg4MTQxMX0.K5cZh6KRxAGJDbU_ACE0MGFavPv5N0fL11KkCs0E9A8',
+    url: 'https://fpwzrqetnboslmvkgiuy.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBleGFiYXNlIiwicmVmIjoiYnJvd3NzZGF0YXRva2VuZXhhbXBsZSIsInJvbGUiOiJ2aWV3ZXIiLCJpYXQiOjE3NDQzMTIzNDAsImV4cCI6MjA1OTg4ODk0MH0.dT7fXkMq8NLE9ZK_M1BqK3M9Jzq7BdyZTzGQvLzPQ1I',
     options: {
         db: {
             schema: 'public'
@@ -16,8 +16,8 @@ const supabaseConfig = {
 
 // Configurações do WhatsApp
 const whatsappConfig = {
-    apiUrl: 'https://7017.bubblewhats.com/send-message',
-    apiKey: 'NTExYzUxZGIzMjc2MTAxZjJhNzhkMjAx1'
+    apiUrl: 'https://6009.bubblewhats.com/send-message',
+    apiKey: 'NTExYzUyKKpJHgYUrPkKJYtkGBklIUuFJIKkljJhNzhkMjAx1'
 };
 
 /**

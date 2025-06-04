@@ -7,6 +7,123 @@
     <meta name="description" content="OlharMais - Dashboard Nutricionista">
     <meta name="theme-color" content="#005ae2">
     
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+    
     <!-- Favicons -->
     <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon/favicon.ico" sizes="any">
@@ -42,11 +159,8 @@
         }
     </script>
     
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Config -->
-    <script src="/config/supabase.js"></script>
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_nutri.js"></script>
     
     <style>
         body {
@@ -356,9 +470,6 @@
         <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
     </div>
     
-    <!-- Navbar JavaScript Alternativo -->
-    <script src="botoes_nutri.js"></script>
-    
     <!-- Fallback: iframe com navbar (oculto se JS alternativo funcionar) -->
     <iframe id="navbar-iframe" src="navbar_nutri.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
     
@@ -608,28 +719,41 @@
                     const hoje = new Date().toISOString().split('T')[0];
                     const { data: presencaHoje } = await supabase
                         .from('view_alunos_logs')
-                        .select('nome_aluno')
-                        .in('turma', turmasIds)
+                        .select('nome_aluno, turma')
+                        .eq('nome_colégio', escola.nome)
                         .gte('hora_check', hoje)
-                        .lt('hora_check', hoje + 'T23:59:59');
+                        .lt('hora_check', hoje + 'T23:59:59.999Z');
                     
-                    // Filtrar para contar cada aluno apenas uma vez
-                    const alunosUnicos = [...new Set(presencaHoje?.map(p => p.nome_aluno) || [])];
+                    // Contar alunos únicos presentes hoje
+                    const alunosUnicosPorTurma = presencaHoje?.reduce((acc, log) => {
+                        if (!acc[log.turma]) {
+                            acc[log.turma] = new Set();
+                        }
+                        acc[log.turma].add(log.nome_aluno);
+                        return acc;
+                    }, {});
+
+                    let presentesEscola = 0;
+                    if (alunosUnicosPorTurma) {
+                        Object.values(alunosUnicosPorTurma).forEach(turmaSet => {
+                            presentesEscola += turmaSet.size;
+                        });
+                    }
                     
                     // Log para verificar a contagem na escola
-                    console.log(`Escola ${escola.nome}: ${totalAlunosEscola} alunos, ${alunosUnicos.length} presentes`);
+                    console.log(`Escola ${escola.nome}: ${totalAlunosEscola} alunos, ${presentesEscola} presentes`);
                     
                     const presencaPorcentagem = totalAlunosEscola > 0 
-                        ? Math.round((alunosUnicos.length) / totalAlunosEscola * 100) 
+                        ? Math.round((presentesEscola / totalAlunosEscola) * 100) 
                         : 0;
+                    
+                    // Calcular presentes e ausentes
+                    const alunosPresentes = presentesEscola;
+                    const alunosAusentes = totalAlunosEscola - alunosPresentes;
                     
                     // Criar card da escola
                     const escolaCard = document.createElement('div');
                     escolaCard.className = 'bg-white rounded-lg p-4 shadow-sm';
-                    
-                    // Calcular presentes e ausentes
-                    const alunosPresentes = alunosUnicos.length;
-                    const alunosAusentes = totalAlunosEscola - alunosPresentes;
                     
                     escolaCard.innerHTML = `
                         <div class="flex items-center justify-between mb-3">
@@ -665,48 +789,168 @@
                     escolasContainer.appendChild(escolaCard);
                 }
                 
-                // Calcular presença total de hoje apenas para as turmas permitidas
+                // Buscar presença total de hoje apenas para as turmas permitidas
                 const hoje = new Date().toISOString().split('T')[0];
                 console.log('Data para filtro:', hoje);
                 console.log('Total de turmas para filtro:', todasTurmasIds.length);
-                
-                // Buscar logs únicos por aluno (considerar apenas um log por aluno)
-                // Filtrar pela lista de turmas permitidas
-                let presencaQuery = supabase
-                    .from('view_alunos_logs')
-                    .select('nome_aluno')
-                    .gte('hora_check', hoje)
-                    .lt('hora_check', hoje + 'T23:59:59');
-                
-                // Só aplicamos o filtro de turma se tivermos turmas específicas
-                if (todasTurmasIds.length > 0) {
-                    presencaQuery = presencaQuery.in('turma', todasTurmasIds);
+
+                // Função para verificar se é dia útil
+                function isDiaUtil(data) {
+                    const diaSemana = data.getDay();
+                    return diaSemana !== 0 && diaSemana !== 6; // 0 = Domingo, 6 = Sábado
+                }
+
+                // Função para calcular dias úteis até hoje
+                function calcularDiasUteis(dataInicio, dataFim) {
+                    let diasUteis = 0;
+                    const dataAtual = new Date(dataInicio);
+                    const hoje = new Date(dataFim);
+                    hoje.setHours(23, 59, 59, 999);
+                    
+                    dataAtual.setHours(0, 0, 0, 0);
+                    
+                    while (dataAtual <= hoje) {
+                        if (isDiaUtil(dataAtual)) {
+                            diasUteis++;
+                        }
+                        dataAtual.setDate(dataAtual.getDate() + 1);
+                    }
+                    return diasUteis;
                 }
                 
-                const { data: presencaTotal, error: presencaError } = await presencaQuery;
+                // Buscar logs únicos por aluno (considerar apenas um log por aluno)
+                const { data: presencaTotal, error: presencaError } = await supabase
+                    .from('view_alunos_logs')
+                    .select('nome_aluno, turma, nome_colégio')
+                    .in('nome_colégio', escolasPermitidas.map(e => e.nome))
+                    .gte('hora_check', hoje)
+                    .lt('hora_check', hoje + 'T23:59:59.999Z');
                 
                 if (presencaError) {
                     console.error('Erro ao buscar presença:', presencaError);
                     Toast.show('Erro ao buscar dados de presença', 'error');
                 }
                 
-                // Filtrar para contar cada aluno apenas uma vez
-                const alunosUnicosTotal = [...new Set(presencaTotal?.map(p => p.nome_aluno) || [])];
+                // Contar alunos únicos presentes hoje (por turma)
+                const alunosUnicosPorTurma = presencaTotal?.reduce((acc, log) => {
+                    const key = `${log.nome_colégio}_${log.turma}`;
+                    if (!acc[key]) {
+                        acc[key] = new Set();
+                    }
+                    acc[key].add(log.nome_aluno);
+                    return acc;
+                }, {});
+
+                let totalAlunosPresentes = 0;
+                if (alunosUnicosPorTurma) {
+                    Object.values(alunosUnicosPorTurma).forEach(turmaSet => {
+                        totalAlunosPresentes += turmaSet.size;
+                    });
+                }
                 
                 // Log para verificar a contagem
                 console.log('Total de alunos:', totalAlunos);
-                console.log('Alunos presentes hoje (contagem única):', alunosUnicosTotal.length);
+                console.log('Alunos presentes hoje (contagem única):', totalAlunosPresentes);
                 
                 const presencaTotalPorcentagem = totalAlunos > 0 
-                    ? Math.round((alunosUnicosTotal.length) / totalAlunos * 100) 
+                    ? Math.round((totalAlunosPresentes / totalAlunos) * 100) 
                     : 0;
                 
                 console.log('Porcentagem de presença calculada:', presencaTotalPorcentagem + '%');
-                console.log('Modo de acesso do usuário:', modoAcesso);
                 
+                // Atualizar os totais na interface
                 document.getElementById('presenca-hoje').textContent = presencaTotalPorcentagem + '%';
                 document.getElementById('total-turmas').textContent = totalTurmas;
                 document.getElementById('total-alunos').textContent = totalAlunos;
+
+                // Limpar o container de escolas antes de adicionar os novos cards
+                escolasContainer.innerHTML = '';
+
+                // Para cada escola, calcular presença individual
+                for (const escola of escolasPermitidas) {
+                    // Buscar cidade da escola
+                    const { data: cidadeEscola } = await supabase
+                        .from('cidades')
+                        .select('nome')
+                        .eq('id', escola.cidade_id)
+                        .single();
+
+                    // Buscar turmas da escola
+                    let turmasQuery = supabase
+                        .from('turmas')
+                        .select('id')
+                        .eq('escola_id', escola.id);
+                    
+                    // Se o modo de acesso for por turma, filtrar apenas turmas permitidas
+                    if (modoAcesso === 'turma') {
+                        turmasQuery = turmasQuery.in('id', turmasPermitidas);
+                    }
+                    
+                    const { data: turmasEscola, error: turmasError } = await turmasQuery;
+                    
+                    if (turmasError) {
+                        console.error(`Erro ao buscar turmas da escola ${escola.id}:`, turmasError);
+                        continue;
+                    }
+
+                    // Buscar alunos presentes hoje nesta escola
+                    const alunosPresentes = Object.entries(alunosUnicosPorTurma || {})
+                        .filter(([key]) => key.startsWith(escola.nome + '_'))
+                        .reduce((total, [_, alunos]) => total + alunos.size, 0);
+
+                    // Buscar total de alunos da escola
+                    const { data: alunosEscola } = await supabase
+                        .from('alunos')
+                        .select('id')
+                        .eq('escola_id', escola.id)
+                        .is('soft_delete', null);
+
+                    const totalAlunosEscola = alunosEscola?.length || 0;
+                    
+                    // Se hoje é dia útil, considerar ausências
+                    const isHojeDiaUtil = isDiaUtil(new Date());
+                    const alunosAusentes = isHojeDiaUtil ? totalAlunosEscola - alunosPresentes : 0;
+                    const presencaPorcentagem = isHojeDiaUtil && totalAlunosEscola > 0 
+                        ? Math.round((alunosPresentes / totalAlunosEscola) * 100)
+                        : 0;
+
+                    // Criar card da escola com os dados atualizados
+                    const escolaCard = document.createElement('div');
+                    escolaCard.className = 'bg-white rounded-lg p-4 shadow-sm';
+                    
+                    escolaCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-medium text-gray-800">${escola.nome}</h4>
+                            <span class="text-sm text-gray-500">${cidadeEscola?.nome || ''}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div class="bg-green-50 rounded-lg p-3 text-center">
+                                <p class="text-sm font-medium text-green-600">${alunosPresentes}</p>
+                                <p class="text-xs text-green-500">Presentes Hoje</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3 text-center">
+                                <p class="text-sm font-medium text-red-600">${alunosAusentes}</p>
+                                <p class="text-xs text-red-500">Ausentes Hoje</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-center pt-3 border-t border-gray-100">
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${turmasEscola?.length || 0}</p>
+                                <p class="text-xs text-gray-500">Turmas</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${totalAlunosEscola}</p>
+                                <p class="text-xs text-gray-500">Alunos</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800">${presencaPorcentagem}%</p>
+                                <p class="text-xs text-gray-500">Presença</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    escolasContainer.appendChild(escolaCard);
+                }
                 
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);

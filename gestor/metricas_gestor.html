@@ -5,6 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OlharMais - Dashboard</title>
     <meta name="description" content="Dashboard de métricas do OlharMais">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
     
     <!-- Favicons -->
     <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
@@ -43,10 +155,6 @@
             }
         }
     </script>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/config/supabase.js" type="module"></script>
     
     <style>
         body {
@@ -237,6 +345,11 @@
         </div>
     </main>
 
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+
     <script>
         // Configurações dos gráficos
         Chart.defaults.font.family = 'Inter';
@@ -417,95 +530,367 @@
             });
         }
         
-        // Carregar dados
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            },
+            
+            error(message) {
+                this.show(message, 'error');
+            },
+            
+            success(message) {
+                this.show(message, 'success');
+            },
+            
+            warning(message) {
+                this.show(message, 'warning');
+            },
+            
+            info(message) {
+                this.show(message, 'info');
+            }
+        };
+
+        // Função para carregar dados
         async function carregarDados() {
             try {
-                const supabase = createSupabaseClient();
-                const userSession = JSON.parse(localStorage.getItem('user_session'));
-                
-                if (!userSession?.id) {
-                    console.error('Usuário não encontrado na sessão');
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
                     return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é GESTOR
+                if (userData.tipo !== 'GESTOR') {
+                    console.error('Usuário não é GESTOR');
+                    Toast.show('Acesso não autorizado para este perfil', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+
+                // Aguardar o carregamento das configurações
+                while (window._configLoading) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Obter cliente Supabase
+                const supabase = createSupabaseClient();
+                if (!supabase) {
+                    Toast.error('Erro ao conectar ao banco de dados');
+                    throw new Error('Cliente Supabase não está disponível');
                 }
 
                 // Buscar usuário para obter a cidade
                 const { data: usuario, error: errorUsuario } = await supabase
                     .from('usuarios')
                     .select('cidade')
-                    .eq('id', userSession.id)
+                    .eq('id', userData.id)
                     .single();
 
                 if (errorUsuario || !usuario?.cidade) {
+                    Toast.error('Erro ao carregar dados da cidade');
                     console.error('Erro ao buscar usuário ou cidade não encontrada');
                     return;
                 }
 
-                // Carregar métricas da cidade
-                const { data: metricasCidade } = await supabase
-                    .from('view_metricas_cidade')
-                    .select('*')
-                    .eq('cidade_id', usuario.cidade)
+                // Buscar permissões do usuário
+                const [
+                    { data: permissoesCidade, error: errorPermissoesCidade },
+                    { data: permissoesEscola, error: errorPermissoesEscola },
+                    { data: permissoesTurma, error: errorPermissoesTurma },
+                    { data: todasEscolas, error: errorTodasEscolas }
+                ] = await Promise.all([
+                    supabase.from('permissoes_cidade').select('cidade_id').eq('usuario_id', userData.id),
+                    supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userData.id),
+                    supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userData.id),
+                    supabase.from('escolas').select('id, nome, cidade_id')
+                ]);
+
+                if (errorPermissoesCidade || errorPermissoesEscola || errorPermissoesTurma || errorTodasEscolas) {
+                    console.error('Erro ao buscar permissões:', {
+                        errorPermissoesCidade, 
+                        errorPermissoesEscola, 
+                        errorPermissoesTurma,
+                        errorTodasEscolas
+                    });
+                    Toast.error('Erro ao carregar permissões');
+                    return;
+                }
+
+                // Determinar as escolas permitidas com base nas permissões
+                let escolasPermitidas = [];
+                let turmasPermitidas = [];
+                let modoAcesso = 'turma'; // 'cidade', 'escola', ou 'turma'
+
+                // Caso 1: Permissão por cidade
+                if (permissoesCidade && permissoesCidade.length > 0) {
+                    modoAcesso = 'cidade';
+                    const cidadesIds = permissoesCidade.map(p => p.cidade_id);
+                    escolasPermitidas = todasEscolas.filter(escola => cidadesIds.includes(escola.cidade_id));
+                    
+                    // Buscar nome da cidade
+                    const { data: cidade } = await supabase
+                        .from('cidades')
+                        .select('nome, brasao')
+                        .eq('id', cidadesIds[0])
+                        .single();
+                        
+                    if (cidade) {
+                        document.getElementById('cidade-nome').textContent = cidade.nome;
+                        const brasaoElement = document.getElementById('brasao-cidade');
+                        if (cidade.brasao) {
+                            brasaoElement.src = cidade.brasao;
+                            brasaoElement.classList.remove('hidden');
+                        }
+                    }
+                    
+                    console.log('Acesso por cidade:', { cidadesIds, totalEscolas: escolasPermitidas.length });
+                } 
+                // Caso 2: Permissão por escola
+                else if (permissoesEscola && permissoesEscola.length > 0) {
+                    modoAcesso = 'escola';
+                    const escolasIds = permissoesEscola.map(p => p.escola_id);
+                    escolasPermitidas = todasEscolas.filter(escola => escolasIds.includes(escola.id));
+                    
+                    // Buscar nome da cidade da primeira escola
+                    if (escolasPermitidas.length > 0) {
+                        const { data: cidade } = await supabase
+                            .from('cidades')
+                            .select('nome, brasao')
+                            .eq('id', escolasPermitidas[0].cidade_id)
+                            .single();
+                            
+                        if (cidade) {
+                            document.getElementById('cidade-nome').textContent = cidade.nome;
+                            const brasaoElement = document.getElementById('brasao-cidade');
+                            if (cidade.brasao) {
+                                brasaoElement.src = cidade.brasao;
+                                brasaoElement.classList.remove('hidden');
+                            }
+                        }
+                    }
+                    
+                    console.log('Acesso por escola:', { escolasIds, totalEscolas: escolasPermitidas.length });
+                } 
+                // Caso 3: Permissão por turma
+                else if (permissoesTurma && permissoesTurma.length > 0) {
+                    modoAcesso = 'turma';
+                    turmasPermitidas = permissoesTurma.map(p => p.turma_id);
+                    
+                    // Buscar as escolas correspondentes às turmas permitidas
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('id, escola_id')
+                        .in('id', turmasPermitidas);
+                        
+                    if (turmasError) {
+                        console.error('Erro ao buscar turmas:', turmasError);
+                        Toast.error('Erro ao carregar dados das turmas');
+                        return;
+                    }
+                    
+                    const escolasIdsDasTurmas = [...new Set(turmas.map(t => t.escola_id))];
+                    escolasPermitidas = todasEscolas.filter(escola => escolasIdsDasTurmas.includes(escola.id));
+                    
+                    // Buscar nome da cidade da primeira escola
+                    if (escolasPermitidas.length > 0) {
+                        const { data: cidade } = await supabase
+                            .from('cidades')
+                            .select('nome, brasao')
+                            .eq('id', escolasPermitidas[0].cidade_id)
                     .single();
                 
-                if (metricasCidade) {
-                    document.getElementById('cidade-nome').textContent = metricasCidade.cidade_nome;
-                    document.getElementById('total-escolas').textContent = formatarNumero(metricasCidade.total_escolas);
-                    document.getElementById('total-turmas').textContent = formatarNumero(metricasCidade.total_turmas);
-                    document.getElementById('total-alunos').textContent = formatarNumero(metricasCidade.total_alunos);
-                    document.getElementById('presentes-hoje').textContent = formatarNumero(metricasCidade.presentes_hoje);
+                        if (cidade) {
+                            document.getElementById('cidade-nome').textContent = cidade.nome;
+                            const brasaoElement = document.getElementById('brasao-cidade');
+                            if (cidade.brasao) {
+                                brasaoElement.src = cidade.brasao;
+                                brasaoElement.classList.remove('hidden');
+                            }
+                        }
+                    }
                     
-                    const percentual = ((metricasCidade.presentes_hoje / metricasCidade.total_alunos) * 100).toFixed(1);
-                    document.getElementById('percentual-presenca').textContent = `${percentual}% de presença`;
-                }
-                
-                // Carregar dados das escolas (view_escolas_resumo)
-                const { data: dadosEscolas } = await supabase
-                    .from('view_escolas_resumo')
-                    .select('*')
-                    .eq('cidade_id', usuario.cidade);
-                
-                if (dadosEscolas) {
-                    atualizarGraficoEscolas({
-                        labels: dadosEscolas.map(e => e.escola_nome),
-                        valores: dadosEscolas.map(e => e.presentes_hoje),
-                        total: dadosEscolas.map(e => e.total_alunos)
+                    console.log('Acesso por turma:', {
+                        turmasPermitidas,
+                        escolasIdsDasTurmas,
+                        totalEscolas: escolasPermitidas.length
                     });
                 }
+
+                // Verificar se temos escolas permitidas
+                if (!escolasPermitidas || escolasPermitidas.length === 0) {
+                    console.log('Nenhuma escola encontrada para este usuário');
+                    Toast.warning('Nenhuma escola encontrada para seu usuário');
+                    document.getElementById('cidade-nome').textContent = 'Sem acesso';
+                    return;
+                }
+
+                // Atualizar total de escolas
+                document.getElementById('total-escolas').textContent = formatarNumero(escolasPermitidas.length);
+
+                // Inicializar contadores
+                let totalTurmas = 0;
+                let totalAlunos = 0;
+                let totalPresentes = 0;
+                let dadosGraficoEscolas = {
+                    labels: [],
+                    valores: [],
+                    total: []
+                };
+
+                // Para cada escola permitida, buscar dados detalhados
+                for (const escola of escolasPermitidas) {
+                    // Buscar turmas da escola (filtradas por permissão se necessário)
+                    let turmasQuery = supabase
+                        .from('turmas')
+                        .select('id')
+                        .eq('escola_id', escola.id);
+                    
+                    // Se o modo de acesso for por turma, filtrar apenas turmas permitidas
+                    if (modoAcesso === 'turma') {
+                        turmasQuery = turmasQuery.in('id', turmasPermitidas);
+                    }
+                    
+                    const { data: turmas, error: turmasError } = await turmasQuery;
+                    
+                    if (turmasError) {
+                        console.error(`Erro ao buscar turmas da escola ${escola.id}:`, turmasError);
+                        continue;
+                    }
+                    
+                    const turmasIds = turmas?.map(t => t.id) || [];
+                    if (turmasIds.length === 0) continue;
+                    
+                    totalTurmas += turmasIds.length;
+
+                    // Buscar alunos das turmas
+                    const { data: alunos } = await supabase
+                        .from('alunos')
+                        .select('id')
+                        .in('turma', turmasIds)
+                        .is('soft_delete', null);
+
+                    const totalAlunosEscola = alunos?.length || 0;
+                    totalAlunos += totalAlunosEscola;
+
+                    // Buscar presença de hoje
+                    const hoje = new Date().toISOString().split('T')[0];
+                    const { data: presencaHoje, error: errorPresenca } = await supabase
+                        .from('view_alunos_logs')
+                        .select('nome_aluno, turma')
+                        .eq('nome_colégio', escola.nome)
+                        .gte('hora_check', hoje)
+                        .lt('hora_check', hoje + 'T23:59:59.999Z');
+
+                    if (errorPresenca) {
+                        console.error(`Erro ao buscar presença da escola ${escola.nome}:`, errorPresenca);
+                        continue;
+                    }
+
+                    // Contar alunos únicos presentes hoje
+                    const alunosUnicosPorTurma = presencaHoje?.reduce((acc, log) => {
+                        if (!acc[log.turma]) {
+                            acc[log.turma] = new Set();
+                        }
+                        acc[log.turma].add(log.nome_aluno);
+                        return acc;
+                    }, {});
+
+                    let presentesEscola = 0;
+                    if (alunosUnicosPorTurma) {
+                        Object.values(alunosUnicosPorTurma).forEach(turmaSet => {
+                            presentesEscola += turmaSet.size;
+                        });
+                    }
+
+                    totalPresentes += presentesEscola;
+
+                    // Adicionar dados para o gráfico
+                    dadosGraficoEscolas.labels.push(escola.nome);
+                    dadosGraficoEscolas.valores.push(presentesEscola);
+                    dadosGraficoEscolas.total.push(totalAlunosEscola);
+
+                    // Log para debug
+                    console.log(`Escola ${escola.nome}:`, {
+                        totalAlunos: totalAlunosEscola,
+                        presentes: presentesEscola,
+                        percentual: ((presentesEscola / totalAlunosEscola) * 100).toFixed(1) + '%'
+                    });
+                }
+
+                // Atualizar métricas gerais
+                document.getElementById('total-turmas').textContent = formatarNumero(totalTurmas);
+                document.getElementById('total-alunos').textContent = formatarNumero(totalAlunos);
+                document.getElementById('presentes-hoje').textContent = formatarNumero(totalPresentes);
                 
-                // Carregar distribuição por série (view_distribuicao_series)
-                const { data: dadosSeries } = await supabase
+                const percentualPresenca = totalAlunos > 0 
+                    ? ((totalPresentes / totalAlunos) * 100).toFixed(1)
+                    : 0;
+                document.getElementById('percentual-presenca').textContent = `${percentualPresenca}% de presença`;
+
+                // Atualizar gráfico de escolas
+                atualizarGraficoEscolas(dadosGraficoEscolas);
+
+                // Buscar distribuição por série apenas das turmas permitidas
+                let seriesQuery = supabase
                     .from('view_distribuicao_series')
-                    .select('*')
-                    .eq('cidade_id', usuario.cidade);
+                    .select('*');
+
+                if (modoAcesso === 'cidade') {
+                    seriesQuery = seriesQuery.in('cidade_id', permissoesCidade.map(p => p.cidade_id));
+                } else if (modoAcesso === 'escola') {
+                    seriesQuery = seriesQuery.in('escola_id', permissoesEscola.map(p => p.escola_id));
+                } else if (modoAcesso === 'turma') {
+                    seriesQuery = seriesQuery.in('turma_id', turmasPermitidas);
+                }
+
+                const { data: dadosSeries } = await seriesQuery;
                 
-                if (dadosSeries) {
+                if (dadosSeries?.length > 0) {
                     atualizarGraficoSeries({
                         labels: dadosSeries.map(s => s.serie_nome),
                         valores: dadosSeries.map(s => s.total_alunos)
                     });
                 }
                 
-                // Carregar histórico de presença (view_historico_presenca)
-                const { data: historicoPresenca } = await supabase
-                    .from('view_historico_presenca')
-                    .select('*')
-                    .eq('cidade_id', usuario.cidade)
-                    .order('data', { ascending: true });
-                    
-                if (historicoPresenca) {
-                    // Atualizar gráfico ou métricas de histórico se necessário
-                    console.log('Histórico de presença carregado:', historicoPresenca.length, 'dias');
-                }
-                
-                // Carregar últimos registros (view_alunos_logs)
+                // Buscar últimos registros apenas das escolas permitidas
+                const escolasIds = escolasPermitidas.map(e => e.nome);
                 const { data: ultimosRegistros } = await supabase
                     .from('view_alunos_logs')
                     .select('*')
-                    .eq('cidade', metricasCidade.cidade_nome)
+                    .in('nome_colégio', escolasIds)
                     .order('hora_check', { ascending: false })
                     .limit(10);
                 
-                if (ultimosRegistros) {
+                if (ultimosRegistros?.length > 0) {
                     const registrosFormatados = ultimosRegistros.map(registro => ({
                         aluno_nome: registro.nome_aluno,
                         aluno_foto: registro.foto_aluno,
@@ -526,21 +911,47 @@
                     
                 if (alunosCriticos) {
                     console.log('Alunos críticos carregados:', alunosCriticos.length);
-                    // Podemos adicionar uma seção para mostrar esses alunos se desejar
                 }
                 
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
+                Toast.error('Erro ao carregar dados. Por favor, recarregue a página.');
+                
+                // Se for erro de autenticação, redirecionar para login
+                if (error.message?.includes('não está logado') || 
+                    error.message?.includes('Sessão não encontrada')) {
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                }
             }
         }
         
-        // Atualização automática
-        setInterval(atualizarDataAtual, 60000); // Atualiza a data a cada minuto
-        setInterval(carregarDados, 60000);      // Atualiza os dados a cada minuto
-        
-        // Primeira carga
+        // Verificar login antes de iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSession = localStorage.getItem('user_session');
+            if (!userSession) {
+                window.location.href = '/auth.html';
+                return;
+            }
+            
+            const userData = JSON.parse(userSession);
+            if (userData.tipo !== 'GESTOR') {
+                Toast.show('Acesso não autorizado para este perfil', 'error');
+                setTimeout(() => {
+                    window.location.href = '/auth.html';
+                }, 2000);
+                return;
+            }
+            
+            // Iniciar carregamento dos dados
         atualizarDataAtual();
         carregarDados();
+            
+            // Configurar atualizações automáticas
+            setInterval(atualizarDataAtual, 60000); // Atualiza a data a cada minuto
+            setInterval(carregarDados, 60000);      // Atualiza os dados a cada minuto
+        });
     </script>
 </body>
 </html>

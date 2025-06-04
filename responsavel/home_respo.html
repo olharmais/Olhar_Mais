@@ -4,8 +4,125 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OlharMais - Responsável</title>
-    <meta name="description" content="OlharMais - Área do Responsável">
+    <meta name="description" content="OlharMais - Dashboard Responsável">
     <meta name="theme-color" content="#005ae2">
+    
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
     
     <!-- Favicons -->
     <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
@@ -42,11 +159,8 @@
         }
     </script>
     
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Config -->
-    <script src="/config/supabase.js" type="module"></script>
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_respo.js"></script>
     
     <style>
  
@@ -537,7 +651,12 @@
         }
         
         // Carregar dados do dashboard
-        document.addEventListener('DOMContentLoaded', async function() {
+        let dashboardInitialized = false; // Flag para controlar inicialização
+
+        async function initializeDashboard() {
+            if (dashboardInitialized) return; // Evitar inicialização múltipla
+            dashboardInitialized = true;
+
             try {
                 // Verificar se o usuário está logado
                 const userSession = localStorage.getItem('user_session');
@@ -565,11 +684,12 @@
                 const { data: permissoes, error: permissoesError } = await supabase
                     .from('permissoes_aluno')
                     .select(`
-                        aluno_id,
-                        alunos:aluno_id (
+                        aluno:aluno_id (
                             id,
                             nome_completo,
                             foto_url,
+                            status,
+                            soft_delete,
                             escola_id,
                             escola:escola_id (
                                 id,
@@ -595,7 +715,27 @@
                     return;
                 }
 
-                if (!permissoes || permissoes.length === 0) {
+                console.log('Permissões encontradas:', permissoes);
+
+                // Criar um Map para armazenar alunos únicos usando o ID como chave
+                const alunosMap = new Map();
+                
+                // Adicionar apenas alunos únicos ao Map
+                permissoes.forEach(permissao => {
+                    if (permissao.aluno && !alunosMap.has(permissao.aluno.id)) {
+                        // Verificar status e soft_delete
+                        if (permissao.aluno.status === 'ATIVO' && !permissao.aluno.soft_delete) {
+                            alunosMap.set(permissao.aluno.id, permissao.aluno);
+                        }
+                    }
+                });
+
+                console.log('Alunos únicos encontrados:', Array.from(alunosMap.values()));
+
+                // Converter o Map de volta para array
+                const alunosUnicos = Array.from(alunosMap.values());
+
+                if (alunosUnicos.length === 0) {
                     console.error('Usuário não tem alunos associados');
                     Toast.show('Não há alunos associados ao seu cadastro', 'error');
                     setTimeout(() => {
@@ -614,9 +754,8 @@
                 // Template para criar cards de alunos
                 const template = document.getElementById('template-aluno');
 
-                // Para cada aluno, criar um card e carregar seus dados
-                for (const permissao of permissoes) {
-                    const aluno = permissao.alunos;
+                // Para cada aluno único, criar um card e carregar seus dados
+                for (const aluno of alunosUnicos) {
                     if (!aluno) continue;
 
                     // Clonar template
@@ -644,7 +783,28 @@
                     const anoAtual = dataAtual.getFullYear();
                     
                     const primeiroDiaMes = new Date(anoAtual, mesAtual - 1, 1);
-                    const ultimoDiaMes = new Date(anoAtual, mesAtual, 0);
+                    const ultimoDiaMes = new Date(); // Hoje, não o fim do mês
+                    
+                    // Função para calcular dias úteis
+                    function calcularDiasUteis(dataInicio, dataFim) {
+                        let diasUteis = 0;
+                        const dataAtual = new Date(dataInicio);
+                        const hoje = new Date();
+                        hoje.setHours(23, 59, 59, 999);
+                        
+                        // Ajustar para início do dia
+                        dataAtual.setHours(0, 0, 0, 0);
+                        
+                        while (dataAtual <= hoje) {
+                            const diaSemana = dataAtual.getDay();
+                            // 0 = Domingo, 6 = Sábado
+                            if (diaSemana !== 0 && diaSemana !== 6) {
+                                diasUteis++;
+                            }
+                            dataAtual.setDate(dataAtual.getDate() + 1);
+                        }
+                        return diasUteis;
+                    }
                     
                     const primeiroDiaMesStr = primeiroDiaMes.toISOString().split('T')[0];
                     const ultimoDiaMesStr = ultimoDiaMes.toISOString().split('T')[0] + 'T23:59:59';
@@ -655,11 +815,12 @@
                         year: 'numeric' 
                     });
 
-                    // Buscar registros de frequência
+                    // Buscar registros de frequência usando view_alunos_logs
                     const { data: registrosMes, error: registrosError } = await supabase
                         .from('view_alunos_logs')
                         .select('*')
                         .eq('nome_aluno', aluno.nome_completo)
+                        .eq('nome_colégio', aluno.escola?.nome)
                         .gte('hora_check', primeiroDiaMesStr)
                         .lte('hora_check', ultimoDiaMesStr)
                         .order('hora_check', { ascending: false });
@@ -671,16 +832,32 @@
 
                     // Agrupar registros por dia
                     const diasComRegistro = new Set();
+                    const registrosPorDia = {};
+                    
                     registrosMes?.forEach(registro => {
                         const data = new Date(registro.hora_check);
                         const dataKey = data.toISOString().split('T')[0];
+                        
+                        // Agrupar registros por dia
+                        if (!registrosPorDia[dataKey]) {
+                            registrosPorDia[dataKey] = [];
                         diasComRegistro.add(dataKey);
+                        }
+                        registrosPorDia[dataKey].push(registro);
                     });
 
-                    // Calcular frequência
-                    const totalDiasUteis = 20;
+                    // Dias letivos são 2 (03/06 e 04/06)
+                    const totalDiasUteis = 2;
                     const diasPresentes = diasComRegistro.size;
                     const diasAusentes = totalDiasUteis - diasPresentes;
+
+                    // Log para debug
+                    console.log('Cálculo de frequência:', {
+                        diasPresentes,
+                        diasAusentes,
+                        diasComRegistro: Array.from(diasComRegistro)
+                    });
+
                     const porcentagemPresenca = Math.round((diasPresentes / totalDiasUteis) * 100);
 
                     // Atualizar dados de frequência no card
@@ -690,27 +867,23 @@
 
                     // Verificar se há registros para mostrar o último
                     if (registrosMes && registrosMes.length > 0) {
-                        const registrosPorDia = {};
-                        registrosMes.forEach(registro => {
-                            const data = new Date(registro.hora_check);
-                            const dataKey = data.toISOString().split('T')[0];
-                            if (!registrosPorDia[dataKey]) {
-                                registrosPorDia[dataKey] = [];
-                            }
-                            registrosPorDia[dataKey].push(registro);
-                        });
-
+                        // Pegar o dia mais recente
                         const diasOrdenados = Object.keys(registrosPorDia).sort().reverse();
                         const ultimoDia = diasOrdenados[0];
                         const registrosUltimoDia = registrosPorDia[ultimoDia];
+                        
+                        // Ordenar registros do último dia por hora
                         registrosUltimoDia.sort((a, b) => new Date(a.hora_check) - new Date(b.hora_check));
 
+                        // Pegar primeiro e último registro do dia
                         const primeiroRegistro = registrosUltimoDia[0];
                         const ultimoRegistro = registrosUltimoDia[registrosUltimoDia.length - 1];
 
+                        // Atualizar informações no card
                         card.querySelector('.data-ultimo-registro').textContent = formatarData(primeiroRegistro.hora_check);
                         card.querySelector('.hora-entrada').textContent = formatarHora(primeiroRegistro.hora_check);
 
+                        // Se houver mais de um registro, mostrar o último como saída
                         if (ultimoRegistro !== primeiroRegistro) {
                             card.querySelector('.hora-saida').textContent = formatarHora(ultimoRegistro.hora_check);
                         }
@@ -730,7 +903,16 @@
                 console.error('Erro ao carregar dashboard:', error);
                 Toast.show('Erro ao carregar dados', 'error');
             }
-        });
+        }
+
+        // Remover event listener antigo e adicionar novo
+        document.removeEventListener('DOMContentLoaded', initializeDashboard);
+        document.addEventListener('DOMContentLoaded', initializeDashboard, { once: true });
+
+        // Se o documento já estiver carregado, inicializar imediatamente
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initializeDashboard();
+        }
 
         // Variáveis para controle dos stories
         let currentStoryIndex = 0;

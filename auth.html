@@ -558,6 +558,50 @@
         <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
     </div>
 
+    <!-- Cookie Consent Float -->
+    <div id="cookie-consent" class="fixed bottom-4 left-4 right-4 md:left-8 md:right-auto md:max-w-md bg-white rounded-lg shadow-lg p-4 transform transition-transform duration-300 translate-y-full opacity-0 z-50">
+        <div class="flex items-start gap-3">
+            <div class="text-primary mt-1">
+                <i class="ph ph-cookie text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm text-gray-600 mb-3">
+                    Utilizamos cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa 
+                    <a href="/politica-privacidade.html" class="text-primary hover:text-primary-dark">Política de Privacidade</a>.
+                </p>
+                <button id="aceitar-cookies" class="w-full bg-primary text-white py-2 px-4 rounded-full text-sm font-medium hover:bg-primary-dark transition-colors">
+                    Aceitar e Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cookie Consent
+        document.addEventListener('DOMContentLoaded', function() {
+            const cookieConsent = document.getElementById('cookie-consent');
+            const btnAceitarCookies = document.getElementById('aceitar-cookies');
+            
+            // Só mostra se ainda não aceitou
+            if (!localStorage.getItem('cookie_consent')) {
+                setTimeout(() => {
+                    cookieConsent.classList.remove('translate-y-full', 'opacity-0');
+                }, 1000);
+            } else {
+                cookieConsent.remove(); // Remove o elemento se já aceitou
+            }
+            
+            // Função para aceitar cookies
+            btnAceitarCookies.addEventListener('click', function() {
+                localStorage.setItem('cookie_consent', 'true');
+                cookieConsent.classList.add('translate-y-full', 'opacity-0');
+                setTimeout(() => {
+                    cookieConsent.remove();
+                }, 300);
+            });
+        });
+    </script>
+
     <script type="module">
         // Inicialização do cliente Supabase usando a configuração padronizada
         const supabase = createSupabaseClient();
@@ -1567,6 +1611,28 @@
                 submitButton.disabled = false;
             }
         }
+
+        // Cookie Consent
+        function mostrarCookieConsent() {
+            const cookieConsent = document.getElementById('cookie-consent');
+            if (cookieConsent && !localStorage.getItem('cookie_consent')) {
+                setTimeout(() => {
+                    cookieConsent.classList.remove('translate-y-full', 'opacity-0');
+                }, 1000);
+            }
+        }
+
+        function aceitarCookies() {
+            localStorage.setItem('cookie_consent', 'true');
+            const cookieConsent = document.getElementById('cookie-consent');
+            cookieConsent.classList.add('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                cookieConsent.remove();
+            }, 300);
+        }
+
+        // Mostrar cookie consent quando a página carregar
+        document.addEventListener('DOMContentLoaded', mostrarCookieConsent);
     </script>
 </body>
 </html> 

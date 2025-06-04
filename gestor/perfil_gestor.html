@@ -7,6 +7,132 @@
     <meta name="description" content="OlharMais - Perfil Gestor">
     <meta name="theme-color" content="#005ae2">
     
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+
+                        // Definir funções do WhatsApp com as chaves corretas da Lambda
+                        window.getWhatsappApiUrl = function() {
+                            return _config.WHATSAPP_API_URL1;
+                        };
+                        
+                        window.getWhatsappApiKey = function() {
+                            return _config.WHATSAPP_API_KEY1;
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+    
     <!-- Favicons -->
     <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon/favicon.ico" sizes="any">
@@ -41,12 +167,6 @@
             }
         }
     </script>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Config -->
-    <script src="/config/supabase.js"></script>
     
     <!-- IMask para máscaras -->
     <script src="https://unpkg.com/imask"></script>
@@ -141,18 +261,21 @@
             <div class="mb-8 flex flex-col items-center">
                 <label for="foto-input" class="cursor-pointer">
                     <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 mb-3 relative group">
-                        <img id="foto-perfil" src="/assets/img/avatar-placeholder.png" alt="Foto de perfil" 
+                        <img id="foto-perfil" 
+                             src="/assets/img/avatar-placeholder.png" 
+                             alt="Foto de perfil" 
                              class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div id="foto-hover" class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <i class="ph ph-camera text-white text-2xl"></i>
                         </div>
-                        <!-- Loading Overlay -->
-                        <div id="foto-loading" class="loading-overlay hidden">
-                            <i class="ph ph-spinner loading-spinner"></i>
+                        <!-- Loading Overlay com fundo escuro -->
+                        <div id="foto-loading" class="absolute inset-0 bg-black/50 flex items-center justify-center hidden">
+                            <div class="animate-spin rounded-full h-8 w-8 border-4 border-white border-t-transparent"></div>
                         </div>
                     </div>
                     <span class="text-primary hover:text-primary-dark text-sm flex items-center justify-center gap-1">
-                        <i class="ph ph-camera"></i> <span id="texto-alterar-foto">Alterar foto</span>
+                        <i class="ph ph-camera"></i> 
+                        <span id="texto-alterar-foto">Alterar foto</span>
                     </span>
                 </label>
                 <input type="file" id="foto-input" class="hidden" accept="image/*">
@@ -376,6 +499,10 @@
                 }
 
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    console.warn('Cliente Supabase não disponível');
+                    return;
+                }
                 
                 // Buscar dados atualizados do usuário
                 const { data: userData, error } = await supabase
@@ -427,7 +554,7 @@
         }
 
         // Carregar perfil quando a página carregar
-        window.addEventListener('DOMContentLoaded', carregarPerfil);
+        document.addEventListener('DOMContentLoaded', carregarPerfil);
         
         // Upload de foto com loading
         document.getElementById('foto-input').addEventListener('change', async function(e) {
@@ -435,13 +562,33 @@
             if (!file) return;
             
             try {
-                // Mostrar loading
+                // Validar tipo do arquivo
+                if (!file.type.startsWith('image/')) {
+                    Toast.error('Por favor, selecione uma imagem válida');
+                    return;
+                }
+
+                // Validar tamanho (máximo 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    Toast.error('A imagem deve ter no máximo 5MB');
+                    return;
+                }
+                
+                // Elementos da UI
                 const loadingOverlay = document.getElementById('foto-loading');
                 const textoAlterarFoto = document.getElementById('texto-alterar-foto');
+                const fotoPerfilElement = document.getElementById('foto-perfil');
+                const fotoHover = document.getElementById('foto-hover');
+                
+                // Mostrar loading e desabilitar hover
                 loadingOverlay.classList.remove('hidden');
+                fotoHover.classList.add('hidden');
                 textoAlterarFoto.textContent = 'Enviando foto...';
                 
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
                 
                 // Criar nome único para o arquivo
                 const fileExt = file.name.split('.').pop();
@@ -459,10 +606,14 @@
                     .from('profile-photos')
                     .getPublicUrl(fileName);
                 
-                // Atualizar foto no perfil e no banco
-                document.getElementById('foto-perfil').src = publicUrl;
-                estadoApp.fotoUrl = publicUrl;
+                // Guardar URL antiga para fallback
+                const oldUrl = estadoApp.fotoUrl;
 
+                // Criar uma nova imagem para pré-carregar
+                const tempImage = new Image();
+                
+                tempImage.onload = async function() {
+                    try {
                 // Atualizar URL no banco de dados
                 const { error: updateError } = await supabase
                     .from('usuarios')
@@ -470,15 +621,50 @@
                     .eq('id', JSON.parse(localStorage.getItem('user_session')).id);
 
                 if (updateError) throw updateError;
+
+                        // Atualizar estado e imagem
+                        estadoApp.fotoUrl = publicUrl;
+                        fotoPerfilElement.src = publicUrl;
+                        
+                        // Atualizar sessão local
+                        const userSession = JSON.parse(localStorage.getItem('user_session'));
+                        userSession.foto_url = publicUrl;
+                        localStorage.setItem('user_session', JSON.stringify(userSession));
                 
                 Toast.success('Foto atualizada com sucesso');
+                    } catch (error) {
+                        console.error('Erro ao atualizar foto no banco:', error);
+                        fotoPerfilElement.src = oldUrl || '../assets/img/user.png';
+                        Toast.error('Erro ao salvar foto. Tente novamente.');
+                    } finally {
+                        // Restaurar interface
+                        loadingOverlay.classList.add('hidden');
+                        fotoHover.classList.remove('hidden');
+                        textoAlterarFoto.textContent = 'Alterar foto';
+                    }
+                };
+                
+                tempImage.onerror = function() {
+                    // Restaurar estado anterior
+                    fotoPerfilElement.src = oldUrl || '../assets/img/user.png';
+                    loadingOverlay.classList.add('hidden');
+                    fotoHover.classList.remove('hidden');
+                    textoAlterarFoto.textContent = 'Alterar foto';
+                    Toast.error('Erro ao carregar a nova foto');
+                };
+                
+                // Iniciar carregamento da imagem
+                tempImage.src = publicUrl;
                 
             } catch (error) {
                 console.error('Erro ao fazer upload da foto:', error);
                 Toast.error('Erro ao atualizar foto. Tente novamente.');
-            } finally {
-                // Ocultar loading e restaurar texto
-                document.getElementById('foto-loading').classList.add('hidden');
+                
+                // Restaurar interface
+                const loadingOverlay = document.getElementById('foto-loading');
+                const fotoHover = document.getElementById('foto-hover');
+                loadingOverlay.classList.add('hidden');
+                fotoHover.classList.remove('hidden');
                 document.getElementById('texto-alterar-foto').textContent = 'Alterar foto';
             }
         });
@@ -533,10 +719,17 @@
                 estadoApp.codigoAntigo = Math.random().toString().substr(2, 6);
                 
                 // Enviar código via WhatsApp
-                const response = await fetch(getWhatsappApiUrl(), {
+                const whatsappApiUrl = getWhatsappApiUrl();
+                const whatsappApiKey = getWhatsappApiKey();
+                
+                if (!whatsappApiUrl || !whatsappApiKey) {
+                    throw new Error('Configurações do WhatsApp não disponíveis');
+                }
+                
+                const response = await fetch(whatsappApiUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': getWhatsappApiKey(),
+                        'Authorization': whatsappApiKey,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -580,6 +773,10 @@
 
                 // Verificar se o número já existe
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
+                
                 const { data: usuarioExistente, error: errorBusca } = await supabase
                     .from('usuarios')
                     .select('id')
@@ -600,10 +797,17 @@
                 estadoApp.whatsappNovo = novoNumero;
                 
                 // Enviar código para o novo número
-                const response = await fetch(getWhatsappApiUrl(), {
+                const whatsappApiUrl = getWhatsappApiUrl();
+                const whatsappApiKey = getWhatsappApiKey();
+                
+                if (!whatsappApiUrl || !whatsappApiKey) {
+                    throw new Error('Configurações do WhatsApp não disponíveis');
+                }
+                
+                const response = await fetch(whatsappApiUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': getWhatsappApiKey(),
+                        'Authorization': whatsappApiKey,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -632,6 +836,10 @@
                 if (codigo === estadoApp.codigoNovo) {
                     // Verificar novamente se o número já existe (dupla verificação)
                     const supabase = createSupabaseClient();
+                    if (!supabase) {
+                        throw new Error('Cliente Supabase não disponível');
+                    }
+                    
                     const { data: usuarioExistente, error: errorBusca } = await supabase
                         .from('usuarios')
                         .select('id')
@@ -704,6 +912,9 @@
                 
                 // Inicializar Supabase
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
 
                 // Preparar dados para atualização
                 const dadosAtualizacao = {
@@ -767,6 +978,10 @@
                     : `55${novoWhatsapp}`;
 
                 const supabase = createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
+                
                 const { data, error } = await supabase
                     .from('usuarios')
                     .update({ whatsapp: whatsappComPrefixo })
