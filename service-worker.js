@@ -1,4 +1,4 @@
-const CACHE_NAME = 'olharmais-cache-v1.1';
+const CACHE_NAME = 'olharmais-cache-v1.2';
 const OFFLINE_URL = '/offline.html';
 
 // Lista de recursos para cache
@@ -19,6 +19,9 @@ const urlsToCache = [
   '/favicon/favicon.ico',
   '/favicon/safari-pinned-tab.svg',
   '/favicon/browserconfig.xml',
+  '/favicon/apple-touch-icon.png',
+  '/favicon/favicon-16x16.png',
+  '/favicon/favicon-32x32.png',
   '/assets/images/icons/icon-16x16.png',
   '/assets/images/icons/icon-32x32.png',
   '/assets/images/icons/icon-72x72.png',
@@ -30,9 +33,11 @@ const urlsToCache = [
   '/assets/images/icons/icon-384x384.png',
   '/assets/images/icons/icon-512x512.png',
   
+  // JavaScript e CSS
+  '/assets/js/tailwind.min.js',
+  
   // Recursos externos essenciais
   'https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap',
-  'https://cdn.tailwindcss.com',
   'https://unpkg.com/@phosphor-icons/web/styles.css',
   
   // Imagens e assets
