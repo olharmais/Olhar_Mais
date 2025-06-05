@@ -1,12 +1,20 @@
-const CACHE_NAME = 'olharmais-cache-v1';
+const CACHE_NAME = 'olharmais-cache-v1.1';
+const OFFLINE_URL = '/offline.html';
 
 // Lista de recursos para cache
 const urlsToCache = [
+  // Páginas principais
   '/',
   '/index.html',
   '/auth.html',
   '/aprovacao.html',
+  '/offline.html',
+  
+  // Manifesto e configurações
   '/manifest.json',
+  '/check-icons.js',
+  
+  // Favicons e ícones
   '/favicon/favicon.svg',
   '/favicon/favicon.ico',
   '/favicon/safari-pinned-tab.svg',
@@ -21,9 +29,14 @@ const urlsToCache = [
   '/assets/images/icons/icon-192x192.png',
   '/assets/images/icons/icon-384x384.png',
   '/assets/images/icons/icon-512x512.png',
+  
+  // Recursos externos essenciais
   'https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap',
   'https://cdn.tailwindcss.com',
-  'https://unpkg.com/@phosphor-icons/web/styles.css'
+  'https://unpkg.com/@phosphor-icons/web/styles.css',
+  
+  // Imagens e assets
+  '/metatag.png'
 ];
 
 // Função para verificar se a URL é válida para cache
@@ -65,97 +78,139 @@ function sanitizeUrl(url) {
 // Instalação do Service Worker
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-      .catch(() => {/* Silenciar erros */})
+    Promise.all([
+      caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)),
+      // Criar página offline se não existir
+      fetch(OFFLINE_URL).catch(() => {
+        return new Response(
+          `<!DOCTYPE html>
+          <html lang="pt-br">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>OlharMais - Offline</title>
+              <style>
+                  body { font-family: 'Inter', sans-serif; background: #E6F0FF; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+                  .container { text-align: center; padding: 20px; }
+                  h1 { color: #005ae2; }
+                  p { color: #666; }
+                  .btn { background: #005ae2; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; display: inline-block; margin-top: 20px; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Você está offline</h1>
+                  <p>Verifique sua conexão com a internet e tente novamente.</p>
+                  <a href="/" class="btn">Tentar novamente</a>
+              </div>
+          </body>
+          </html>`,
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      })
+    ])
   );
 });
 
 // Ativação e limpeza de caches antigos
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-            if (!cacheWhitelist.includes(cacheName)) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-      .then(() => self.clients.claim())
-      .catch(() => {/* Silenciar erros */})
+    Promise.all([
+      // Limpar caches antigos
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Tomar controle imediatamente
+      self.clients.claim()
+    ])
   );
 });
 
-// Interceptação de requisições para usar cache quando offline
+// Interceptação de requisições
 self.addEventListener('fetch', event => {
+  // Não interceptar requisições para APIs ou recursos sensíveis
+  if (event.request.url.includes('supabase') || 
+      event.request.url.includes('lambda') || 
+      event.request.url.includes('whatsapp')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {
         if (response) {
-          return response;
+          return response; // Cache hit
         }
-        
+
         return fetch(event.request)
           .then(response => {
+            // Verificar se a resposta é válida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-            
+
+            // Clonar a resposta para o cache
             const responseToCache = response.clone();
-            
             caches.open(CACHE_NAME)
               .then(cache => {
-                if (shouldLogUrl(event.request.url)) {
                 cache.put(event.request, responseToCache);
-                }
               });
-            
+
             return response;
           })
           .catch(() => {
+            // Se falhar e for uma navegação, mostrar página offline
             if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
+              return caches.match(OFFLINE_URL);
             }
-            return new Response('Recurso não disponível offline', {
+            // Para outros recursos, retornar erro 503
+            return new Response('Recurso indisponível offline', {
               status: 503,
-              statusText: 'Serviço Indisponível'
+              statusText: 'Service Unavailable'
             });
           });
       })
-      .catch(() => {/* Silenciar erros */})
   );
 });
 
-// Evento de sincronização em background
+// Sincronização em background
 self.addEventListener('sync', event => {
   if (event.tag === 'syncData') {
-    event.waitUntil(syncData());
+    event.waitUntil(
+      // Implementar lógica de sincronização aqui
+      Promise.resolve()
+    );
   }
 });
 
-// Função para sincronizar dados
-function syncData() {
-  return Promise.resolve();
-}
-
-// Evento para mostrar notificações push
+// Notificações push
 self.addEventListener('push', event => {
-  const title = 'OlharMais';
   const options = {
-    body: 'Nova notificação do OlharMais',
-    icon: '/assets/img/logo.png',
-    badge: '/assets/img/badge.png'
+    body: event.data ? event.data.text() : 'Nova notificação do OlharMais',
+    icon: '/assets/images/icons/icon-192x192.png',
+    badge: '/assets/images/icons/icon-72x72.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    }
   };
-  
-  event.waitUntil(self.registration.showNotification(title, options));
+
+  event.waitUntil(
+    self.registration.showNotification('OlharMais', options)
+  );
 });
 
-// Evento para lidar com cliques em notificações
+// Clique em notificações
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
+  event.waitUntil(
+    clients.openWindow('/')
+  );
 }); 
