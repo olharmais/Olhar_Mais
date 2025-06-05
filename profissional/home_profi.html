@@ -754,6 +754,15 @@
                     const startOfDay = new Date(hoje + 'T00:00:00-03:00');
                     const endOfDay = new Date(hoje + 'T23:59:59.999-03:00');
 
+                    // Verificar se é dia útil (não é sábado nem domingo)
+                    const diaDaSemana = dataLocal.getDay();
+                    const ehDiaUtil = diaDaSemana !== 0 && diaDaSemana !== 6; // 0 = domingo, 6 = sábado
+
+                    // Se não for dia útil, não conta para presença
+                    if (!ehDiaUtil) {
+                        continue;
+                    }
+
                     // Buscar presenças para cada turma
                     for (const turma of turmas) {
                         const { data: logsView, error: logsError } = await supabase

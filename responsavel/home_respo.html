@@ -846,10 +846,31 @@
                         registrosPorDia[dataKey].push(registro);
                     });
 
-                    // Dias letivos são 2 (03/06 e 04/06)
-                    const totalDiasUteis = 2;
+                    // Calcular dias úteis do mês até hoje (excluindo sábados e domingos)
+                    let dataAtualLoop = new Date(primeiroDiaMes);
+                    const hoje = new Date();
+                    hoje.setHours(23, 59, 59, 999);
+                    const diasLetivos = [];
+
+                    while (dataAtualLoop <= hoje) {
+                        const diaSemana = dataAtualLoop.getDay();
+                        // Se não for sábado (6) nem domingo (0)
+                        if (diaSemana !== 0 && diaSemana !== 6) {
+                            diasLetivos.push(dataAtualLoop.toISOString().split('T')[0]);
+                        }
+                        dataAtualLoop.setDate(dataAtualLoop.getDate() + 1);
+                    }
+
                     const diasPresentes = diasComRegistro.size;
+                    const totalDiasUteis = diasLetivos.length;
                     const diasAusentes = totalDiasUteis - diasPresentes;
+
+                    // Log para debug
+                    console.log('Dias com registro:', Array.from(diasComRegistro));
+                    console.log('Dias letivos:', diasLetivos);
+                    console.log('Total dias úteis:', totalDiasUteis);
+                    console.log('Dias presentes:', diasPresentes);
+                    console.log('Dias ausentes:', diasAusentes);
 
                     // Log para debug
                     console.log('Cálculo de frequência:', {
