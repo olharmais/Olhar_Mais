@@ -662,7 +662,7 @@
                 // Tentar carregar a foto
                 const { data: { publicUrl } } = await supabase
                     .storage
-                    .from('avatars')
+                    .from('profile-photos')
                     .getPublicUrl(`${userId}.png`);
                     
                 if (publicUrl) {
@@ -705,13 +705,16 @@
                     throw new Error('A imagem deve ter no máximo 5MB.');
                 }
                 
-                const userId = estadoApp.userId;
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                if (!userSession) {
+                    throw new Error('Usuário não está logado');
+                }
                 
                 // Fazer upload
                 const { error: uploadError } = await supabase
                     .storage
-                    .from('avatars')
-                    .upload(`${userId}.png`, file, {
+                    .from('profile-photos')
+                    .upload(`${userSession.id}.png`, file, {
                         cacheControl: '3600',
                         upsert: true
                     });
@@ -719,15 +722,27 @@
                 if (uploadError) throw uploadError;
                 
                 // Recarregar a foto
-                await carregarFotoPerfil(userId);
+                await carregarFotoPerfil(userSession.id);
                 
                 // Atualizar URL no estado
                 const { data: { publicUrl } } = await supabase
                     .storage
-                    .from('avatars')
-                    .getPublicUrl(`${userId}.png`);
+                    .from('profile-photos')
+                    .getPublicUrl(`${userSession.id}.png`);
                     
                 estadoApp.fotoUrl = publicUrl;
+                
+                // Atualizar URL no banco de dados
+                const { error: updateError } = await supabase
+                    .from('usuarios')
+                    .update({ foto_url: publicUrl })
+                    .eq('id', userSession.id);
+
+                if (updateError) throw updateError;
+                
+                // Atualizar sessão local
+                userSession.foto_url = publicUrl;
+                localStorage.setItem('user_session', JSON.stringify(userSession));
                 
             } catch (error) {
                 console.error('Erro ao fazer upload da foto:', error);
@@ -736,6 +751,9 @@
                 setTimeout(() => {
                     errorElement.style.display = 'none';
                 }, 3000);
+            } finally {
+                // Garantir que o loading seja removido
+                fotoPerfilWrapper.classList.remove('loading');
             }
         }
 

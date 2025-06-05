@@ -672,7 +672,7 @@
                         limit: 1,
                         search: `${userId}.png`
                     });
-
+                
                 if (listError) {
                     throw listError;
                 }
@@ -695,7 +695,7 @@
                     const img = new Image();
                     img.onload = function() {
                         fotoPerfilElement.src = publicUrl;
-                        estadoApp.fotoUrl = publicUrl;
+                estadoApp.fotoUrl = publicUrl;
                         fotoPerfilWrapper.classList.remove('loading');
                     };
                     img.onerror = function() {

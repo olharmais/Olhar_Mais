@@ -234,16 +234,16 @@
                 if (!supabase) {
                     throw new Error('Sistema ainda não está pronto. Por favor, aguarde o carregamento completo.');
                 }
-
-                if (senha === SENHA_ACESSO) {
-                    sessionStorage.setItem('logado', 'true');
-                    showToast('Login realizado com sucesso!');
-                    setTimeout(() => {
-                        window.location.href = 'alunos_fotos.html';
-                    }, 1000);
-                } else {
-                    showToast('Senha incorreta!', 'error');
-                    document.getElementById('password').value = '';
+            
+            if (senha === SENHA_ACESSO) {
+                sessionStorage.setItem('logado', 'true');
+                showToast('Login realizado com sucesso!');
+                setTimeout(() => {
+                    window.location.href = 'alunos_fotos.html';
+                }, 1000);
+            } else {
+                showToast('Senha incorreta!', 'error');
+                document.getElementById('password').value = '';
                 }
             } catch (error) {
                 console.error('Erro ao fazer login:', error);
@@ -251,9 +251,9 @@
             } finally {
                 // Restaurar botão se houver erro
                 if (senha !== SENHA_ACESSO) {
-                    spinner.classList.add('hidden');
-                    textSpan.textContent = 'Entrar';
-                    button.disabled = false;
+                spinner.classList.add('hidden');
+                textSpan.textContent = 'Entrar';
+                button.disabled = false;
                 }
             }
         });

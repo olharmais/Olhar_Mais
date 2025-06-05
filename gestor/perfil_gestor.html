@@ -556,118 +556,114 @@
         // Carregar perfil quando a página carregar
         document.addEventListener('DOMContentLoaded', carregarPerfil);
         
-        // Upload de foto com loading
-        document.getElementById('foto-input').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // Função para carregar a foto de perfil
+        async function carregarFotoPerfil(userId) {
+            const fotoPerfilWrapper = document.querySelector('.profile-picture-wrapper');
+            const fotoPerfilElement = document.getElementById('foto-perfil');
+            const errorElement = document.querySelector('.profile-picture-error');
             
             try {
-                // Validar tipo do arquivo
+                // Adicionar classe de loading
+                fotoPerfilWrapper.classList.add('loading');
+                errorElement.style.display = 'none';
+                
+                // Tentar carregar a foto
+                const { data: { publicUrl } } = await supabase
+                    .storage
+                    .from('profile-photos')
+                    .getPublicUrl(`${userId}.png`);
+                    
+                if (publicUrl) {
+                    // Pré-carregar a imagem
+                    const img = new Image();
+                    img.onload = function() {
+                        fotoPerfilElement.src = publicUrl;
+                        // O evento onload do elemento img principal removerá a classe loading
+                    };
+                    img.onerror = function() {
+                        handleProfilePictureError(fotoPerfilElement);
+                    };
+                    img.src = publicUrl;
+                } else {
+                    handleProfilePictureError(fotoPerfilElement);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar foto de perfil:', error);
+                handleProfilePictureError(fotoPerfilElement);
+            }
+        }
+
+        // Função para fazer upload da foto de perfil
+        async function uploadFotoPerfil(file) {
+            const fotoPerfilWrapper = document.querySelector('.profile-picture-wrapper');
+            const errorElement = document.querySelector('.profile-picture-error');
+            
+            try {
+                // Adicionar classe de loading
+                fotoPerfilWrapper.classList.add('loading');
+                errorElement.style.display = 'none';
+                
+                // Verificar se é uma imagem
                 if (!file.type.startsWith('image/')) {
-                    Toast.error('Por favor, selecione uma imagem válida');
-                    return;
+                    throw new Error('Por favor, selecione uma imagem.');
                 }
-
-                // Validar tamanho (máximo 5MB)
+                
+                // Verificar tamanho (max 5MB)
                 if (file.size > 5 * 1024 * 1024) {
-                    Toast.error('A imagem deve ter no máximo 5MB');
-                    return;
+                    throw new Error('A imagem deve ter no máximo 5MB.');
                 }
                 
-                // Elementos da UI
-                const loadingOverlay = document.getElementById('foto-loading');
-                const textoAlterarFoto = document.getElementById('texto-alterar-foto');
-                const fotoPerfilElement = document.getElementById('foto-perfil');
-                const fotoHover = document.getElementById('foto-hover');
-                
-                // Mostrar loading e desabilitar hover
-                loadingOverlay.classList.remove('hidden');
-                fotoHover.classList.add('hidden');
-                textoAlterarFoto.textContent = 'Enviando foto...';
-                
-                const supabase = createSupabaseClient();
-                if (!supabase) {
-                    throw new Error('Cliente Supabase não disponível');
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                if (!userSession) {
+                    throw new Error('Usuário não está logado');
                 }
                 
-                // Criar nome único para o arquivo
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}.${fileExt}`;
-                
-                // Upload do arquivo
-                const { data, error } = await supabase.storage
+                // Fazer upload
+                const { error: uploadError } = await supabase
+                    .storage
                     .from('profile-photos')
-                    .upload(fileName, file);
-                
-                if (error) throw error;
-                
-                // Obter URL pública
-                const { data: { publicUrl } } = supabase.storage
-                    .from('profile-photos')
-                    .getPublicUrl(fileName);
-                
-                // Guardar URL antiga para fallback
-                const oldUrl = estadoApp.fotoUrl;
+                    .upload(`${userSession.id}.png`, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
 
-                // Criar uma nova imagem para pré-carregar
-                const tempImage = new Image();
+                if (uploadError) throw uploadError;
                 
-                tempImage.onload = async function() {
-                    try {
+                // Recarregar a foto
+                await carregarFotoPerfil(userSession.id);
+                
+                // Atualizar URL no estado
+                const { data: { publicUrl } } = await supabase
+                    .storage
+                    .from('profile-photos')
+                    .getPublicUrl(`${userSession.id}.png`);
+                    
+                estadoApp.fotoUrl = publicUrl;
+                
                 // Atualizar URL no banco de dados
                 const { error: updateError } = await supabase
                     .from('usuarios')
                     .update({ foto_url: publicUrl })
-                    .eq('id', JSON.parse(localStorage.getItem('user_session')).id);
+                    .eq('id', userSession.id);
 
                 if (updateError) throw updateError;
-
-                        // Atualizar estado e imagem
-                        estadoApp.fotoUrl = publicUrl;
-                        fotoPerfilElement.src = publicUrl;
-                        
-                        // Atualizar sessão local
-                        const userSession = JSON.parse(localStorage.getItem('user_session'));
-                        userSession.foto_url = publicUrl;
-                        localStorage.setItem('user_session', JSON.stringify(userSession));
                 
-                Toast.success('Foto atualizada com sucesso');
-                    } catch (error) {
-                        console.error('Erro ao atualizar foto no banco:', error);
-                        fotoPerfilElement.src = oldUrl || '../assets/img/user.png';
-                        Toast.error('Erro ao salvar foto. Tente novamente.');
-                    } finally {
-                        // Restaurar interface
-                        loadingOverlay.classList.add('hidden');
-                        fotoHover.classList.remove('hidden');
-                        textoAlterarFoto.textContent = 'Alterar foto';
-                    }
-                };
-                
-                tempImage.onerror = function() {
-                    // Restaurar estado anterior
-                    fotoPerfilElement.src = oldUrl || '../assets/img/user.png';
-                    loadingOverlay.classList.add('hidden');
-                    fotoHover.classList.remove('hidden');
-                    textoAlterarFoto.textContent = 'Alterar foto';
-                    Toast.error('Erro ao carregar a nova foto');
-                };
-                
-                // Iniciar carregamento da imagem
-                tempImage.src = publicUrl;
+                // Atualizar sessão local
+                userSession.foto_url = publicUrl;
+                localStorage.setItem('user_session', JSON.stringify(userSession));
                 
             } catch (error) {
                 console.error('Erro ao fazer upload da foto:', error);
-                Toast.error('Erro ao atualizar foto. Tente novamente.');
-                
-                // Restaurar interface
-                const loadingOverlay = document.getElementById('foto-loading');
-                const fotoHover = document.getElementById('foto-hover');
-                loadingOverlay.classList.add('hidden');
-                fotoHover.classList.remove('hidden');
-                document.getElementById('texto-alterar-foto').textContent = 'Alterar foto';
+                errorElement.textContent = error.message || 'Erro ao fazer upload da foto';
+                errorElement.style.display = 'flex';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 3000);
+            } finally {
+                // Garantir que o loading seja removido
+                fotoPerfilWrapper.classList.remove('loading');
             }
-        });
+        }
         
         // Funções para manipulação dos modais
         function mostrarModal(id) {

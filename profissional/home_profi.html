@@ -829,8 +829,8 @@
 
                         // Buscar logs da view_alunos_logs usando o nome da turma
                         const { data: logsView, error: logsError } = await supabase
-                            .from('view_alunos_logs')
-                            .select('nome_aluno')
+                        .from('view_alunos_logs')
+                        .select('nome_aluno')
                             .eq('turma_nome', turma.nome)
                             .gte('hora_check', startOfDay.toISOString())
                             .lte('hora_check', endOfDay.toISOString());
@@ -952,7 +952,7 @@
                     inicio: startOfDay.toISOString(),
                     fim: endOfDay.toISOString()
                 });
-
+                
                 // Buscar logs da view_alunos_logs para cada turma permitida
                 let totalAlunosPresentes = 0;
                 let totalAlunosGeral = 0;
@@ -989,12 +989,12 @@
 
                     // Buscar logs da view_alunos_logs usando o nome da turma
                     const { data: logsView, error: logsError } = await supabase
-                        .from('view_alunos_logs')
-                        .select('nome_aluno')
+                    .from('view_alunos_logs')
+                    .select('nome_aluno')
                         .eq('turma_nome', turma.nome)
                         .gte('hora_check', startOfDay.toISOString())
                         .lte('hora_check', endOfDay.toISOString());
-
+                
                     if (logsError) {
                         console.error(`Erro ao buscar logs da turma ${turma.nome}:`, logsError);
                         continue;
@@ -1024,7 +1024,7 @@
                 const presencaTotalPorcentagem = totalAlunosGeral > 0 
                     ? Math.min(100, Math.round((totalAlunosPresentes / totalAlunosGeral) * 100))
                     : 0;
-
+                
                 console.log('Cálculo final de presença:', {
                     totalAlunosPresentes,
                     totalAlunosGeral,
@@ -1033,7 +1033,7 @@
                     startOfDay: startOfDay.toISOString(),
                     endOfDay: endOfDay.toISOString()
                 });
-
+                
                 document.getElementById('presenca-hoje').textContent = presencaTotalPorcentagem + '%';
                 document.getElementById('total-turmas').textContent = totalTurmas;
                 document.getElementById('total-alunos').textContent = totalAlunos;
