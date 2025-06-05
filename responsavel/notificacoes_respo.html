@@ -561,7 +561,6 @@
                         cidades:cidade_id(nome)
                     `)
                     .eq('cidade_id', usuario.cidade)
-                    .not('video_file_url', 'is', null)
                     .order('created_at', { ascending: false });
                 
                 if (notificacoesError) {
