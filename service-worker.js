@@ -4,12 +4,26 @@ const CACHE_NAME = 'olharmais-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/dashboard.html',
-  '/assets/css/style.css',
-  '/assets/js/main.js',
-  '/assets/img/logo.png',
+  '/auth.html',
+  '/aprovacao.html',
   '/manifest.json',
-  '/favicon/favicon.svg'
+  '/favicon/favicon.svg',
+  '/favicon/favicon.ico',
+  '/favicon/safari-pinned-tab.svg',
+  '/favicon/browserconfig.xml',
+  '/assets/images/icons/icon-16x16.png',
+  '/assets/images/icons/icon-32x32.png',
+  '/assets/images/icons/icon-72x72.png',
+  '/assets/images/icons/icon-96x96.png',
+  '/assets/images/icons/icon-128x128.png',
+  '/assets/images/icons/icon-144x144.png',
+  '/assets/images/icons/icon-152x152.png',
+  '/assets/images/icons/icon-192x192.png',
+  '/assets/images/icons/icon-384x384.png',
+  '/assets/images/icons/icon-512x512.png',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/@phosphor-icons/web/styles.css'
 ];
 
 // Função para verificar se a URL é válida para cache
