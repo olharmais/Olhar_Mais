@@ -250,6 +250,39 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmação de Exclusão -->
+    <div id="modalExcluir" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="ph ph-warning text-red-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Confirmar Exclusão</h3>
+                            <p class="text-sm text-gray-600">Esta ação não pode ser desfeita</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-700 mb-6">
+                        Tem certeza que deseja excluir o aluno <strong id="nomeAlunoExcluir"></strong>?
+                        Todos os dados relacionados a este aluno serão removidos permanentemente.
+                    </p>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button id="btnCancelarExclusao" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                            Cancelar
+                        </button>
+                        <button id="btnConfirmarExclusao" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                            Excluir Aluno
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Painel de Filtros (inicialmente oculto) -->
     <div id="painelFiltros" class="fixed inset-x-0 top-[57px] bg-white shadow-md transform -translate-y-full transition-transform duration-300 z-30">
         <div class="p-4 space-y-4">
@@ -258,23 +291,6 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Colégio</label>
                 <select id="selectEscola" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Selecione um colégio</option>
-                </select>
-            </div>
-
-            <!-- Seleção de Série -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Série</label>
-                <select id="selectSerie" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Todas as séries</option>
-                    <option value="1">1º Ano</option>
-                    <option value="2">2º Ano</option>
-                    <option value="3">3º Ano</option>
-                    <option value="4">4º Ano</option>
-                    <option value="5">5º Ano</option>
-                    <option value="6">6º Ano</option>
-                    <option value="7">7º Ano</option>
-                    <option value="8">8º Ano</option>
-                    <option value="9">9º Ano</option>
                 </select>
             </div>
 
@@ -430,7 +446,8 @@
         }
 
         // Toggle do painel de filtros
-        document.getElementById('btnFiltros').addEventListener('click', () => {
+        document.getElementById('btnFiltros').addEventListener('click', (e) => {
+            e.stopPropagation();
             const painel = document.getElementById('painelFiltros');
             filtrosAbertos = !filtrosAbertos;
             
@@ -439,6 +456,22 @@
             } else {
                 painel.classList.add('-translate-y-full');
             }
+        });
+
+        // Fechar painel de filtros ao clicar fora dele
+        document.addEventListener('click', (e) => {
+            const painel = document.getElementById('painelFiltros');
+            const btnFiltros = document.getElementById('btnFiltros');
+            
+            if (filtrosAbertos && !painel.contains(e.target) && !btnFiltros.contains(e.target)) {
+                painel.classList.add('-translate-y-full');
+                filtrosAbertos = false;
+            }
+        });
+
+        // Prevenir fechamento ao clicar dentro do painel
+        document.getElementById('painelFiltros').addEventListener('click', (e) => {
+            e.stopPropagation();
         });
 
         // Carregar escolas
@@ -514,46 +547,19 @@
             }
         }
 
-        // Carregar séries e turmas para os filtros baseado nos alunos carregados
+        // Carregar turmas para os filtros baseado nos alunos carregados
         async function carregarFiltros() {
             try {
-                // Extrair séries e turmas únicas dos alunos carregados
-                const seriesUnicas = new Map(); // ID -> {id, nome}
+                // Extrair turmas únicas dos alunos carregados
                 const turmasUnicas = new Map(); // ID -> {id, nome}
 
                 alunos.forEach(aluno => {
-                    if (aluno.serie && aluno.series) {
-                        seriesUnicas.set(aluno.serie, {
-                            id: aluno.serie,
-                            nome: aluno.series.nome
-                        });
-                    }
                     if (aluno.turma && aluno.turmas) {
                         turmasUnicas.set(aluno.turma, {
                             id: aluno.turma,
                             nome: aluno.turmas.nome
                         });
                     }
-                });
-
-                // Preencher select de séries
-                const selectSerie = document.getElementById('selectSerie');
-                selectSerie.innerHTML = '<option value="">Todas as séries</option>';
-                
-                Array.from(seriesUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome)).forEach(serie => {
-                    // Encontrar turmas para esta série
-                    const turmasDestaSerie = alunos
-                        .filter(aluno => aluno.serie === serie.id && aluno.turmas)
-                        .map(aluno => aluno.turmas.nome)
-                        .filter((nome, index, arr) => nome && arr.indexOf(nome) === index)
-                        .sort();
-                    
-                    const turmasTexto = turmasDestaSerie.length > 0 ? ` (${turmasDestaSerie.join(', ')})` : '';
-                    
-                    const option = document.createElement('option');
-                    option.value = serie.id;
-                    option.textContent = `${serie.nome}${turmasTexto}`;
-                    selectSerie.appendChild(option);
                 });
 
                 // Preencher select de turmas
@@ -599,7 +605,6 @@
         function filtrarEExibirAlunos() {
             const termoBusca = document.getElementById('searchAluno').value.toLowerCase().trim();
             const apenasAlunosSemFoto = document.getElementById('filterSemFoto').checked;
-            const serieSelecionada = document.getElementById('selectSerie').value;
             const turmaSelecionada = document.getElementById('selectTurma').value;
             
             const alunosFiltrados = alunos.filter(aluno => {
@@ -609,10 +614,9 @@
                 const semFotoValida = !aluno.foto_url || isFotoPadrao(aluno.foto_url);
                 const matchesFoto = !apenasAlunosSemFoto || (apenasAlunosSemFoto && semFotoValida);
                 
-                const matchesSerie = !serieSelecionada || aluno.serie == serieSelecionada;
                 const matchesTurma = !turmaSelecionada || aluno.turma == turmaSelecionada;
                 
-                return matchesNome && matchesFoto && matchesSerie && matchesTurma;
+                return matchesNome && matchesFoto && matchesTurma;
             });
 
             // Atualizar contadores
@@ -651,6 +655,10 @@
                             <button onclick="alterarFoto('${aluno.id}')" 
                                     class="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg hover:bg-gray-50 flex items-center justify-center">
                                 <i class="ph ph-camera text-gray-700"></i>
+                            </button>
+                            <button onclick="confirmarExclusao('${aluno.id}', '${aluno.nome_completo?.replace(/'/g, "\\'")}' || 'Sem nome')" 
+                                    class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center">
+                                <i class="ph ph-trash text-sm"></i>
                             </button>
                         </div>
                         <div class="p-3">
@@ -777,19 +785,90 @@
             input.click();
         }
 
+        // Variável para armazenar o ID do aluno a ser excluído
+        let alunoParaExcluir = null;
+
+        // Função para confirmar exclusão
+        function confirmarExclusao(alunoId, nomeAluno) {
+            alunoParaExcluir = alunoId;
+            document.getElementById('nomeAlunoExcluir').textContent = nomeAluno;
+            document.getElementById('modalExcluir').classList.remove('hidden');
+        }
+
+        // Função para excluir aluno
+        async function excluirAluno(alunoId) {
+            try {
+                showLoading();
+
+                // Primeiro, excluir registros relacionados em aluno_dispositivo
+                const { error: deleteAlunoDispositivoError } = await createSupabaseClient()
+                    .from('aluno_dispositivo')
+                    .delete()
+                    .eq('aluno', alunoId);
+
+                if (deleteAlunoDispositivoError) throw deleteAlunoDispositivoError;
+
+                // Buscar a foto do aluno para excluir do storage
+                const { data: alunoData, error: alunoError } = await createSupabaseClient()
+                    .from('alunos')
+                    .select('foto_url')
+                    .eq('id', alunoId)
+                    .single();
+
+                if (alunoError) throw alunoError;
+
+                // Excluir foto do storage se existir
+                if (alunoData.foto_url && !isFotoPadrao(alunoData.foto_url)) {
+                    try {
+                        // Extrair o caminho da foto da URL
+                        const url = new URL(alunoData.foto_url);
+                        const pathParts = url.pathname.split('/');
+                        const fileName = pathParts[pathParts.length - 1];
+                        const filePath = `alunos/${fileName}`;
+
+                        await createSupabaseClient()
+                            .storage
+                            .from('fotos_alunos')
+                            .remove([filePath]);
+                    } catch (storageError) {
+                        console.warn('Erro ao excluir foto do storage:', storageError);
+                        // Não interromper o processo se houver erro na exclusão da foto
+                    }
+                }
+
+                // Excluir o aluno
+                const { error: deleteAlunoError } = await createSupabaseClient()
+                    .from('alunos')
+                    .delete()
+                    .eq('id', alunoId);
+
+                if (deleteAlunoError) throw deleteAlunoError;
+
+                showToast('Aluno excluído com sucesso!');
+                
+                // Recarregar lista de alunos
+                await carregarAlunos(document.getElementById('selectEscola').value);
+                
+                // Fechar modal
+                document.getElementById('modalExcluir').classList.add('hidden');
+                alunoParaExcluir = null;
+
+            } catch (error) {
+                console.error('Erro ao excluir aluno:', error);
+                showToast('Erro ao excluir aluno: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
         // Event Listeners
         document.getElementById('selectEscola').addEventListener('change', (e) => {
             // Limpar filtros ao trocar de escola
-            document.getElementById('selectSerie').value = '';
             document.getElementById('selectTurma').value = '';
             document.getElementById('searchAluno').value = '';
             document.getElementById('filterSemFoto').checked = false;
             
             carregarAlunos(e.target.value);
-        });
-
-        document.getElementById('selectSerie').addEventListener('change', () => {
-            filtrarEExibirAlunos();
         });
 
         document.getElementById('selectTurma').addEventListener('change', () => {
@@ -806,9 +885,12 @@
 
         // Controles do Modal de Cadastro
         const modal = document.getElementById('modalCadastro');
+        const modalExcluir = document.getElementById('modalExcluir');
         const btnCadastrar = document.getElementById('btnCadastrar');
         const btnFecharModal = document.getElementById('btnFecharModal');
         const btnCancelar = document.getElementById('btnCancelar');
+        const btnCancelarExclusao = document.getElementById('btnCancelarExclusao');
+        const btnConfirmarExclusao = document.getElementById('btnConfirmarExclusao');
         const formCadastro = document.getElementById('formCadastro');
         const fotoAluno = document.getElementById('foto_aluno');
         const previewFoto = document.getElementById('preview_foto');
@@ -820,13 +902,41 @@
             carregarDadosEscola();
         });
 
-        // Fechar modal
+        // Fechar modal de cadastro
         [btnFecharModal, btnCancelar].forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.classList.add('hidden');
                 formCadastro.reset();
                 previewFoto.classList.add('hidden');
                 placeholderFoto.classList.remove('hidden');
+            });
+        });
+
+        // Controles do modal de exclusão
+        btnCancelarExclusao.addEventListener('click', () => {
+            modalExcluir.classList.add('hidden');
+            alunoParaExcluir = null;
+        });
+
+        btnConfirmarExclusao.addEventListener('click', () => {
+            if (alunoParaExcluir) {
+                excluirAluno(alunoParaExcluir);
+            }
+        });
+
+        // Fechar modais ao clicar fora deles
+        [modal, modalExcluir].forEach(modalElement => {
+            modalElement.addEventListener('click', (e) => {
+                if (e.target === modalElement) {
+                    modalElement.classList.add('hidden');
+                    if (modalElement === modal) {
+                        formCadastro.reset();
+                        previewFoto.classList.add('hidden');
+                        placeholderFoto.classList.remove('hidden');
+                    } else if (modalElement === modalExcluir) {
+                        alunoParaExcluir = null;
+                    }
+                }
             });
         });
 
