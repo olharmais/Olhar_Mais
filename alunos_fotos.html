@@ -811,7 +811,10 @@
                     .delete()
                     .eq('aluno', alunoId);
 
-                if (deleteAlunoDispositivoError) throw deleteAlunoDispositivoError;
+                if (deleteAlunoDispositivoError) {
+                    console.error('Erro ao excluir registros em aluno_dispositivo:', deleteAlunoDispositivoError);
+                    throw new Error('Erro ao excluir registros relacionados ao aluno');
+                }
 
                 // Buscar a foto do aluno para excluir do storage
                 const { data: alunoData, error: alunoError } = await createSupabaseClient()
@@ -822,26 +825,29 @@
 
                 if (alunoError) throw alunoError;
 
-                // Excluir foto do storage se existir
+                // Excluir foto do storage se existir e não for uma foto padrão
                 if (alunoData.foto_url && !isFotoPadrao(alunoData.foto_url)) {
                     try {
                         // Extrair o caminho da foto da URL
-                        const url = new URL(alunoData.foto_url);
-                        const pathParts = url.pathname.split('/');
-                        const fileName = pathParts[pathParts.length - 1];
-                        const filePath = `alunos/${fileName}`;
+                        const fotoPath = alunoData.foto_url.split('/').pop();
+                        if (fotoPath) {
+                            const { error: deleteStorageError } = await createSupabaseClient()
+                                .storage
+                                .from('fotos_alunos')
+                                .remove([`alunos/${fotoPath}`]);
 
-                        await createSupabaseClient()
-                            .storage
-                            .from('fotos_alunos')
-                            .remove([filePath]);
+                            if (deleteStorageError) {
+                                console.error('Erro ao excluir foto do storage:', deleteStorageError);
+                                // Não vamos interromper a exclusão do aluno se a foto não puder ser excluída
+                            }
+                        }
                     } catch (storageError) {
-                        console.warn('Erro ao excluir foto do storage:', storageError);
-                        // Não interromper o processo se houver erro na exclusão da foto
+                        console.error('Erro ao tentar excluir foto:', storageError);
+                        // Não vamos interromper a exclusão do aluno se a foto não puder ser excluída
                     }
                 }
 
-                // Excluir o aluno
+                // Por fim, excluir o aluno
                 const { error: deleteAlunoError } = await createSupabaseClient()
                     .from('alunos')
                     .delete()
@@ -850,13 +856,11 @@
                 if (deleteAlunoError) throw deleteAlunoError;
 
                 showToast('Aluno excluído com sucesso!');
-                
-                // Recarregar lista de alunos
-                await carregarAlunos(document.getElementById('selectEscola').value);
-                
-                // Fechar modal
                 document.getElementById('modalExcluir').classList.add('hidden');
                 alunoParaExcluir = null;
+
+                // Recarregar lista de alunos
+                await carregarAlunos('21');
 
             } catch (error) {
                 console.error('Erro ao excluir aluno:', error);
@@ -982,7 +986,7 @@
                 // Agrupar turmas por série
                 const turmasPorSerie = turmas.reduce((acc, turma) => {
                     const serieNome = turma.series?.nome || 'Série não informada';
-                    const serieId = turma.serie_id;
+                    const serieId = turma.series?.id;
                     
                     if (!acc[serieNome]) {
                         acc[serieNome] = {
