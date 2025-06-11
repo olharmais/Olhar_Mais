@@ -122,14 +122,14 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     Promise.all([
       // Limpar caches antigos
-      caches.keys().then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
             if (cacheName !== CACHE_NAME) {
-              return caches.delete(cacheName);
-            }
-          })
-        );
+            return caches.delete(cacheName);
+          }
+        })
+      );
       }),
       // Tomar controle imediatamente
       self.clients.claim()
@@ -152,21 +152,21 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response; // Cache hit
         }
-
+        
         return fetch(event.request)
           .then(response => {
             // Verificar se a resposta é válida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-
+            
             // Clonar a resposta para o cache
             const responseToCache = response.clone();
             caches.open(CACHE_NAME)
               .then(cache => {
                 cache.put(event.request, responseToCache);
               });
-
+            
             return response;
           })
           .catch(() => {
@@ -188,10 +188,10 @@ self.addEventListener('fetch', event => {
 self.addEventListener('sync', event => {
   if (event.tag === 'syncData') {
     event.waitUntil(
-      // Implementar lógica de sincronização aqui
+  // Implementar lógica de sincronização aqui
       Promise.resolve()
     );
-  }
+}
 });
 
 // Notificações push
@@ -206,7 +206,7 @@ self.addEventListener('push', event => {
       primaryKey: 1
     }
   };
-
+  
   event.waitUntil(
     self.registration.showNotification('OlharMais', options)
   );

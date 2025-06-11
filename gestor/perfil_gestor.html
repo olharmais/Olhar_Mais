@@ -626,7 +626,7 @@
                         cacheControl: '3600',
                         upsert: true
                     });
-
+                
                 if (uploadError) throw uploadError;
                 
                 // Recarregar a foto
@@ -637,9 +637,9 @@
                     .storage
                     .from('profile-photos')
                     .getPublicUrl(`${userSession.id}.png`);
-                    
-                estadoApp.fotoUrl = publicUrl;
                 
+                estadoApp.fotoUrl = publicUrl;
+
                 // Atualizar URL no banco de dados
                 const { error: updateError } = await supabase
                     .from('usuarios')

@@ -14,7 +14,7 @@ const requiredIcons = [
     '/assets/images/icons/icon-384x384.png',
     '/assets/images/icons/icon-512x512.png'
 ];
-
+  
 // Função para verificar se um ícone existe
 async function checkIcon(url) {
     try {
@@ -23,9 +23,9 @@ async function checkIcon(url) {
     } catch {
         return false;
     }
-}
-
-// Verificar todos os ícones
+  }
+  
+  // Verificar todos os ícones
 async function checkAllIcons() {
     const results = await Promise.all(
         requiredIcons.map(async icon => {

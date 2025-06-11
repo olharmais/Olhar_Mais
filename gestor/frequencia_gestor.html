@@ -259,7 +259,12 @@
         
         <!-- Dias Disponíveis (Etapa 2) -->
         <div id="dias-container" class="hidden animate-fade-in">
-            <h3 class="text-xl font-semibold text-gray-800 mb-3">Dias Disponíveis</h3>
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-xl font-semibold text-gray-800">Dias Disponíveis</h3>
+                <button id="toggle-fins-semana" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors">
+                    <i class="ph ph-calendar"></i> Mostrar fins de semana
+                </button>
+            </div>
             <div class="bg-white rounded-lg shadow p-5 mb-6">
                 <div id="dias-disponiveis" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     <!-- Os botões de dias serão inseridos aqui via JavaScript -->
@@ -381,7 +386,9 @@
             turmaNome: '',
             turmaPeriodo: '',
             dataSelecionada: null,
-            diasDisponiveis: []
+            diasDisponiveis: [],
+            todosOsDias: [], // Armazenar todos os dias sem filtro
+            mostrarFimDeSemana: false
         };
         
         // Verificação de Permissão e Tipo de Usuário
@@ -740,18 +747,37 @@
                 if (error) throw error;
                 
                 console.log('Dias disponíveis recebidos da view:', data);
+                console.log('Total de dias antes do filtro:', data?.length || 0);
 
                 // Função para verificar se é dia útil
-                function isDiaUtil(data) {
-                    const diaSemana = new Date(data).getDay();
-                    return diaSemana !== 0 && diaSemana !== 6; // 0 = Domingo, 6 = Sábado
+                function isDiaUtil(dataString) {
+                    try {
+                        // Criar data sem problemas de timezone
+                        // A data vem no formato YYYY-MM-DD do banco
+                        const [ano, mes, dia] = dataString.split('-');
+                        const dataObj = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                        const diaSemana = dataObj.getDay();
+                        const ehDiaUtil = diaSemana !== 0 && diaSemana !== 6; // 0 = Domingo, 6 = Sábado
+                        console.log(`Data: ${dataString}, Dia da semana: ${diaSemana} (0=Dom, 1=Seg, ..., 6=Sab), É dia útil: ${ehDiaUtil}`);
+                        return ehDiaUtil;
+                    } catch (error) {
+                        console.error('Erro ao processar data:', dataString, error);
+                        return false;
+                    }
                 }
                 
                 // Filtrar apenas dias úteis
-                const diasUteis = data?.filter(dia => isDiaUtil(dia.data)) || [];
+                const diasUteis = data?.filter(dia => {
+                    const ehDiaUtil = isDiaUtil(dia.data);
+                    console.log(`Data: ${dia.data}, É dia útil: ${ehDiaUtil}`);
+                    return ehDiaUtil;
+                }) || [];
+                
+                console.log('Total de dias após filtro:', diasUteis.length);
                 
                 // Salvar no estado da aplicação
-                estadoApp.diasDisponiveis = diasUteis;
+                estadoApp.todosOsDias = data || [];
+                estadoApp.diasDisponiveis = estadoApp.mostrarFimDeSemana ? estadoApp.todosOsDias : diasUteis;
                 
                 // Esconder loading
                 document.getElementById('loading').classList.add('hidden');
@@ -785,20 +811,22 @@
             semDiasMsg.classList.add('hidden');
             
             dias.forEach(item => {
-                const dataObj = new Date(item.data + 'T00:00:00');
+                // Criar data sem problemas de timezone
+                const [ano, mes, dia] = item.data.split('-');
+                const dataObj = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
                 
                 const diaSemana = dataObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
-                const dia = dataObj.getDate().toString().padStart(2, '0');
-                const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
-                const ano = dataObj.getFullYear();
+                const diaFormatado = dataObj.getDate().toString().padStart(2, '0');
+                const mesFormatado = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+                const anoFormatado = dataObj.getFullYear();
                 
                 const button = document.createElement('button');
                 button.className = 'bg-white rounded-lg p-4 hover:border-primary transition-all border border-gray-100 flex flex-col items-center';
                 button.dataset.data = item.data;
                 button.innerHTML = `
                     <div class="text-sm text-gray-500 mb-1">${diaSemana}</div>
-                    <div class="text-xl font-bold text-primary mb-1">${dia}/${mes}</div>
-                    <div class="text-sm text-gray-400">${ano}</div>
+                    <div class="text-xl font-bold text-primary mb-1">${diaFormatado}/${mesFormatado}</div>
+                    <div class="text-sm text-gray-400">${anoFormatado}</div>
                     <div class="flex flex-col gap-2 mt-2 w-full">
                         <div class="text-xs border border-green-500 text-green-600 px-2 py-0.5 rounded text-center">
                             ${item.qtd_logs} presentes
@@ -821,7 +849,7 @@
                             escolaNome: estadoApp.escolaNome,
                             turmaNome: estadoApp.turmaNome,
                             turmaPeriodo: estadoApp.turmaPeriodo,
-                            data: `${dia}/${mes}/${ano}`,
+                            data: `${diaFormatado}/${mesFormatado}/${anoFormatado}`,
                             diaSemana,
                             qtdPresentes: item.qtd_logs,
                             qtdFaltantes: item.total_alunos - item.qtd_logs
@@ -946,11 +974,24 @@
                     throw new Error('Nenhum aluno encontrado na turma');
                 }
 
-                // Buscar logs da view_alunos_logs
+                // Buscar logs da view_alunos_logs usando uma consulta mais robusta
+                // Primeiro, vamos buscar o nome exato da turma no banco
+                const { data: turmaInfo, error: turmaError } = await supabase
+                    .from('turmas')
+                    .select('nome')
+                    .eq('id', parseInt(turmaId))
+                    .single();
+
+                if (turmaError) throw turmaError;
+
+                console.log('Nome da turma no banco:', turmaInfo.nome);
+                console.log('Nome da turma no estado:', estadoApp.turmaNome);
+
+                // Buscar logs usando o nome exato da turma do banco
                 const { data: logsView, error: logsError } = await supabase
                     .from('view_alunos_logs')
                     .select('*')
-                    .eq('turma_nome', infoExibicao.turmaNome)
+                    .eq('turma_nome', turmaInfo.nome)
                     .gte('hora_check', startOfDay.toISOString())
                     .lte('hora_check', endOfDay.toISOString())
                     .order('hora_check', { ascending: true });
@@ -961,6 +1002,14 @@
                 }
 
                 console.log('Logs encontrados na view:', logsView ? logsView.length : 0);
+                console.log('Parâmetros da consulta:', {
+                    turmaNome: turmaInfo.nome,
+                    dataInicio: startOfDay.toISOString(),
+                    dataFim: endOfDay.toISOString()
+                });
+                if (logsView && logsView.length > 0) {
+                    console.log('Primeiros logs encontrados:', logsView.slice(0, 3));
+                }
 
                 // Agrupar logs por aluno
                 const logsAgrupadosPorAluno = {};
@@ -1060,6 +1109,7 @@
             const carregarDiasBtn = document.getElementById('carregar-dias-btn');
             const voltarSelecaoBtn = document.getElementById('voltar-selecao');
             const voltarDiasBtn = document.getElementById('voltar-dias');
+            const toggleFimSemanaBtn = document.getElementById('toggle-fins-semana');
             
             // Quando selecionar uma escola
             escolaSelect.addEventListener('change', async (event) => {
@@ -1123,6 +1173,28 @@
                 if (estadoApp.turmaId) {
                     carregarDiasDisponiveis(supabase, estadoApp.turmaId);
                 }
+            });
+            
+            // Botão para alternar exibição de fins de semana
+            toggleFimSemanaBtn.addEventListener('click', () => {
+                estadoApp.mostrarFimDeSemana = !estadoApp.mostrarFimDeSemana;
+                
+                // Atualizar texto do botão
+                if (estadoApp.mostrarFimDeSemana) {
+                    toggleFimSemanaBtn.innerHTML = '<i class="ph ph-calendar-x"></i> Ocultar fins de semana';
+                    estadoApp.diasDisponiveis = estadoApp.todosOsDias;
+                } else {
+                    toggleFimSemanaBtn.innerHTML = '<i class="ph ph-calendar"></i> Mostrar fins de semana';
+                    estadoApp.diasDisponiveis = estadoApp.todosOsDias.filter(dia => {
+                        const [ano, mes, diaNum] = dia.data.split('-');
+                        const dataObj = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(diaNum));
+                        const diaSemana = dataObj.getDay();
+                        return diaSemana !== 0 && diaSemana !== 6;
+                    });
+                }
+                
+                // Re-renderizar os dias
+                renderizarDiasDisponiveis(estadoApp.diasDisponiveis);
             });
         }
     </script>

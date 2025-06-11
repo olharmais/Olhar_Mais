@@ -591,7 +591,7 @@
                 
                 // Inicializar Supabase
                 const supabase = createSupabaseClient();
-
+                
                 // Primeiro, vamos determinar o nível de acesso do profissional
                 const [
                     { data: permissoesEscola, error: errorPermissoesEscola },
@@ -600,7 +600,7 @@
                     supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userData.id),
                     supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userData.id)
                 ]);
-
+                
                 if (errorPermissoesEscola || errorPermissoesTurma) {
                     console.error('Erro ao buscar permissões:', { errorPermissoesEscola, errorPermissoesTurma });
                     throw new Error('Erro ao buscar permissões');
@@ -638,9 +638,9 @@
                         .from('turmas')
                         .select('escola_id')
                         .in('id', turmasIds);
-
+                        
                     if (errorTurmas) throw errorTurmas;
-
+                    
                     const escolasIdsDasTurmas = [...new Set(turmas.map(t => t.escola_id))];
                     const { data: escolas, error: errorEscolas } = await supabase
                         .from('escolas')
@@ -676,13 +676,13 @@
                     `;
                     return;
                 }
-
+                
                 // Atualizar total de escolas
                 document.getElementById('total-escolas').textContent = escolasPermitidas.length;
 
                 // Objeto para armazenar dados por escola
                 const escolasPresenca = {};
-
+                
                 // Para cada escola, buscar dados de presença
                 for (const escola of escolasPermitidas) {
                     // Buscar dados da cidade
@@ -691,7 +691,7 @@
                         .select('nome')
                         .eq('id', escola.cidade_id)
                         .single();
-
+                    
                     const cidadeNome = cidadeData?.nome || '';
 
                     // Inicializar dados da escola
@@ -714,9 +714,9 @@
                             .eq('escola_id', escola.id)
                             .in('id', turmasIds);
                     }
-
+                    
                     const { data: turmas, error: turmasError } = await turmasQuery;
-
+                    
                     if (turmasError) {
                         console.error(`Erro ao buscar turmas da escola ${escola.id}:`, turmasError);
                         continue;
@@ -726,14 +726,14 @@
 
                     // Adicionar turmas ao Set
                     turmas.forEach(turma => escolasPresenca[escola.id].turmas.add(turma.id));
-
+                    
                     // Buscar alunos das turmas
                     const { data: alunos, error: alunosError } = await supabase
                         .from('alunos')
                         .select('nome_completo')
                         .in('turma', turmas.map(t => t.id))
                         .is('soft_delete', null);
-
+                    
                     if (alunosError) {
                         console.error(`Erro ao buscar alunos da escola ${escola.id}:`, alunosError);
                         continue;
@@ -749,7 +749,7 @@
                         month: '2-digit',
                         day: '2-digit'
                     }).split('/').reverse().join('-');
-
+                    
                     // Criar datas de início e fim do dia em horário de Brasília
                     const startOfDay = new Date(hoje + 'T00:00:00-03:00');
                     const endOfDay = new Date(hoje + 'T23:59:59.999-03:00');
@@ -766,8 +766,8 @@
                     // Buscar presenças para cada turma
                     for (const turma of turmas) {
                         const { data: logsView, error: logsError } = await supabase
-                            .from('view_alunos_logs')
-                            .select('nome_aluno')
+                        .from('view_alunos_logs')
+                        .select('nome_aluno')
                             .eq('turma_nome', turma.nome)
                             .gte('hora_check', startOfDay.toISOString())
                             .lte('hora_check', endOfDay.toISOString());
