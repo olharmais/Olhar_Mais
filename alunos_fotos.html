@@ -187,9 +187,8 @@
                                     <select id="turma" name="turma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                         <option value="">Selecione uma turma</option>
                                     </select>
-                                    <p class="text-sm text-gray-500 mt-1" id="serie_info"></p>
+                                    <input type="hidden" id="serie" name="serie">
                                 </div>
-                                <input type="hidden" id="serie" name="serie">
                                 <div>
                                     <label for="registro_aluno" class="block text-sm font-medium text-gray-700 mb-2">RA (Registro Aluno) *</label>
                                     <input type="text" id="registro_aluno" name="registro_aluno" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite o RA">
@@ -207,7 +206,7 @@
                                 </div>
                                 <div>
                                     <label for="data_nascimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento *</label>
-                                    <input type="date" id="data_nascimento" name="data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <input type="text" id="data_nascimento" name="data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/AAAA" maxlength="10">
                                 </div>
                                 <div>
                                     <label for="genero" class="block text-sm font-medium text-gray-700 mb-2">Sexo *</label>
@@ -240,8 +239,14 @@
                             <button type="button" id="btnCancelar" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
                                 Cancelar
                             </button>
-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                Cadastrar
+                            <button type="submit" id="btnSubmit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                <span>Cadastrar</span>
+                                <div class="hidden ml-2" id="btnSubmitLoading">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
                             </button>
                         </div>
                     </form>
@@ -963,7 +968,6 @@
                     .select(`
                         id, 
                         nome,
-                        serie_id,
                         series (
                             id,
                             nome
@@ -975,32 +979,104 @@
 
                 if (turmasError) throw turmasError;
 
-                const selectTurma = document.getElementById('turma');
-                selectTurma.innerHTML = '<option value="">Selecione uma turma</option>';
-                turmas.forEach(turma => {
-                    const option = document.createElement('option');
-                    option.value = turma.id;
-                    option.textContent = `${turma.nome} - ${turma.series?.nome || 'Série não informada'}`;
-                    option.dataset.serieId = turma.serie_id;
-                    option.dataset.serieNome = turma.series?.nome || 'Série não informada';
-                    selectTurma.appendChild(option);
+                // Agrupar turmas por série
+                const turmasPorSerie = turmas.reduce((acc, turma) => {
+                    const serieNome = turma.series?.nome || 'Série não informada';
+                    const serieId = turma.serie_id;
+                    
+                    if (!acc[serieNome]) {
+                        acc[serieNome] = {
+                            id: serieId,
+                            turmas: []
+                        };
+                    }
+                    
+                    acc[serieNome].turmas.push({
+                        id: turma.id,
+                        nome: turma.nome
+                    });
+                    
+                    return acc;
+                }, {});
+
+                // Ordenar séries e turmas
+                const seriesOrdenadas = Object.keys(turmasPorSerie).sort((a, b) => {
+                    // Tratar casos especiais primeiro
+                    if (a === 'Série não informada') return 1;
+                    if (b === 'Série não informada') return -1;
+                    return a.localeCompare(b);
                 });
 
-                // Event listener para atualizar informação da série
+                // Preencher select de turmas
+                const selectTurma = document.getElementById('turma');
+                selectTurma.innerHTML = '<option value="">Selecione uma turma</option>';
+
+                seriesOrdenadas.forEach(serieNome => {
+                    const serie = turmasPorSerie[serieNome];
+                    
+                    // Ordenar turmas pelo nome
+                    const turmasOrdenadas = serie.turmas.sort((a, b) => a.nome.localeCompare(b.nome));
+                    
+                    // Adicionar grupo de série
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = serieNome;
+                    
+                    turmasOrdenadas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        option.dataset.serieId = serie.id;
+                        optgroup.appendChild(option);
+                    });
+                    
+                    selectTurma.appendChild(optgroup);
+                });
+
+                // Event listener para atualizar o campo série quando uma turma for selecionada
                 selectTurma.addEventListener('change', function() {
                     const selectedOption = this.options[this.selectedIndex];
-                    const serieInfo = document.getElementById('serie_info');
                     const serieInput = document.getElementById('serie');
                     
-                    if (this.value) {
-                        const serieNome = selectedOption.dataset.serieNome;
-                        serieInfo.textContent = `Série: ${serieNome}`;
+                    if (this.value && selectedOption.dataset.serieId) {
                         serieInput.value = selectedOption.dataset.serieId;
                     } else {
-                        serieInfo.textContent = '';
                         serieInput.value = '';
                     }
                 });
+
+                // Configurar máscara para o campo de data
+                const dataNascimento = document.getElementById('data_nascimento');
+                if (dataNascimento) {
+                    dataNascimento.addEventListener('input', function(e) {
+                        let value = e.target.value.replace(/\D/g, '');
+                        if (value.length > 8) value = value.slice(0, 8);
+                        
+                        if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2);
+                        if (value.length >= 5) value = value.slice(0, 5) + '/' + value.slice(5);
+                        
+                        e.target.value = value;
+
+                        // Validar a data enquanto digita
+                        if (value.length === 8) {
+                            const [dia, mes, ano] = e.target.value.split('/');
+                            const data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                            
+                            // Verificar se é uma data válida
+                            if (isNaN(data.getTime()) || 
+                                data > new Date() || 
+                                data.getFullYear() < 1900 ||
+                                data.getDate() !== parseInt(dia) || // Verifica se o dia é válido para o mês
+                                (data.getMonth() + 1) !== parseInt(mes)) { // Verifica se o mês é válido
+                                
+                                e.target.classList.add('border-red-500');
+                                e.target.classList.remove('border-gray-300');
+                            } else {
+                                e.target.classList.remove('border-red-500');
+                                e.target.classList.add('border-gray-300');
+                            }
+                        }
+                    });
+                }
 
             } catch (error) {
                 console.error('Erro ao carregar dados da escola:', error);
@@ -1009,102 +1085,135 @@
         }
 
         // Cadastrar aluno
-        formCadastro.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        if (formCadastro) {
+            formCadastro.addEventListener('submit', async (e) => {
+                e.preventDefault();
 
-            try {
-                showLoading();
+                const btnSubmit = document.getElementById('btnSubmit');
+                const btnSubmitText = btnSubmit.querySelector('span');
+                const btnSubmitLoading = document.getElementById('btnSubmitLoading');
 
-                const formData = new FormData(formCadastro);
-                const alunoData = {
-                    nome_completo: formData.get('nome_completo'),
-                    registro_aluno: formData.get('registro_aluno'),
-                    escola_id: 21,
-                    genero: formData.get('genero'),
-                    data_nascimento: formData.get('data_nascimento'),
-                    turma: parseInt(formData.get('turma')),
-                    serie: parseInt(formData.get('serie'))
-                };
+                try {
+                    // Desabilitar botão e mostrar loading
+                    btnSubmit.disabled = true;
+                    btnSubmitText.textContent = 'Cadastrando...';
+                    btnSubmitLoading.classList.remove('hidden');
 
-                // Upload da foto
-                const fotoFile = document.getElementById('foto_aluno').files[0];
-                if (fotoFile) {
-                    const fileName = `aluno_${Date.now()}.jpg`;
-                    const filePath = `alunos/${fileName}`;
+                    const formData = new FormData(formCadastro);
+                    
+                    // Validar e formatar data de nascimento
+                    const dataNascimento = document.getElementById('data_nascimento');
+                    const [dia, mes, ano] = dataNascimento.value.split('/');
+                    
+                    if (!dia || !mes || !ano || isNaN(dia) || isNaN(mes) || isNaN(ano)) {
+                        showToast('Data de nascimento inválida', 'error');
+                        return;
+                    }
+                    
+                    const data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                    if (data > new Date() || data.getFullYear() < 1900) {
+                        showToast('Data de nascimento inválida', 'error');
+                        return;
+                    }
+                    
+                    // Converter para o formato ISO (YYYY-MM-DD)
+                    const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 
-                    const { error: uploadError } = await createSupabaseClient()
-                        .storage
-                        .from('fotos_alunos')
-                        .upload(filePath, fotoFile, {
-                            contentType: 'image/jpeg',
-                            upsert: true
-                        });
+                    const alunoData = {
+                        nome_completo: formData.get('nome_completo'),
+                        registro_aluno: formData.get('registro_aluno'),
+                        escola_id: 21,
+                        genero: formData.get('genero'),
+                        data_nascimento: dataFormatada,
+                        turma: parseInt(formData.get('turma')),
+                        serie: parseInt(formData.get('serie'))
+                    };
 
-                    if (uploadError) throw uploadError;
+                    // Upload da foto
+                    const fotoFile = document.getElementById('foto_aluno').files[0];
+                    if (fotoFile) {
+                        const fileName = `aluno_${Date.now()}.jpg`;
+                        const filePath = `alunos/${fileName}`;
 
-                    const { data: publicUrlData } = createSupabaseClient()
-                        .storage
-                        .from('fotos_alunos')
-                        .getPublicUrl(filePath);
+                        const { error: uploadError } = await createSupabaseClient()
+                            .storage
+                            .from('fotos_alunos')
+                            .upload(filePath, fotoFile, {
+                                contentType: 'image/jpeg',
+                                upsert: true
+                            });
 
-                    alunoData.foto_url = publicUrlData.publicUrl;
+                        if (uploadError) throw uploadError;
+
+                        const { data: publicUrlData } = createSupabaseClient()
+                            .storage
+                            .from('fotos_alunos')
+                            .getPublicUrl(filePath);
+
+                        alunoData.foto_url = publicUrlData.publicUrl;
+                    }
+
+                    // Inserir aluno
+                    const { data: aluno, error: alunoError } = await createSupabaseClient()
+                        .from('alunos')
+                        .insert([alunoData])
+                        .select()
+                        .single();
+
+                    if (alunoError) throw alunoError;
+
+                    // Buscar dispositivos da escola
+                    const { data: dispositivos, error: dispositivosError } = await createSupabaseClient()
+                        .from('dispositivos')
+                        .select('id')
+                        .eq('escola_id', 21)
+                        .eq('status', 'ATIVO')
+                        .is('soft_delete', null);
+
+                    if (dispositivosError) throw dispositivosError;
+
+                    // ID fixo do usuário para cadastro
+                    const usuarioId = '1b84f6c8-7a6e-404b-aca6-874b676d7bd8';
+
+                    // Buscar whatsapp do usuário
+                    const { data: userData, error: userError } = await createSupabaseClient()
+                        .from('usuarios')
+                        .select('whatsapp')
+                        .eq('id', usuarioId)
+                        .single();
+
+                    if (userError) throw userError;
+
+                    // Inserir em aluno_dispositivo para cada dispositivo
+                    for (const dispositivo of dispositivos) {
+                        await createSupabaseClient()
+                            .from('aluno_dispositivo')
+                            .insert({
+                                id_dispositivo: dispositivo.id,
+                                aluno: aluno.id,
+                                escola: 21,
+                                numero_de_quem_cadastrou: userData.whatsapp
+                            });
+                    }
+
+                    showToast('Aluno cadastrado com sucesso!');
+                    modal.classList.add('hidden');
+                    formCadastro.reset();
+                    previewFoto.classList.add('hidden');
+                    placeholderFoto.classList.remove('hidden');
+                    carregarAlunos('21'); // Recarregar lista de alunos
+
+                } catch (error) {
+                    console.error('Erro ao cadastrar aluno:', error);
+                    showToast('Erro ao cadastrar aluno: ' + error.message, 'error');
+                } finally {
+                    // Restaurar botão
+                    btnSubmit.disabled = false;
+                    btnSubmitText.textContent = 'Cadastrar';
+                    btnSubmitLoading.classList.add('hidden');
                 }
-
-                // Inserir aluno
-                const { data: aluno, error: alunoError } = await createSupabaseClient()
-                    .from('alunos')
-                    .insert([alunoData])
-                    .select()
-                    .single();
-
-                if (alunoError) throw alunoError;
-
-                // Buscar dispositivos da escola
-                const { data: dispositivos, error: dispositivosError } = await createSupabaseClient()
-                    .from('dispositivos')
-                    .select('id')
-                    .eq('escola_id', 21)
-                    .eq('status', 'ATIVO')
-                    .is('soft_delete', null);
-
-                if (dispositivosError) throw dispositivosError;
-
-                // ID fixo do usuário para cadastro
-                const usuarioId = '1b84f6c8-7a6e-404b-aca6-874b676d7bd8';
-
-                // Buscar whatsapp do usuário
-                const { data: userData, error: userError } = await createSupabaseClient()
-                    .from('usuarios')
-                    .select('whatsapp')
-                    .eq('id', usuarioId)
-                    .single();
-
-                if (userError) throw userError;
-
-                // Inserir em aluno_dispositivo para cada dispositivo
-                for (const dispositivo of dispositivos) {
-                    await createSupabaseClient()
-                        .from('aluno_dispositivo')
-                        .insert({
-                            id_dispositivo: dispositivo.id,
-                            aluno: aluno.id,
-                            escola: 21,
-                            numero_de_quem_cadastrou: userData.whatsapp
-                        });
-                }
-
-                showToast('Aluno cadastrado com sucesso!');
-                modal.classList.add('hidden');
-                formCadastro.reset();
-                carregarAlunos('21'); // Recarregar lista de alunos
-
-            } catch (error) {
-                console.error('Erro ao cadastrar aluno:', error);
-                showToast('Erro ao cadastrar aluno: ' + error.message, 'error');
-            } finally {
-                hideLoading();
-            }
-        });
+            });
+        }
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', async () => {
