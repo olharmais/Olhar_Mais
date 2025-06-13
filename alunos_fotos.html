@@ -288,27 +288,92 @@
         </div>
     </div>
 
+    <!-- Modal de Edição -->
+    <div id="modalEditar" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-[500px] max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">Editar Aluno</h2>
+                        <button id="btnFecharModalEditar" class="text-gray-500 hover:text-gray-700">
+                            <i class="ph ph-x text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <form id="formEditar" class="space-y-6">
+                        <input type="hidden" id="edit_aluno_id" name="edit_aluno_id">
+                        
+                        <!-- Informações Escolares -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Informações Escolares</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <input type="hidden" id="edit_escola_id" name="edit_escola_id" value="21">
+                                <div>
+                                    <label for="edit_turma" class="block text-sm font-medium text-gray-700 mb-2">Turma *</label>
+                                    <select id="edit_turma" name="edit_turma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Selecione uma turma</option>
+                                    </select>
+                                    <input type="hidden" id="edit_serie" name="edit_serie">
+                                </div>
+                                <div>
+                                    <label for="edit_registro_aluno" class="block text-sm font-medium text-gray-700 mb-2">RA (Registro Aluno) *</label>
+                                    <input type="text" id="edit_registro_aluno" name="edit_registro_aluno" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite o RA">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dados Pessoais -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Dados Pessoais</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label for="edit_nome_completo" class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                                    <input type="text" id="edit_nome_completo" name="edit_nome_completo" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite o nome completo">
+                                </div>
+                                <div>
+                                    <label for="edit_data_nascimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento *</label>
+                                    <input type="text" id="edit_data_nascimento" name="edit_data_nascimento" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/AAAA" maxlength="10">
+                                </div>
+                                <div>
+                                    <label for="edit_genero" class="block text-sm font-medium text-gray-700 mb-2">Sexo *</label>
+                                    <select id="edit_genero" name="edit_genero" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Selecione o sexo</option>
+                                        <option value="M">Masculino</option>
+                                        <option value="F">Feminino</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="flex justify-end space-x-3 pt-6 border-t">
+                            <button type="button" id="btnCancelarEdicao" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="btnSubmitEdicao" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                <span>Salvar Alterações</span>
+                                <div class="hidden ml-2" id="btnSubmitEdicaoLoading">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Painel de Filtros (inicialmente oculto) -->
     <div id="painelFiltros" class="fixed inset-x-0 top-[57px] bg-white shadow-md transform -translate-y-full transition-transform duration-300 z-30">
         <div class="p-4 space-y-4">
-            <!-- Seleção de Colégio -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Colégio</label>
-                <select id="selectEscola" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Selecione um colégio</option>
-                </select>
-            </div>
-
             <!-- Seleção de Turma -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Turma</label>
                 <select id="selectTurma" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Todas as turmas</option>
-                    <option value="A">Turma A</option>
-                    <option value="B">Turma B</option>
-                    <option value="C">Turma C</option>
-                    <option value="D">Turma D</option>
-                    <option value="E">Turma E</option>
                 </select>
             </div>
 
@@ -479,40 +544,12 @@
             e.stopPropagation();
         });
 
-        // Carregar escolas
-        async function carregarEscolas() {
-            try {
-                const { data: escolasData, error } = await createSupabaseClient()
-                    .from('escolas')
-                    .select('id, nome')
-                    .order('nome');
-
-                if (error) throw error;
-
-                escolas = escolasData;
-                
-                // Preencher select de escolas
-                const selectEscola = document.getElementById('selectEscola');
-                selectEscola.innerHTML = '<option value="">Selecione um colégio</option>';
-                
-                escolas.forEach(escola => {
-                    const option = document.createElement('option');
-                    option.value = escola.id;
-                    option.textContent = escola.nome;
-                    selectEscola.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Erro ao carregar escolas:', error);
-                showToast('Erro ao carregar escolas: ' + error.message, 'error');
-            }
-        }
-
         // Carregar alunos
-        async function carregarAlunos(escolaId = '') {
+        async function carregarAlunos() {
             try {
                 showLoading();
 
-                let query = createSupabaseClient()
+                const { data: alunosData, error } = await createSupabaseClient()
                     .from('alunos')
                     .select(`
                         id,
@@ -531,13 +568,8 @@
                             nome
                         )
                     `)
+                    .eq('escola_id', 21)
                     .order('nome_completo');
-
-                if (escolaId) {
-                    query = query.eq('escola_id', escolaId);
-                }
-
-                const { data: alunosData, error } = await query;
 
                 if (error) throw error;
 
@@ -661,10 +693,16 @@
                                     class="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg hover:bg-gray-50 flex items-center justify-center">
                                 <i class="ph ph-camera text-gray-700"></i>
                             </button>
-                            <button onclick="confirmarExclusao('${aluno.id}', '${aluno.nome_completo?.replace(/'/g, "\\'")}' || 'Sem nome')" 
-                                    class="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center">
-                                <i class="ph ph-trash text-sm"></i>
-                            </button>
+                            <div class="absolute top-2 right-2 flex gap-2">
+                                <button onclick="abrirModalEdicao('${aluno.id}')" 
+                                        class="w-8 h-8 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 flex items-center justify-center">
+                                    <i class="ph ph-pencil text-sm"></i>
+                                </button>
+                                <button onclick="confirmarExclusao('${aluno.id}', '${aluno.nome_completo?.replace(/'/g, "\\'")}' || 'Sem nome')" 
+                                        class="w-8 h-8 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center">
+                                    <i class="ph ph-trash text-sm"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="p-3">
                             <h3 class="font-medium text-gray-900 text-sm line-clamp-2">${aluno.nome_completo || 'Sem nome'}</h3>
@@ -778,7 +816,7 @@
                     showToast('Foto atualizada com sucesso!');
                     
                     // Recarregar alunos
-                    await carregarAlunos(document.getElementById('selectEscola').value);
+                    await carregarAlunos();
                 } catch (error) {
                     console.error('Erro ao atualizar foto:', error);
                     showToast('Erro ao atualizar foto: ' + error.message, 'error');
@@ -860,7 +898,7 @@
                 alunoParaExcluir = null;
 
                 // Recarregar lista de alunos
-                await carregarAlunos('21');
+                await carregarAlunos();
 
             } catch (error) {
                 console.error('Erro ao excluir aluno:', error);
@@ -871,15 +909,6 @@
         }
 
         // Event Listeners
-        document.getElementById('selectEscola').addEventListener('change', (e) => {
-            // Limpar filtros ao trocar de escola
-            document.getElementById('selectTurma').value = '';
-            document.getElementById('searchAluno').value = '';
-            document.getElementById('filterSemFoto').checked = false;
-            
-            carregarAlunos(e.target.value);
-        });
-
         document.getElementById('selectTurma').addEventListener('change', () => {
             filtrarEExibirAlunos();
         });
@@ -1205,7 +1234,7 @@
                     formCadastro.reset();
                     previewFoto.classList.add('hidden');
                     placeholderFoto.classList.remove('hidden');
-                    carregarAlunos('21'); // Recarregar lista de alunos
+                    carregarAlunos(); // Recarregar lista de alunos
 
                 } catch (error) {
                     console.error('Erro ao cadastrar aluno:', error);
@@ -1219,11 +1248,341 @@
             });
         }
 
+        // Função para carregar turmas no filtro com a mesma ordenação do cadastro
+        async function carregarTurmasFiltro() {
+            try {
+                // Carregar turmas com suas séries
+                const { data: turmas, error: turmasError } = await createSupabaseClient()
+                    .from('turmas')
+                    .select(`
+                        id, 
+                        nome,
+                        series (
+                            id,
+                            nome
+                        )
+                    `)
+                    .eq('escola_id', 21)
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (turmasError) throw turmasError;
+
+                // Agrupar turmas por série
+                const turmasPorSerie = turmas.reduce((acc, turma) => {
+                    const serieNome = turma.series?.nome || 'Série não informada';
+                    const serieId = turma.series?.id;
+                    
+                    if (!acc[serieNome]) {
+                        acc[serieNome] = {
+                            id: serieId,
+                            turmas: []
+                        };
+                    }
+                    
+                    acc[serieNome].turmas.push({
+                        id: turma.id,
+                        nome: turma.nome
+                    });
+                    
+                    return acc;
+                }, {});
+
+                // Ordenar séries e turmas
+                const seriesOrdenadas = Object.keys(turmasPorSerie).sort((a, b) => {
+                    if (a === 'Série não informada') return 1;
+                    if (b === 'Série não informada') return -1;
+                    return a.localeCompare(b);
+                });
+
+                // Preencher select de turmas do filtro
+                const selectTurma = document.getElementById('selectTurma');
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+
+                seriesOrdenadas.forEach(serieNome => {
+                    const serie = turmasPorSerie[serieNome];
+                    const turmasOrdenadas = serie.turmas.sort((a, b) => a.nome.localeCompare(b.nome));
+                    
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = serieNome;
+                    
+                    turmasOrdenadas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        optgroup.appendChild(option);
+                    });
+                    
+                    selectTurma.appendChild(optgroup);
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar turmas para filtro:', error);
+                showToast('Erro ao carregar turmas', 'error');
+            }
+        }
+
+        // Função para abrir modal de edição
+        async function abrirModalEdicao(alunoId) {
+            try {
+                showLoading();
+
+                // Buscar dados do aluno
+                const { data: aluno, error } = await createSupabaseClient()
+                    .from('alunos')
+                    .select(`
+                        *,
+                        series (id, nome),
+                        turmas (id, nome)
+                    `)
+                    .eq('id', alunoId)
+                    .single();
+
+                if (error) throw error;
+
+                // Preencher formulário
+                document.getElementById('edit_aluno_id').value = aluno.id;
+                document.getElementById('edit_nome_completo').value = aluno.nome_completo || '';
+                document.getElementById('edit_registro_aluno').value = aluno.registro_aluno || '';
+                document.getElementById('edit_genero').value = aluno.genero || '';
+
+                // Formatar e preencher data de nascimento
+                if (aluno.data_nascimento) {
+                    const data = new Date(aluno.data_nascimento);
+                    const dia = String(data.getDate()).padStart(2, '0');
+                    const mes = String(data.getMonth() + 1).padStart(2, '0');
+                    const ano = data.getFullYear();
+                    document.getElementById('edit_data_nascimento').value = `${dia}/${mes}/${ano}`;
+                }
+
+                // Carregar turmas e selecionar a atual
+                await carregarTurmasEdicao(aluno.turma, aluno.serie);
+
+                // Mostrar modal
+                document.getElementById('modalEditar').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Erro ao abrir edição:', error);
+                showToast('Erro ao carregar dados do aluno', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Função para carregar turmas no modal de edição
+        async function carregarTurmasEdicao(turmaAtual, serieAtual) {
+            try {
+                const { data: turmas, error: turmasError } = await createSupabaseClient()
+                    .from('turmas')
+                    .select(`
+                        id, 
+                        nome,
+                        series (
+                            id,
+                            nome
+                        )
+                    `)
+                    .eq('escola_id', 21)
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                if (turmasError) throw turmasError;
+
+                const turmasPorSerie = turmas.reduce((acc, turma) => {
+                    const serieNome = turma.series?.nome || 'Série não informada';
+                    const serieId = turma.series?.id;
+                    
+                    if (!acc[serieNome]) {
+                        acc[serieNome] = {
+                            id: serieId,
+                            turmas: []
+                        };
+                    }
+                    
+                    acc[serieNome].turmas.push({
+                        id: turma.id,
+                        nome: turma.nome
+                    });
+                    
+                    return acc;
+                }, {});
+
+                const seriesOrdenadas = Object.keys(turmasPorSerie).sort((a, b) => {
+                    if (a === 'Série não informada') return 1;
+                    if (b === 'Série não informada') return -1;
+                    return a.localeCompare(b);
+                });
+
+                const selectTurma = document.getElementById('edit_turma');
+                selectTurma.innerHTML = '<option value="">Selecione uma turma</option>';
+
+                seriesOrdenadas.forEach(serieNome => {
+                    const serie = turmasPorSerie[serieNome];
+                    const turmasOrdenadas = serie.turmas.sort((a, b) => a.nome.localeCompare(b.nome));
+                    
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = serieNome;
+                    
+                    turmasOrdenadas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        option.dataset.serieId = serie.id;
+                        if (turma.id === turmaAtual) {
+                            option.selected = true;
+                            document.getElementById('edit_serie').value = serie.id;
+                        }
+                        optgroup.appendChild(option);
+                    });
+                    
+                    selectTurma.appendChild(optgroup);
+                });
+
+                // Event listener para atualizar o campo série
+                selectTurma.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const serieInput = document.getElementById('edit_serie');
+                    
+                    if (this.value && selectedOption.dataset.serieId) {
+                        serieInput.value = selectedOption.dataset.serieId;
+                    } else {
+                        serieInput.value = '';
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar turmas para edição:', error);
+                showToast('Erro ao carregar turmas', 'error');
+            }
+        }
+
+        // Função para salvar edição do aluno
+        async function salvarEdicaoAluno(e) {
+            e.preventDefault();
+
+            const btnSubmit = document.getElementById('btnSubmitEdicao');
+            const btnSubmitText = btnSubmit.querySelector('span');
+            const btnSubmitLoading = document.getElementById('btnSubmitEdicaoLoading');
+
+            try {
+                btnSubmit.disabled = true;
+                btnSubmitText.textContent = 'Salvando...';
+                btnSubmitLoading.classList.remove('hidden');
+
+                const formData = new FormData(e.target);
+                
+                // Validar e formatar data de nascimento
+                const dataNascimento = document.getElementById('edit_data_nascimento');
+                const [dia, mes, ano] = dataNascimento.value.split('/');
+                
+                if (!dia || !mes || !ano || isNaN(dia) || isNaN(mes) || isNaN(ano)) {
+                    showToast('Data de nascimento inválida', 'error');
+                    return;
+                }
+                
+                const data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                if (data > new Date() || data.getFullYear() < 1900) {
+                    showToast('Data de nascimento inválida', 'error');
+                    return;
+                }
+                
+                const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+
+                const alunoData = {
+                    nome_completo: formData.get('edit_nome_completo'),
+                    registro_aluno: formData.get('edit_registro_aluno'),
+                    genero: formData.get('edit_genero'),
+                    data_nascimento: dataFormatada,
+                    turma: parseInt(formData.get('edit_turma')),
+                    serie: parseInt(formData.get('edit_serie')),
+                    mudar_no_dispositivo: true,
+                    updated_at: new Date().toISOString()
+                };
+
+                const alunoId = formData.get('edit_aluno_id');
+
+                // Atualizar aluno
+                const { error: updateError } = await createSupabaseClient()
+                    .from('alunos')
+                    .update(alunoData)
+                    .eq('id', alunoId);
+
+                if (updateError) throw updateError;
+
+                showToast('Aluno atualizado com sucesso!');
+                document.getElementById('modalEditar').classList.add('hidden');
+                await carregarAlunos();
+
+            } catch (error) {
+                console.error('Erro ao atualizar aluno:', error);
+                showToast('Erro ao atualizar aluno: ' + error.message, 'error');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmitText.textContent = 'Salvar Alterações';
+                btnSubmitLoading.classList.add('hidden');
+            }
+        }
+
+        // Controles do Modal de Edição
+        const modalEditar = document.getElementById('modalEditar');
+        const btnFecharModalEditar = document.getElementById('btnFecharModalEditar');
+        const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
+        const formEditar = document.getElementById('formEditar');
+
+        // Fechar modal de edição
+        [btnFecharModalEditar, btnCancelarEdicao].forEach(btn => {
+            btn.addEventListener('click', () => {
+                modalEditar.classList.add('hidden');
+            });
+        });
+
+        // Fechar modal ao clicar fora
+        modalEditar.addEventListener('click', (e) => {
+            if (e.target === modalEditar) {
+                modalEditar.classList.add('hidden');
+            }
+        });
+
+        // Configurar máscara para o campo de data de edição
+        const editDataNascimento = document.getElementById('edit_data_nascimento');
+        if (editDataNascimento) {
+            editDataNascimento.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 8) value = value.slice(0, 8);
+                
+                if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2);
+                if (value.length >= 5) value = value.slice(0, 5) + '/' + value.slice(5);
+                
+                e.target.value = value;
+
+                if (value.length === 8) {
+                    const [dia, mes, ano] = e.target.value.split('/');
+                    const data = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                    
+                    if (isNaN(data.getTime()) || 
+                        data > new Date() || 
+                        data.getFullYear() < 1900 ||
+                        data.getDate() !== parseInt(dia) || 
+                        (data.getMonth() + 1) !== parseInt(mes)) {
+                        
+                        e.target.classList.add('border-red-500');
+                        e.target.classList.remove('border-gray-300');
+                    } else {
+                        e.target.classList.remove('border-red-500');
+                        e.target.classList.add('border-gray-300');
+                    }
+                }
+            });
+        }
+
+        // Submit do formulário de edição
+        formEditar.addEventListener('submit', salvarEdicaoAluno);
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                await carregarEscolas();
                 await carregarAlunos();
+                await carregarTurmasFiltro();
 
                 // Remover preloader
                 const preloader = document.querySelector('.preloader');
