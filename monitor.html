@@ -836,18 +836,18 @@
         // Função para carregar logs
         async function loadLogs() {
             try {
-                // Buscar total de logs de hoje usando a view_alunos_logs
+                // Buscar todos os logs e filtrar manualmente por data
+                const { data: todosLogs } = await supabaseClient
+                    .from('view_alunos_logs')
+                    .select('*')
+                    .order('hora_check', { ascending: false });
+                
+                // Filtrar manualmente os registros de hoje considerando o timezone local
                 const hoje = new Date();
                 hoje.setHours(0, 0, 0, 0);
                 const amanha = new Date(hoje);
                 amanha.setDate(amanha.getDate() + 1);
-
-                // Buscar todos os logs e filtrar manualmente por data (como no código de referência)
-                const { data: todosLogs } = await supabaseClient
-                    .from('view_alunos_logs')
-                    .select('hora_check');
                 
-                // Filtrar manualmente os registros de hoje
                 const logsHoje = todosLogs?.filter(log => {
                     const dataLog = new Date(log.hora_check);
                     return dataLog >= hoje && dataLog < amanha;
@@ -855,15 +855,13 @@
                 
                 document.getElementById('totalAcessosHoje').textContent = logsHoje.length;
 
-                // Buscar logs recentes com paginação usando a view_alunos_logs
-                const { data: logs, count } = await supabaseClient
-                    .from('view_alunos_logs')
-                    .select('*', { count: 'exact' })
-                    .order('hora_check', { ascending: false })
-                    .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+                // Aplicar paginação manualmente
+                const startIndex = currentPage * pageSize;
+                const endIndex = startIndex + pageSize;
+                const logsPaginados = todosLogs?.slice(startIndex, endIndex) || [];
 
-                totalLogs = count || 0;
-                renderLogs(logs || []);
+                totalLogs = todosLogs?.length || 0;
+                renderLogs(logsPaginados);
                 updatePagination();
                 
             } catch (error) {
@@ -878,16 +876,16 @@
                     const amanha = new Date(hoje);
                     amanha.setDate(amanha.getDate() + 1);
 
-                    const { count: totalHoje } = await supabaseClient
+                    const { data: logsHoje } = await supabaseClient
                         .from('logs')
-                        .select('*', { count: 'exact', head: true })
+                        .select('*')
                         .gte('created_at', hoje.toISOString())
                         .lt('created_at', amanha.toISOString());
 
-                    document.getElementById('totalAcessosHoje').textContent = totalHoje || 0;
+                    document.getElementById('totalAcessosHoje').textContent = logsHoje?.length || 0;
 
                     // Buscar logs recentes com join manual
-                    const { data: logs, count } = await supabaseClient
+                    const { data: logs } = await supabaseClient
                         .from('logs')
                         .select(`
                             *,
@@ -898,12 +896,16 @@
                                 series (nome),
                                 turmas (nome)
                             )
-                        `, { count: 'exact' })
-                        .order('created_at', { ascending: false })
-                        .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
+                        `)
+                        .order('created_at', { ascending: false });
 
-                    totalLogs = count || 0;
-                    renderLogsFallback(logs || []);
+                    // Aplicar paginação manualmente
+                    const startIndex = currentPage * pageSize;
+                    const endIndex = startIndex + pageSize;
+                    const logsPaginados = logs?.slice(startIndex, endIndex) || [];
+
+                    totalLogs = logs?.length || 0;
+                    renderLogsFallback(logsPaginados);
                     updatePagination();
                     
                 } catch (fallbackError) {
