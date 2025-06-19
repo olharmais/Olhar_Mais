@@ -544,6 +544,20 @@
                                 </svg>
                             </div>
                         </div>
+
+                        <!-- Escola -->
+                        <div class="relative mb-4">
+                            <select id="school" required disabled
+                                class="w-full py-4 pl-12 pr-4 border border-gray-300 rounded-full focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none text-base transition-all">
+                                <option value="">Selecione uma escola</option>
+                                <!-- As opções serão carregadas via JavaScript -->
+                            </select>
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M216.49,79.52l-80-56A8,8,0,0,0,128,24h0a8,8,0,0,0-8.49.49l-80,56A8,8,0,0,0,36,88V200a16,16,0,0,0,16,16H204a16,16,0,0,0,16-16V88A8,8,0,0,0,216.49,79.52ZM204,200H52V94.37l76-53.12,76,53.12Z"></path>
+                                </svg>
+                            </div>
+                        </div>
                         
                         <!-- Sexo -->
                         <div class="mb-4">
@@ -1303,6 +1317,9 @@
                         document.querySelector('.whatsapp-step').classList.add('hidden');
                         document.querySelector('.user-details-step').classList.remove('hidden');
                         
+                        // Carregar lista de cidades
+                        await loadCidades();
+                        
                         Toast.success('Código verificado! Complete seu cadastro');
                         
                     } catch (error) {
@@ -1384,15 +1401,62 @@
                     Toast.error('Erro ao carregar lista de cidades');
                 }
             }
-            
-            // Carregar cidades ao selecionar a aba de registro
-            registerTab.addEventListener('click', function() {
-                // Se estiver vazio, carregue as cidades
-                const cidadeSelect = document.getElementById('city');
-                if (cidadeSelect.options.length <= 1) {
-                    loadCidades();
+
+            // Função para carregar escolas da cidade selecionada
+            async function loadEscolas(cidadeId) {
+                try {
+                    const supabaseClient = createSupabaseClient();
+                    if (!supabaseClient) {
+                        console.error('Cliente Supabase não está disponível');
+                        Toast.error('Serviço temporariamente indisponível');
+                        return;
+                    }
+
+                    const escolaSelect = document.getElementById('school');
+                    escolaSelect.innerHTML = '<option value="">Selecione uma escola</option>';
+                    escolaSelect.disabled = true;
+
+                    if (!cidadeId) {
+                        return;
+                    }
+
+                    const { data: escolas, error } = await supabaseClient
+                        .from('escolas')
+                        .select('id, nome')
+                        .eq('cidade_id', cidadeId)
+                        .is('soft_delete', null)
+                        .eq('status', 'ATIVA')
+                        .order('nome');
+
+                    if (error) throw error;
+
+                    if (escolas && escolas.length > 0) {
+                        escolas.forEach(escola => {
+                            const option = document.createElement('option');
+                            option.value = escola.id;
+                            option.textContent = escola.nome;
+                            escolaSelect.appendChild(option);
+                        });
+                        escolaSelect.disabled = false;
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "Nenhuma escola disponível";
+                        escolaSelect.appendChild(option);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar escolas:', error);
+                    Toast.error('Erro ao carregar lista de escolas');
                 }
-            });
+            }
+
+            // Adicionar evento para carregar escolas quando uma cidade for selecionada
+            const cidadeSelect = document.getElementById('city');
+            if (cidadeSelect) {
+                cidadeSelect.addEventListener('change', function() {
+                    loadEscolas(this.value);
+                });
+            }
 
             // Completar cadastro
             const registerSubmitBtn = document.getElementById('register-submit');
@@ -1404,6 +1468,7 @@
                     const firstName = document.getElementById('first-name').value;
                     const lastName = document.getElementById('last-name').value;
                     const cityId = document.getElementById('city').value;
+                    const schoolId = document.getElementById('school').value;
                     const gender = document.querySelector('input[name="gender"]:checked')?.value;
                     
                     if (!firstName) {
@@ -1418,6 +1483,11 @@
                     
                     if (!cityId) {
                         Toast.warning('Selecione uma cidade');
+                        return;
+                    }
+
+                    if (!schoolId) {
+                        Toast.warning('Selecione uma escola');
                         return;
                     }
                     
@@ -1502,6 +1572,7 @@
                                 status: 'Inativo',
                                 ultimo_log: new Date().toISOString(),
                                 cidade: parseInt(cityId),
+                                escola: parseInt(schoolId),
                                 genero: gender
                             }])
                             .select();
@@ -1510,6 +1581,39 @@
                             console.error('Erro ao criar usuário:', erroCriarUsuario);
                             throw new Error('Erro ao completar cadastro: ' + erroCriarUsuario.message);
                         }
+
+                        // Buscar dados da cidade e escola para a mensagem
+                        const { data: cidadeData } = await supabaseClient
+                            .from('cidades')
+                            .select('nome')
+                            .eq('id', cityId)
+                            .single();
+
+                        const { data: escolaData } = await supabaseClient
+                            .from('escolas')
+                            .select('nome')
+                            .eq('id', schoolId)
+                            .single();
+
+                        // Enviar mensagem administrativa
+                        const adminPhone = '5514997996149';
+                        const mensagemAdmin = `Novo cadastro pendente de aprovação:\n\nNome: ${firstName} ${lastName}\nTipo: ${selectedType}\nTelefone: ${phone}\nCidade: ${cidadeData?.nome || 'N/A'}\nEscola: ${escolaData?.nome || 'N/A'}`;
+
+                        // Usar as mesmas credenciais da API já existente
+                        const WHATSAPP_API_URL = getWhatsappApiUrl();
+                        const WHATSAPP_API_KEY = getWhatsappApiKey();
+
+                        await fetch(WHATSAPP_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': WHATSAPP_API_KEY,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                jid: adminPhone,
+                                message: mensagemAdmin
+                            })
+                        });
                             
                         // Limpar dados temporários
                         localStorage.removeItem('temp_register_phone');
