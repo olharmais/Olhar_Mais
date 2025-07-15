@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OlharMais - Notificações</title>
-    <meta name="description" content="OlharMais - Feed de Notificações">
+    <title>OlharMais - Comunicados</title>
+    <meta name="description" content="OlharMais - Sistema de Comunicados">
     <meta name="theme-color" content="#005ae2">
     
     <!-- Definições preliminares para evitar erros antes do carregamento -->
@@ -245,22 +245,186 @@
             width: 100%;
             height: 100%;
         }
+
+        /* Estilo para lista de usuários */
+        .lista-usuarios {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .lista-usuarios::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .lista-usuarios::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .lista-usuarios::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .lista-usuarios::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Estilo para checkboxes personalizados */
+        .checkbox-usuario {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-usuario:checked {
+            background-color: #005ae2;
+            border-color: #005ae2;
+        }
+
+        .checkbox-usuario:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Melhorar scroll dos modais */
+        .modal-content {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        /* Estilos para seção de visualizações */
+        .fotos-preview img:hover {
+            z-index: 10;
+            transform: scale(1.1);
+        }
+
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+
+        /* Animação suave para lista expandida */
+        .lista-expandida-enter {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                max-height: 240px;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body class="font-sans">
     
     
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="history.back()" class="text-gray-600 hover:text-primary transition-colors" title="Voltar">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+                    <div class="flex items-center gap-2">
+                        <p class="text-sm text-gray-600">Comunicados</p>
+                        <span class="text-gray-400">•</span>
+                        <span id="user-profissao" class="text-sm font-medium text-primary bg-primary-light px-2 py-1 rounded-full">
+                            Carregando...
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-novo-comunicado" class="hidden bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary-dark transition-colors">
+                <i class="ph ph-plus"></i>
+                <span>Criar</span>
+            </button>
+        </div>
+    </header>
+    
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-6">
-        <!-- Cabeçalho -->
+        <!-- Abas -->
         <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Notificações</h2>
-            <p class="text-gray-600">Acompanhe as últimas atualizações</p>
+            <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                <button id="tab-recebidos" class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm">
+                    Recebidos
+                </button>
+                <button id="tab-enviados" class="hidden flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700">
+                    Enviados
+                </button>
+            </div>
         </div>
         
-        <!-- Feed de Notificações -->
+        <!-- Filtros -->
+        <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
+            <div class="flex flex-wrap gap-2">
+                <button class="filter-btn active px-3 py-1 text-sm rounded-full border border-gray-300 bg-primary text-white" data-filter="todos">
+                    Todos
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-green-300 text-green-600 hover:bg-green-50" data-filter="informativo">
+                    🟢 Informativos
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-yellow-300 text-yellow-600 hover:bg-yellow-50" data-filter="importante">
+                    🟡 Importantes
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-red-300 text-red-600 hover:bg-red-50" data-filter="urgente">
+                    🔴 Urgentes
+                </button>
+            </div>
+        </div>
+        
+        <!-- Aviso de Profissão Inválida -->
+        <div id="aviso-profissao" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center">
+                <i class="ph ph-warning text-yellow-600 text-xl mr-3"></i>
+                <div>
+                    <h3 class="font-semibold text-yellow-800">Profissão não definida</h3>
+                    <p class="text-yellow-700">Você ainda não tem nenhuma profissão no sistema, entre em contato com o suporte.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feed de Comunicados -->
         <div id="feed-container" class="space-y-4">
-            <!-- As notificações serão inseridas aqui via JavaScript -->
+            <!-- Os comunicados serão inseridos aqui via JavaScript -->
         </div>
         
         <!-- Loading State -->
@@ -270,45 +434,166 @@
         
         <!-- Estado Vazio -->
         <div id="empty-state" class="hidden py-12 text-center">
-            <i class="ph ph-bell-slash text-gray-400 text-5xl mb-4"></i>
-            <p class="text-gray-600">Nenhuma notificação encontrada</p>
+            <i class="ph ph-chat-circle-dots text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-600">Nenhum comunicado encontrado</p>
         </div>
     </main>
     
-    <!-- Modal de Mídia -->
-    <div id="media-modal" class="fixed inset-0 z-[9999] hidden">
+    <!-- Modal de Detalhes do Comunicado -->
+    <div id="modal-detalhes" class="fixed inset-0 z-[9999] hidden">
         <div class="modal-backdrop absolute inset-0"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl fade-in my-8">
-                <!-- Cabeçalho do Modal -->
-                <div class="p-4 border-b flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-800" id="modal-title"></h3>
-                    <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-700">
+        <div class="absolute inset-0 flex items-start justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl fade-in my-4 max-h-[90vh] overflow-y-auto modal-content">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span id="badge-importancia" class="px-2 py-1 text-xs rounded-full"></span>
+                                <span id="data-comunicado" class="text-sm text-gray-500"></span>
+                            </div>
+                            <h3 id="titulo-comunicado" class="text-xl font-bold text-gray-800"></h3>
+                        </div>
+                        <button onclick="fecharModalDetalhes()" class="text-gray-500 hover:text-gray-700">
                         <i class="ph ph-x text-xl"></i>
                     </button>
                 </div>
                 
-                <!-- Conteúdo do Modal -->
-                <div class="p-4">
-                    <!-- Container de Mídia -->
-                    <div id="media-container" class="mb-4 rounded-lg overflow-hidden">
-                        <!-- A mídia será inserida aqui -->
-                    </div>
-                    
-                    <!-- Descrição -->
-                    <p id="modal-description" class="text-gray-600"></p>
-                    
-                    <!-- Metadados -->
-                    <div class="mt-4 pt-4 border-t">
-                        <div class="flex items-center text-sm text-gray-500">
-                            <i class="ph ph-map-pin mr-2"></i>
-                            <span id="modal-cidade"></span>
-                        </div>
-                        <div class="flex items-center text-sm text-gray-500 mt-2">
-                            <i class="ph ph-buildings mr-2"></i>
-                            <span id="modal-escolas"></span>
+                    <div class="mb-4">
+                        <div class="flex items-center text-sm text-gray-600 mb-2">
+                            <i class="ph ph-user mr-2"></i>
+                            <span id="autor-comunicado"></span>
                         </div>
                     </div>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <p id="conteudo-comunicado" class="text-gray-700 whitespace-pre-wrap"></p>
+                    </div>
+                    
+                    <!-- Seção de Visualizações -->
+                    <div id="secao-visualizacoes" class="mb-4 hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-gray-800 flex items-center">
+                                <i class="ph ph-eye mr-2"></i>
+                                Visualizado por <span id="contador-visualizacoes" class="ml-1 text-primary">0</span>
+                            </h4>
+                            <button id="btn-expandir-visualizacoes" class="text-primary text-sm hover:text-primary-dark flex items-center">
+                                <span>Ver todos</span>
+                                <i class="ph ph-caret-down ml-1 transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Fotos em linha (preview) -->
+                        <div id="fotos-preview" class="flex -space-x-2 mb-3">
+                            <!-- Fotos serão inseridas aqui -->
+                        </div>
+                        
+                        <!-- Lista expandida (inicialmente oculta) -->
+                        <div id="lista-expandida" class="hidden space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Lista completa será inserida aqui -->
+                    </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button onclick="marcarComoLido()" id="btn-marcar-lido" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                            Marcar como Lido
+                        </button>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    <!-- Modal de Novo Comunicado -->
+    <div id="modal-novo-comunicado" class="fixed inset-0 z-[9999] hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="absolute inset-0 flex items-start justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl fade-in my-4 max-h-[90vh] overflow-y-auto modal-content">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">Novo Comunicado</h3>
+                        <button onclick="fecharModalNovo()" class="text-gray-500 hover:text-gray-700">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="form-comunicado">
+                        <div class="space-y-4">
+                            <!-- Título -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Título</label>
+                                <input type="text" id="input-titulo" placeholder="Ex: Reunião de Coordenação - Urgente" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                            </div>
+                            
+                            <!-- Nível de Importância -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Importância</label>
+                                <select id="select-importancia" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                    <option value="informativo">🟢 Informativo</option>
+                                    <option value="importante">🟡 Importante</option>
+                                    <option value="urgente">🔴 Urgente</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Tipo de Envio -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Enviar para</label>
+                                <select id="select-tipo-envio" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="todos_profissao">Todos de um tipo</option>
+                                    <option value="usuarios_especificos">Usuários específicos</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Profissão Destino -->
+                            <div id="div-profissao-destino" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Profissão</label>
+                                <select id="select-profissao-destino" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">Selecione a profissão...</option>
+                                </select>
+                            </div>
+
+                            <!-- Turma de Destino (apenas para Professor enviando para Responsável) -->
+                            <div id="div-turma-destino" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Turma</label>
+                                <select id="select-turma-destino" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="">Todas as turmas</option>
+                                </select>
+                                <p class="text-sm text-gray-500 mt-1">Selecione uma turma específica para enviar apenas aos responsáveis dos alunos desta turma.</p>
+                            </div>
+                            
+                            <!-- Usuários Específicos -->
+                            <div id="div-usuarios-especificos" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Usuários</label>
+                                
+                                <!-- Campo de busca -->
+                                <div class="mb-3">
+                                    <div class="relative">
+                                        <input type="text" id="busca-usuario" placeholder="Digite o nome do usuário para buscar..." class="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <div id="lista-usuarios" class="lista-usuarios border border-gray-300 rounded-lg p-2 bg-gray-50">
+                                    <!-- Lista de usuários será inserida aqui -->
+                                </div>
+                            </div>
+                            
+                            <!-- Conteúdo -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
+                                <textarea id="textarea-conteudo" rows="6" placeholder="Digite aqui o conteúdo do comunicado. Seja claro e objetivo para facilitar o entendimento..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" required></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button type="button" onclick="fecharModalNovo()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="btn-enviar" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark">
+                                Enviar Comunicado
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -320,9 +605,11 @@
     </div>
     
     <!-- Navbar -->
-    <script src="botoes_nutri.js" type="module"></script>
+    <script src="botoes_profi.js" type="module"></script>
     
     <script>
+        // ========== COMPONENTES UTILITÁRIOS ==========
+        
         // Toast Component
         const Toast = {
             element: document.getElementById('toast'),
@@ -350,263 +637,1142 @@
             }
         };
         
-        // Função para formatar data
-        function formatarData(data) {
-            return new Date(data).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
+        // ========== CLASSE PRINCIPAL ==========
         
-        // Função para extrair ID do vídeo do YouTube
-        function extrairIdYoutube(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
-        }
-        
-        // Função para criar card de notificação
-        function criarCardNotificacao(notificacao) {
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in';
-            
-            // Determinar se é imagem, YouTube ou vídeo enviado
-            let mediaHtml = '';
-            if (notificacao.tipo_midia === 'imagem' && notificacao.imagem_url) {
-                // Imagem
-                mediaHtml = `
-                    <div class="aspect-video bg-gray-100">
-                        <img src="${notificacao.imagem_url}" alt="${notificacao.titulo}" class="w-full h-full object-cover cursor-pointer" onclick="abrirModal('${notificacao.id}')">
-                    </div>
-                `;
-            } else if (notificacao.tipo_midia === 'youtube' && notificacao.video_url) {
-                // Vídeo do YouTube
-                const videoId = extrairIdYoutube(notificacao.video_url);
-                if (videoId) {
-                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                    mediaHtml = `
-                        <div class="aspect-video bg-gray-100 relative cursor-pointer group" onclick="abrirModal('${notificacao.id}')">
-                            <img src="${thumbnailUrl}" alt="${notificacao.titulo}" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 flex items-center justify-center bg-black/5 group-hover:opacity-100 transition-opacity">
-                                <i class="ph ph-play-circle text-white text-6xl"></i>
-                            </div>
-                            <div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-lg text-sm flex items-center gap-1">
-                                <i class="ph ph-video-camera"></i><span>Vídeo</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else if (notificacao.tipo_midia === 'video_upload' && notificacao.video_file_url) {
-                // Vídeo enviado
-                mediaHtml = `
-                    <div class="aspect-video bg-gray-100">
-                        <video controls class="w-full h-full object-cover cursor-pointer" onclick="abrirModal('${notificacao.id}')">
-                            <source src="${notificacao.video_file_url}" type="video/mp4" />Seu navegador não suporta vídeo.
-                        </video>
-                    </div>
-                `;
+        class ComunicadosApp {
+            constructor() {
+                this.supabase = null;
+                this.usuario = null;
+                this.profissoesValidas = ['Prefeito', 'Secretário', 'Diretor', 'Coordenador', 'Professor', 'Nutricionista', 'Responsável'];
+                this.hierarquiaProfissoes = {
+                    'Prefeito': ['Secretário', 'Nutricionista'],
+                    'Secretário': ['Diretor', 'Coordenador', 'Professor', 'Nutricionista'],
+                    'Diretor': ['Coordenador', 'Professor'],
+                    'Coordenador': ['Professor'],
+                    'Professor': ['Responsável']
+                };
+                this.tabAtiva = 'recebidos';
+                this.filtroAtivo = 'todos';
+                this.comunicadoAtual = null;
+                this.todosUsuarios = [];
             }
-            
-            card.innerHTML = `
-                ${mediaHtml}
-                <div class="p-4">
-                    <h3 class="font-semibold text-gray-800 mb-2">${notificacao.titulo}</h3>
-                    <p class="text-gray-600 text-sm line-clamp-2 mb-4">${notificacao.descricao}</p>
-                    <div class="flex items-center justify-between text-sm">
-                        <div class="flex items-center text-gray-500">
-                            <i class="ph ph-map-pin mr-1"></i>
-                            <span>${notificacao.cidade_nome}</span>
-                        </div>
-                        <span class="text-gray-400">${formatarData(notificacao.created_at)}</span>
-                    </div>
-                </div>
-            `;
-            
-            return card;
-        }
-        
-        // Função para abrir modal
-        async function abrirModal(id) {
-            try {
-                const supabase = createSupabaseClient();
-                
-                const { data: notificacao, error } = await supabase
-                    .from('notificacoes')
-                    .select(`
-                        *,
-                        cidades:cidade_id(nome)
-                    `)
-                    .eq('id', id)
-                    .single();
-                
-                if (error) throw error;
-                
-                // Preencher dados do modal
-                document.getElementById('modal-title').textContent = notificacao.titulo;
-                document.getElementById('modal-description').textContent = notificacao.descricao;
-                document.getElementById('modal-cidade').textContent = notificacao.cidades?.nome || 'Cidade não identificada';
-                document.getElementById('modal-escolas').textContent = 'Todas as escolas da cidade';
-                
-                // Preparar container de mídia
-                const mediaContainer = document.getElementById('media-container');
-                
-                if (notificacao.tipo_midia === 'imagem' && notificacao.imagem_url) {
-                    mediaContainer.innerHTML = `<img src="${notificacao.imagem_url}" alt="${notificacao.titulo}" class="w-full h-auto rounded-lg">`;
-                } else if (notificacao.tipo_midia === 'youtube' && notificacao.video_url) {
-                    const videoId = extrairIdYoutube(notificacao.video_url);
-                    if (videoId) {
-                        mediaContainer.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
-                    }
-                } else if (notificacao.tipo_midia === 'video_upload' && notificacao.video_file_url) {
-                    mediaContainer.innerHTML = `<video controls class="w-full rounded-lg"><source src="${notificacao.video_file_url}" type="video/mp4" />Seu navegador não suporta vídeo.</video>`;
-                }
-                
-                // Mostrar modal
-                document.getElementById('media-modal').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error('Erro ao abrir modal:', error);
-                Toast.show('Erro ao carregar detalhes da notificação', 'error');
-            }
-        }
-        
-        // Função para fechar modal
-        function fecharModal() {
-            const modal = document.getElementById('media-modal');
-            modal.classList.add('hidden');
-            document.getElementById('media-container').innerHTML = '';
-        }
-        
-        // Carregar notificações
-        async function carregarNotificacoes() {
-            try {
+
+            async inicializar() {
+                try {
+                    // Verificar autenticação
                 const userSession = localStorage.getItem('user_session');
                 if (!userSession) {
                     window.location.href = '/auth.html';
                     return;
                 }
                 
-                const userData = JSON.parse(userSession);
-                
-                if (userData.tipo !== 'NUTRICIONISTA') {
-                    Toast.show('Acesso não autorizado para este perfil', 'error');
-                    setTimeout(() => {
-                        window.location.href = '/auth.html';
-                    }, 2000);
-                    return;
+                    this.usuario = JSON.parse(userSession);
+                    this.supabase = createSupabaseClient();
+
+                    // Buscar dados completos do usuário
+                    await this.carregarDadosUsuario();
+                    
+                    // Configurar interface baseada na profissão
+                    this.configurarInterface();
+                    
+                    // Configurar eventos
+                    this.configurarEventos();
+                    
+                    // Carregar comunicados
+                    await this.carregarComunicados();
+
+                } catch (error) {
+                    console.error('Erro ao inicializar:', error);
+                    Toast.show('Erro ao carregar a página', 'error');
                 }
-                
-                const supabase = createSupabaseClient();
-                
-                // Buscar a cidade do usuário logado
-                const { data: usuario, error: errorUsuario } = await supabase
+            }
+
+            async carregarDadosUsuario() {
+                const { data: userData, error } = await this.supabase
                     .from('usuarios')
-                    .select('cidade')
-                    .eq('id', userData.id)
+                    .select('*')
+                    .eq('id', this.usuario.id)
                     .single();
+
+                if (error) throw error;
                 
-                if (errorUsuario) {
-                    console.error('Erro ao buscar cidade do usuário:', errorUsuario);
-                    Toast.show('Erro ao identificar sua cidade', 'error');
-                    return;
+                this.usuario = { ...this.usuario, ...userData };
+                console.log('Dados do usuário:', this.usuario);
+            }
+
+            configurarInterface() {
+                const profissao = this.usuario.profissao;
+                
+                // Atualizar profissão no header
+                const profissaoElement = document.getElementById('user-profissao');
+                if (profissao) {
+                    profissaoElement.textContent = profissao;
+                    profissaoElement.className = 'text-sm font-medium text-primary bg-primary-light px-2 py-1 rounded-full';
+                } else {
+                    profissaoElement.textContent = 'Sem profissão';
+                    profissaoElement.className = 'text-sm font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full';
                 }
                 
-                if (!usuario?.cidade) {
-                    console.warn('Usuário não possui cidade definida');
-                    Toast.show('Você não está associado a nenhuma cidade', 'warning');
+                // Verificar se tem profissão válida
+                if (!profissao || !this.profissoesValidas.includes(profissao)) {
+                    document.getElementById('aviso-profissao').classList.remove('hidden');
                     document.getElementById('loading').classList.add('hidden');
+                    return;
+                }
+
+                // Verificar se pode criar comunicados
+                const podeEnviar = this.hierarquiaProfissoes[profissao];
+                if (podeEnviar) {
+                    document.getElementById('btn-novo-comunicado').classList.remove('hidden');
+                    document.getElementById('tab-enviados').classList.remove('hidden');
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+            }
+
+            configurarEventos() {
+                // Abas
+                document.getElementById('tab-recebidos').addEventListener('click', () => this.trocarAba('recebidos'));
+                document.getElementById('tab-enviados').addEventListener('click', () => this.trocarAba('enviados'));
+
+                // Filtros
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.aplicarFiltro(btn.dataset.filter));
+                });
+
+                // Botões de modal
+                document.getElementById('btn-novo-comunicado').addEventListener('click', () => this.abrirModalNovo());
+                document.getElementById('form-comunicado').addEventListener('submit', (e) => this.enviarComunicado(e));
+                document.getElementById('select-tipo-envio').addEventListener('change', () => this.alterarTipoEnvio());
+                document.getElementById('select-profissao-destino').addEventListener('change', () => this.alterarProfissaoDestino());
+
+                // Fechar modais clicando fora
+                document.getElementById('modal-detalhes').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-backdrop')) this.fecharModalDetalhes();
+                });
+                document.getElementById('modal-novo-comunicado').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-backdrop')) this.fecharModalNovo();
+                });
+            }
+
+            trocarAba(aba) {
+                this.tabAtiva = aba;
+                
+                // Atualizar visual das abas
+                document.getElementById('tab-recebidos').className = aba === 'recebidos' 
+                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
+                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
+                
+                document.getElementById('tab-enviados').className = aba === 'enviados'
+                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
+                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
+
+                this.carregarComunicados();
+            }
+
+            aplicarFiltro(filtro) {
+                this.filtroAtivo = filtro;
+                
+                // Atualizar visual dos filtros
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-primary', 'text-white');
+                    btn.classList.add('text-gray-600', 'hover:bg-gray-50');
+                });
+
+                const btnAtivo = document.querySelector(`[data-filter="${filtro}"]`);
+                btnAtivo.classList.add('active', 'bg-primary', 'text-white');
+                btnAtivo.classList.remove('text-gray-600', 'hover:bg-gray-50');
+
+                this.filtrarComunicados();
+            }
+
+            async carregarComunicados() {
+                try {
+                    document.getElementById('loading').classList.remove('hidden');
+                    document.getElementById('feed-container').innerHTML = '';
+                    document.getElementById('empty-state').classList.add('hidden');
+
+                    let comunicados = [];
+
+                    if (this.tabAtiva === 'recebidos') {
+                        comunicados = await this.buscarComunicadosRecebidos();
+                    } else {
+                        comunicados = await this.buscarComunicadosEnviados();
+                    }
+
+                    this.renderizarComunicados(comunicados);
+
+                } catch (error) {
+                    console.error('Erro ao carregar comunicados:', error);
+                    Toast.show('Erro ao carregar comunicados', 'error');
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            }
+
+            async buscarComunicadosRecebidos() {
+                console.log('🔍 Iniciando busca de comunicados recebidos para usuário:', this.usuario.id);
+                console.log('👤 Profissão do usuário:', this.usuario.profissao);
+                
+                try {
+                    if (this.usuario.profissao === 'Responsável') {
+                        // Para responsáveis, usar lógica especial considerando turmas dos filhos
+                        return await this.buscarComunicadosResponsavel();
+                    } else {
+                        // Para outras profissões, usar a view normal
+                        const { data, error } = await this.supabase
+                            .from('view_comunicados_completos')
+                            .select('*')
+                            .eq('destinatario_id', this.usuario.id)
+                            .order('created_at', { ascending: false });
+
+                        console.log('📊 Comunicados recebidos:', { data, error });
+
+                        if (error) {
+                            console.error('❌ Erro na view:', error);
+                            throw error;
+                        }
+
+                        return data || [];
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erro ao buscar comunicados recebidos:', error);
+                    throw error;
+                }
+            }
+
+            async buscarComunicadosResponsavel() {
+                console.log('👨‍👩‍👧‍👦 Buscando comunicados para responsável:', this.usuario.id);
+                
+                try {
+                    // 1. Buscar alunos do responsável
+                    const { data: permissoesAlunos, error: errorPermissoes } = await this.supabase
+                        .from('permissoes_aluno')
+                        .select('aluno_id')
+                        .eq('usuario_id', this.usuario.id);
+
+                    if (errorPermissoes) {
+                        console.error('❌ Erro ao buscar permissões de alunos:', errorPermissoes);
+                        throw errorPermissoes;
+                    }
+
+                    if (!permissoesAlunos || permissoesAlunos.length === 0) {
+                        console.log('⚠️ Responsável não tem alunos associados');
+                        return [];
+                    }
+
+                    const alunosIds = permissoesAlunos.map(p => p.aluno_id);
+                    console.log('👶 IDs dos alunos do responsável:', alunosIds);
+
+                    // 2. Buscar turmas dos alunos
+                    const { data: alunos, error: errorAlunos } = await this.supabase
+                        .from('alunos')
+                        .select('id, turma')
+                        .in('id', alunosIds)
+                        .is('soft_delete', null);
+
+                    if (errorAlunos) {
+                        console.error('❌ Erro ao buscar dados dos alunos:', errorAlunos);
+                        throw errorAlunos;
+                    }
+
+                    if (!alunos || alunos.length === 0) {
+                        console.log('⚠️ Nenhum aluno ativo encontrado');
+                        return [];
+                    }
+
+                    const turmasIds = [...new Set(alunos.map(a => a.turma).filter(t => t))];
+                    console.log('🎓 IDs das turmas dos alunos:', turmasIds);
+
+                    // 3. Buscar comunicados destinados ao responsável
+                    const { data: comunicadosGerais, error: errorComunicados } = await this.supabase
+                        .from('view_comunicados_completos')
+                        .select('*')
+                        .eq('destinatario_id', this.usuario.id)
+                        .order('created_at', { ascending: false });
+
+                    if (errorComunicados) {
+                        console.error('❌ Erro ao buscar comunicados gerais:', errorComunicados);
+                        throw errorComunicados;
+                    }
+
+                    // 4. Filtrar comunicados baseado nas turmas
+                    const comunicadosFiltrados = (comunicadosGerais || []).filter(comunicado => {
+                        // Se não tem turma específica, mostrar (comunicado geral)
+                        if (!comunicado.turma_destino) {
+                            console.log('✅ Comunicado geral (sem turma específica):', comunicado.id);
+                            return true;
+                        }
+                        
+                        // Se tem turma específica, verificar se é uma das turmas dos filhos
+                        const turmaValida = turmasIds.includes(comunicado.turma_destino);
+                        console.log(`${turmaValida ? '✅' : '❌'} Comunicado ${comunicado.id} - Turma ${comunicado.turma_destino} - Válida: ${turmaValida}`);
+                        return turmaValida;
+                    });
+
+                    console.log('📋 Comunicados filtrados para o responsável:', comunicadosFiltrados.length);
+                    return comunicadosFiltrados;
+
+                } catch (error) {
+                    console.error('❌ Erro ao buscar comunicados do responsável:', error);
+                    throw error;
+                }
+            }
+
+            async buscarComunicadosEnviados() {
+                const { data, error } = await this.supabase
+                    .from('comunicados')
+                    .select(`
+                        *,
+                        usuarios!comunicados_autor_id_fkey(nome, profissao)
+                    `)
+                    .eq('autor_id', this.usuario.id)
+                    .is('soft_delete', null)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                return data || [];
+            }
+
+            renderizarComunicados(comunicados) {
+                const container = document.getElementById('feed-container');
+                
+                if (comunicados.length === 0) {
                     document.getElementById('empty-state').classList.remove('hidden');
                     return;
                 }
-                
-                console.log('Cidade do usuário:', usuario.cidade);
-                
-                // Buscar nome da cidade para exibição
-                const { data: cidadeInfo, error: errorCidade } = await supabase
-                    .from('cidades')
-                    .select('nome')
-                    .eq('id', usuario.cidade)
-                    .single();
-                
-                if (!errorCidade && cidadeInfo) {
-                    console.log('Nome da cidade:', cidadeInfo.nome);
-                }
-                
-                // Buscar notificações da cidade do usuário diretamente da tabela notificacoes
-                const { data: notificacoes, error: notificacoesError } = await supabase
-                    .from('notificacoes')
-                    .select(`
-                        *,
-                        cidades:cidade_id(nome)
-                    `)
-                    .eq('cidade_id', usuario.cidade)
-                    .order('created_at', { ascending: false });
-                
-                if (notificacoesError) {
-                    console.error('Erro ao buscar notificações:', notificacoesError);
-                    throw notificacoesError;
-                }
-                
-                console.log('Notificações encontradas:', notificacoes?.length || 0);
-                
-                // Formatar os dados para uso no template
-                const notificacoesFormatadas = notificacoes?.map(n => ({
-                    id: n.id,
-                    titulo: n.titulo,
-                    descricao: n.descricao,
-                    tipo_midia: n.tipo_midia,
-                    imagem_url: n.imagem_url,
-                    video_url: n.video_url,
-                    video_file_url: n.video_file_url,
-                    created_at: n.created_at,
-                    updated_at: n.updated_at,
-                    cidade_id: n.cidade_id,
-                    cidade_nome: n.cidades?.nome || 'Cidade não identificada'
-                })) || [];
-                
-                // Mostrar estado vazio se não houver notificações
-                const emptyState = document.getElementById('empty-state');
-                const feedContainer = document.getElementById('feed-container');
-                
-                if (notificacoesFormatadas.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    feedContainer.innerHTML = '';
-                } else {
-                    emptyState.classList.add('hidden');
-                    feedContainer.innerHTML = '';
-                    
-                    // Renderizar cards
-                    notificacoesFormatadas.forEach(notificacao => {
-                        const card = criarCardNotificacao(notificacao);
-                        feedContainer.appendChild(card);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Erro ao carregar notificações:', error);
-                Toast.show('Erro ao carregar notificações', 'error');
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
+
+                comunicados.forEach(comunicado => {
+                    const card = this.criarCardComunicado(comunicado);
+                    container.appendChild(card);
+                });
+
+                this.filtrarComunicados();
             }
+
+            criarCardComunicado(comunicado) {
+                const card = document.createElement('div');
+                card.className = 'comunicado-card bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow';
+                card.dataset.importancia = comunicado.nivel_importancia;
+                
+                const badges = {
+                    'informativo': '🟢 Informativo',
+                    'importante': '🟡 Importante',
+                    'urgente': '🔴 Urgente'
+                };
+
+                const badgeColors = {
+                    'informativo': 'bg-green-100 text-green-800',
+                    'importante': 'bg-yellow-100 text-yellow-800',
+                    'urgente': 'bg-red-100 text-red-800'
+                };
+
+                const isLido = this.tabAtiva === 'recebidos' ? comunicado.lido : true;
+                const indicadorLeitura = this.tabAtiva === 'recebidos' 
+                    ? (isLido ? '' : '<div class="w-3 h-3 bg-primary rounded-full"></div>')
+                    : '';
+
+            card.innerHTML = `
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
+                                ${badges[comunicado.nivel_importancia]}
+                            </span>
+                            ${indicadorLeitura}
+                        </div>
+                        <span class="text-sm text-gray-500">${this.formatarData(comunicado.created_at)}</span>
+                    </div>
+                    
+                    <h3 class="font-semibold text-gray-800 mb-2 ${!isLido ? 'font-bold' : ''}">${comunicado.titulo}</h3>
+                    
+                    <p class="text-gray-600 text-sm line-clamp-2 mb-3">${comunicado.conteudo}</p>
+                    
+                    <div class="flex items-center justify-between text-sm text-gray-500">
+                        <div class="flex items-center">
+                            <i class="ph ph-user mr-1"></i>
+                            <span>${this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${this.tabAtiva === 'recebidos' && !isLido ? '<span class="text-primary font-medium">Novo</span>' : ''}
+                            ${this.tabAtiva === 'enviados' ? `<button onclick="event.stopPropagation(); app.confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado"><i class="ph ph-trash text-sm"></i></button>` : ''}
+                        </div>
+                </div>
+            `;
+            
+                card.addEventListener('click', () => this.abrirModalDetalhes(comunicado));
+            return card;
         }
         
-        // Carregar notificações quando a página carregar
-        document.addEventListener('DOMContentLoaded', carregarNotificacoes);
+            filtrarComunicados() {
+                const cards = document.querySelectorAll('.comunicado-card');
+                
+                cards.forEach(card => {
+                    const importancia = card.dataset.importancia;
+                    const mostrar = this.filtroAtivo === 'todos' || this.filtroAtivo === importancia;
+                    card.style.display = mostrar ? 'block' : 'none';
+                });
+            }
+
+            formatarData(data) {
+                return new Date(data).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            async abrirModalDetalhes(comunicado) {
+                this.comunicadoAtual = comunicado;
+                
+                const badges = {
+                    'informativo': '🟢 Informativo',
+                    'importante': '🟡 Importante', 
+                    'urgente': '🔴 Urgente'
+                };
+
+                const badgeColors = {
+                    'informativo': 'bg-green-100 text-green-800',
+                    'importante': 'bg-yellow-100 text-yellow-800',
+                    'urgente': 'bg-red-100 text-red-800'
+                };
+
+                document.getElementById('badge-importancia').textContent = badges[comunicado.nivel_importancia];
+                document.getElementById('badge-importancia').className = `px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}`;
+                document.getElementById('data-comunicado').textContent = this.formatarData(comunicado.created_at);
+                document.getElementById('titulo-comunicado').textContent = comunicado.titulo;
+                document.getElementById('autor-comunicado').textContent = this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você';
+                document.getElementById('conteudo-comunicado').textContent = comunicado.conteudo;
+
+                // Mostrar/ocultar botão de marcar como lido
+                const btnMarcarLido = document.getElementById('btn-marcar-lido');
+                if (this.tabAtiva === 'recebidos' && !comunicado.lido) {
+                    btnMarcarLido.classList.remove('hidden');
+                } else {
+                    btnMarcarLido.classList.add('hidden');
+                }
+
+                // Carregar visualizações se for comunicado enviado
+                if (this.tabAtiva === 'enviados') {
+                    await this.carregarVisualizacoes(comunicado.id);
+                } else {
+                    document.getElementById('secao-visualizacoes').classList.add('hidden');
+                }
+
+                document.getElementById('modal-detalhes').classList.remove('hidden');
+            }
+
+            async carregarVisualizacoes(comunicadoId) {
+                try {
+                    // Usar a nova view que inclui fotos
+                    const { data: visualizacoes, error } = await this.supabase
+                        .from('view_comunicados_com_fotos')
+                        .select('destinatario_id, destinatario_nome, destinatario_sobrenome, destinatario_foto, lido, data_leitura')
+                        .eq('id', comunicadoId)
+                        .eq('lido', true)
+                        .order('data_leitura', { ascending: false });
+
+                if (error) throw error;
+
+                    if (visualizacoes && visualizacoes.length > 0) {
+                        this.exibirVisualizacoes(visualizacoes);
+                        document.getElementById('secao-visualizacoes').classList.remove('hidden');
+                    } else {
+                        document.getElementById('secao-visualizacoes').classList.add('hidden');
+                    }
+
+            } catch (error) {
+                    console.error('Erro ao carregar visualizações:', error);
+                    document.getElementById('secao-visualizacoes').classList.add('hidden');
+                }
+            }
+
+            exibirVisualizacoes(visualizacoes) {
+                const contadorEl = document.getElementById('contador-visualizacoes');
+                const fotosPreviewEl = document.getElementById('fotos-preview');
+                const listaExpandidaEl = document.getElementById('lista-expandida');
+
+                // Atualizar contador
+                contadorEl.textContent = visualizacoes.length;
+
+                // Limpar conteúdo anterior
+                fotosPreviewEl.innerHTML = '';
+                listaExpandidaEl.innerHTML = '';
+
+                // Mostrar até 5 fotos no preview
+                const maxPreview = 5;
+                const fotosParaPreview = visualizacoes.slice(0, maxPreview);
+                const restantes = visualizacoes.length - maxPreview;
+
+                fotosParaPreview.forEach((viz, index) => {
+                    const fotoUrl = viz.destinatario_foto || '/assets/img/avatar-placeholder.png';
+                    const nomeCompleto = `${viz.destinatario_nome} ${viz.destinatario_sobrenome || ''}`.trim();
+                    
+                    const img = document.createElement('img');
+                    img.src = fotoUrl;
+                    img.alt = nomeCompleto;
+                    img.className = 'w-8 h-8 rounded-full border-2 border-white shadow-sm object-cover cursor-pointer hover:scale-110 transition-transform';
+                    img.title = nomeCompleto;
+                    img.onerror = () => img.src = '/assets/img/avatar-placeholder.png';
+                    
+                    fotosPreviewEl.appendChild(img);
+                });
+
+                // Mostrar indicador de "mais pessoas" se necessário
+                if (restantes > 0) {
+                    const maisDiv = document.createElement('div');
+                    maisDiv.className = 'w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-xs font-medium text-gray-600';
+                    maisDiv.textContent = `+${restantes}`;
+                    maisDiv.title = `E mais ${restantes} pessoa${restantes > 1 ? 's' : ''}`;
+                    fotosPreviewEl.appendChild(maisDiv);
+                }
+
+                // Criar lista expandida
+                visualizacoes.forEach(viz => {
+                    const fotoUrl = viz.destinatario_foto || '/assets/img/avatar-placeholder.png';
+                    const nomeCompleto = `${viz.destinatario_nome} ${viz.destinatario_sobrenome || ''}`.trim();
+                    const dataLeitura = new Date(viz.data_leitura).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex items-center p-2 hover:bg-gray-50 rounded-lg';
+                    itemDiv.innerHTML = `
+                        <img src="${fotoUrl}" alt="${nomeCompleto}" class="w-10 h-10 rounded-full mr-3 object-cover border-2 border-gray-200" onerror="this.src='/assets/img/avatar-placeholder.png'">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800">${nomeCompleto}</div>
+                            <div class="text-sm text-gray-500">Lido em ${dataLeitura}</div>
+                        </div>
+                        <i class="ph ph-check-circle text-green-500"></i>
+                    `;
+                    listaExpandidaEl.appendChild(itemDiv);
+                });
+
+                // Configurar botão de expandir/contrair
+                this.configurarBotaoExpandir();
+            }
+
+            configurarBotaoExpandir() {
+                const btnExpandir = document.getElementById('btn-expandir-visualizacoes');
+                const listaExpandida = document.getElementById('lista-expandida');
+                const icone = btnExpandir.querySelector('i');
+                const texto = btnExpandir.querySelector('span');
+
+                btnExpandir.onclick = () => {
+                    const isExpanded = !listaExpandida.classList.contains('hidden');
+                    
+                    if (isExpanded) {
+                        listaExpandida.classList.add('hidden');
+                        icone.classList.remove('rotate-180');
+                        texto.textContent = 'Ver todos';
+                    } else {
+                        listaExpandida.classList.remove('hidden');
+                        icone.classList.add('rotate-180');
+                        texto.textContent = 'Ocultar';
+                    }
+                };
+            }
+
+            async marcarComoLido() {
+                try {
+                    const { error } = await this.supabase
+                        .from('comunicados_destinatarios')
+                        .update({ 
+                            lido: true, 
+                            data_leitura: new Date().toISOString() 
+                        })
+                        .eq('comunicado_id', this.comunicadoAtual.id)
+                        .eq('usuario_id', this.usuario.id);
+
+                if (error) throw error;
+
+                    Toast.show('Comunicado marcado como lido', 'success');
+                    this.fecharModalDetalhes();
+                    this.carregarComunicados();
+
+            } catch (error) {
+                    console.error('Erro ao marcar como lido:', error);
+                    Toast.show('Erro ao marcar como lido', 'error');
+                }
+            }
+
+            fecharModalDetalhes() {
+                document.getElementById('modal-detalhes').classList.add('hidden');
+                this.comunicadoAtual = null;
+            }
+
+            async abrirModalNovo() {
+                document.getElementById('modal-novo-comunicado').classList.remove('hidden');
+                await this.carregarOpcoesEnvio();
+            }
+
+            async carregarOpcoesEnvio() {
+                const profissoesPermitidas = this.hierarquiaProfissoes[this.usuario.profissao] || [];
+                const selectProfissao = document.getElementById('select-profissao-destino');
+                
+                selectProfissao.innerHTML = '<option value="">Selecione a profissão...</option>';
+                profissoesPermitidas.forEach(profissao => {
+                    const option = document.createElement('option');
+                    option.value = profissao;
+                    option.textContent = profissao;
+                    selectProfissao.appendChild(option);
+                });
+            }
+
+            async alterarTipoEnvio() {
+                const tipo = document.getElementById('select-tipo-envio').value;
+                const divProfissao = document.getElementById('div-profissao-destino');
+                const divUsuarios = document.getElementById('div-usuarios-especificos');
+                const divTurma = document.getElementById('div-turma-destino');
+
+                if (tipo === 'todos_profissao') {
+                    divProfissao.classList.remove('hidden');
+                    divUsuarios.classList.add('hidden');
+                    divTurma.classList.add('hidden');
+                    this.carregarProfissoesDestino();
+                } else if (tipo === 'usuarios_especificos') {
+                    divProfissao.classList.add('hidden');
+                    divUsuarios.classList.remove('hidden');
+                    divTurma.classList.add('hidden');
+                    await this.carregarUsuariosEspecificos();
+                } else {
+                    divProfissao.classList.add('hidden');
+                    divUsuarios.classList.add('hidden');
+                    divTurma.classList.add('hidden');
+                }
+            }
+
+            carregarProfissoesDestino() {
+                const select = document.getElementById('select-profissao-destino');
+                const profissoesPermitidas = this.hierarquiaProfissoes[this.usuario.profissao] || [];
+                
+                select.innerHTML = '<option value="">Selecione a profissão...</option>';
+                
+                profissoesPermitidas.forEach(profissao => {
+                    const option = document.createElement('option');
+                    option.value = profissao;
+                    option.textContent = profissao;
+                    select.appendChild(option);
+                });
+            }
+
+            alterarProfissaoDestino() {
+                const profissaoDestino = document.getElementById('select-profissao-destino').value;
+                const divTurma = document.getElementById('div-turma-destino');
+                
+                // Mostrar seleção de turma apenas se for Professor enviando para Responsável
+                if (this.usuario.profissao === 'Professor' && profissaoDestino === 'Responsável') {
+                    divTurma.classList.remove('hidden');
+                    this.carregarTurmasPermitidas();
+                } else {
+                    divTurma.classList.add('hidden');
+                }
+            }
+
+            async carregarTurmasPermitidas() {
+                try {
+                    console.log('🎓 Carregando turmas permitidas para o professor:', this.usuario.id);
+                    
+                    // Buscar turmas que o professor tem permissão
+                    const { data: permissoesTurma, error: errorPermissoes } = await this.supabase
+                        .from('permissoes_turma')
+                        .select('turma_id')
+                        .eq('usuario_id', this.usuario.id);
+
+                    if (errorPermissoes) throw errorPermissoes;
+
+                    if (!permissoesTurma || permissoesTurma.length === 0) {
+                        console.log('⚠️ Professor não tem permissões específicas de turma');
+                        return;
+                    }
+
+                    const turmasIds = permissoesTurma.map(p => p.turma_id);
+                    console.log('🎯 IDs das turmas permitidas:', turmasIds);
+
+                    // Buscar dados das turmas
+                    const { data: turmas, error: errorTurmas } = await this.supabase
+                        .from('turmas')
+                        .select(`
+                            id,
+                            nome,
+                            periodo,
+                            serie:serie_id (
+                                nome
+                            )
+                        `)
+                        .in('id', turmasIds)
+                        .eq('escola_id', this.usuario.escola)
+                        .order('nome');
+
+                    if (errorTurmas) throw errorTurmas;
+
+                    console.log('🎓 Turmas encontradas:', turmas);
+
+                    // Preencher select de turmas
+                    const select = document.getElementById('select-turma-destino');
+                    
+                    // Apenas Diretor pode selecionar "Todas as turmas"
+                    if (this.usuario.profissao === 'Diretor') {
+                        select.innerHTML = '<option value="">Todas as turmas</option>';
+                    } else {
+                        select.innerHTML = '<option value="">Selecione uma turma</option>';
+                    }
+                    
+                    if (turmas && turmas.length > 0) {
+                        turmas.forEach(turma => {
+                            const option = document.createElement('option');
+                            option.value = turma.id;
+                            option.textContent = `${turma.nome} - ${turma.serie?.nome || 'Série não definida'} (${turma.periodo})`;
+                            select.appendChild(option);
+                        });
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erro ao carregar turmas:', error);
+                    Toast.show('Erro ao carregar turmas', 'error');
+                }
+            }
+
+            async carregarUsuariosEspecificos() {
+                try {
+                    const profissoesPermitidas = this.hierarquiaProfissoes[this.usuario.profissao] || [];
+                    console.log('🔍 Carregando usuários para profissões:', profissoesPermitidas);
+                    console.log('👤 Usuário atual:', this.usuario);
+                    
+                    // DEBUG ESPECIAL PARA PREFEITO
+                    if (this.usuario.profissao === 'Prefeito') {
+                        console.log('🏛️ PREFEITO DETECTADO - Verificando dados do banco');
+                        
+                        // Testar busca de Secretários
+                        const { data: secretarios, error: errorSecretarios } = await this.supabase
+                            .from('usuarios')
+                            .select('id, nome, profissao, cidade, escola')
+                            .eq('profissao', 'Secretário')
+                            .order('nome');
+                        
+                        console.log('🏢 Secretários encontrados:', secretarios);
+                        console.log('❌ Erro ao buscar Secretários:', errorSecretarios);
+                        
+                        // Testar busca de Nutricionistas
+                        const { data: nutricionistas, error: errorNutricionistas } = await this.supabase
+                            .from('usuarios')
+                            .select('id, nome, profissao, cidade, escola')
+                            .eq('profissao', 'Nutricionista')
+                            .order('nome');
+                        
+                        console.log('🥗 Nutricionistas encontrados:', nutricionistas);
+                        console.log('❌ Erro ao buscar Nutricionistas:', errorNutricionistas);
+                        
+                        // Testar busca geral
+                        const { data: todosUsuarios, error: errorTodos } = await this.supabase
+                            .from('usuarios')
+                            .select('id, nome, profissao, cidade, escola')
+                            .in('profissao', ['Secretário', 'Nutricionista'])
+                            .order('nome');
+                        
+                        console.log('👥 Todos os usuários (Secretário + Nutricionista):', todosUsuarios);
+                        console.log('❌ Erro na busca geral:', errorTodos);
+                    }
+                    
+                    // Filtrar por cidade/escola baseado na profissão
+                    let query = this.supabase
+                        .from('usuarios')
+                        .select('id, nome, profissao, foto_url, cidade, escola')
+                        .in('profissao', profissoesPermitidas)
+                        .order('nome');
+
+                    // Se não for Prefeito ou Secretário, filtrar por mesma cidade/escola
+                    if (!['Prefeito', 'Secretário'].includes(this.usuario.profissao)) {
+                        query = query
+                            .eq('cidade', this.usuario.cidade)
+                            .eq('escola', this.usuario.escola);
+                        console.log('🏫 Filtrando por cidade/escola:', this.usuario.cidade, this.usuario.escola);
+                    }
+
+                    const { data: usuarios, error } = await query;
+
+                    console.log('👥 Usuários encontrados:', usuarios);
+
+                    if (error) throw error;
+
+                    // Armazenar todos os usuários para busca
+                    this.todosUsuarios = usuarios || [];
+                    this.renderizarUsuarios(this.todosUsuarios);
+
+                } catch (error) {
+                    console.error('❌ Erro ao carregar usuários:', error);
+                    Toast.show('Erro ao carregar usuários', 'error');
+                    
+                    // Mostrar erro no container
+                    const container = document.getElementById('lista-usuarios');
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="ph ph-warning text-red-500 text-2xl mb-2"></i>
+                            <p class="text-gray-600">Erro ao carregar usuários</p>
+                        </div>
+                    `;
+                }
+            }
+
+            renderizarUsuarios(usuarios) {
+                const container = document.getElementById('lista-usuarios');
+                container.innerHTML = '';
+
+                if (usuarios.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum usuário encontrado</p>';
+                    return;
+                }
+                
+                usuarios.forEach(usuario => {
+                    const div = document.createElement('div');
+                    div.className = 'usuario-item flex items-center p-3 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0';
+                    div.dataset.nome = usuario.nome.toLowerCase();
+                    
+                    // Determinar foto do usuário
+                    const fotoUrl = usuario.foto_url || '/assets/img/avatar-placeholder.png';
+                    
+                    div.innerHTML = `
+                        <input type="checkbox" id="user-${usuario.id}" value="${usuario.id}" class="checkbox-usuario mr-3">
+                        <div class="flex items-center flex-1">
+                            <img src="${fotoUrl}" alt="${usuario.nome}" class="w-10 h-10 rounded-full mr-3 object-cover border-2 border-gray-200 shadow-sm" onerror="this.src='/assets/img/avatar-placeholder.png'">
+                            <label for="user-${usuario.id}" class="flex-1 cursor-pointer">
+                                <div class="font-medium text-gray-800">${usuario.nome}</div>
+                                <div class="text-sm text-gray-500">${usuario.profissao}</div>
+                            </label>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                // Configurar busca
+                this.configurarBuscaUsuarios();
+            }
+
+            configurarBuscaUsuarios() {
+                const campoBusca = document.getElementById('busca-usuario');
+                if (campoBusca) {
+                    campoBusca.addEventListener('input', (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        
+                        if (termo === '') {
+                            // Mostrar todos os usuários
+                            this.renderizarUsuarios(this.todosUsuarios);
+                        } else {
+                            // Filtrar usuários
+                            const usuariosFiltrados = this.todosUsuarios.filter(usuario => 
+                                usuario.nome.toLowerCase().includes(termo)
+                            );
+                            this.renderizarUsuarios(usuariosFiltrados);
+                        }
+                    });
+                }
+            }
+
+            async enviarComunicado(e) {
+                e.preventDefault();
+                
+                try {
+                    // Debug: Verificar autenticação
+                    const { data: { user } } = await this.supabase.auth.getUser();
+                    console.log('Usuário autenticado:', user);
+                    console.log('UUID do usuário:', user?.id);
+                    console.log('ID do usuário local:', this.usuario.id);
+                    
+                    const formData = new FormData(e.target);
+                    const titulo = document.getElementById('input-titulo').value;
+                    const importancia = document.getElementById('select-importancia').value;
+                    const tipoEnvio = document.getElementById('select-tipo-envio').value;
+                    const conteudo = document.getElementById('textarea-conteudo').value;
+
+                    // Validações
+                    if (!titulo.trim()) {
+                        Toast.show('Título é obrigatório', 'error');
+                        return;
+                    }
+                    
+                    if (!conteudo.trim()) {
+                        Toast.show('Conteúdo é obrigatório', 'error');
+                        return;
+                    }
+                    
+                    if (!tipoEnvio) {
+                        Toast.show('Selecione o tipo de envio', 'error');
+                        return;
+                    }
+
+                    // Validação específica para "todos_profissao"
+                    if (tipoEnvio === 'todos_profissao') {
+                        const profissaoDestino = document.getElementById('select-profissao-destino').value;
+                        if (!profissaoDestino) {
+                            Toast.show('Selecione a profissão de destino', 'error');
+                            return;
+                        }
+
+                        // Para Professor enviando para Responsável, turma é obrigatória
+                        if (this.usuario.profissao === 'Professor' && profissaoDestino === 'Responsável') {
+                            const turmaDestino = document.getElementById('select-turma-destino').value;
+                            if (!turmaDestino) {
+                                Toast.show('Selecione uma turma específica', 'error');
+                                return;
+                            }
+                        }
+                    }
+
+                    // Criar comunicado
+                    const comunicadoData = {
+                        titulo,
+                        conteudo,
+                        autor_id: this.usuario.id,
+                        nivel_importancia: importancia,
+                        tipo_envio: tipoEnvio
+                    };
+
+                    if (tipoEnvio === 'todos_profissao') {
+                        comunicadoData.profissao_destino = document.getElementById('select-profissao-destino').value;
+                        
+                        // Adicionar turma de destino se selecionada
+                        const turmaDestino = document.getElementById('select-turma-destino').value;
+                        if (turmaDestino) {
+                            comunicadoData.turma_destino = parseInt(turmaDestino);
+                        }
+                    }
+
+                    const { data: comunicado, error: errorComunicado } = await this.supabase
+                        .from('comunicados')
+                        .insert([comunicadoData])
+                        .select()
+                    .single();
+                
+                    if (errorComunicado) throw errorComunicado;
+
+                    // Criar destinatários
+                    await this.criarDestinatarios(comunicado, tipoEnvio);
+
+                    Toast.show('Comunicado enviado com sucesso!', 'success');
+                    this.fecharModalNovo();
+                    
+                    // Voltar para a tela anterior após sucesso
+                    setTimeout(() => {
+                        history.back();
+                    }, 1500);
+                
+            } catch (error) {
+                    console.error('Erro ao enviar comunicado:', error);
+                    Toast.show('Erro ao enviar comunicado', 'error');
+                }
+            }
+
+            async criarDestinatarios(comunicado, tipoEnvio) {
+                console.log('🎯 Criando destinatários para comunicado:', comunicado.id, 'tipo:', tipoEnvio);
+                let destinatarios = [];
+
+                if (tipoEnvio === 'todos_profissao') {
+                    const profissao = comunicado.profissao_destino;
+                    const turmaDestino = comunicado.turma_destino;
+                    console.log('🔍 Buscando usuários com profissão:', profissao);
+                    console.log('🎓 Turma de destino:', turmaDestino);
+                    console.log('👤 Autor:', this.usuario.profissao, 'Cidade:', this.usuario.cidade, 'Escola:', this.usuario.escola);
+                    
+                    let usuarios = [];
+
+                    if (turmaDestino && profissao === 'Responsável') {
+                        // Buscar responsáveis dos alunos da turma específica
+                        console.log('🎯 Buscando responsáveis da turma:', turmaDestino);
+                        
+                        const { data: alunosTurma, error: errorAlunos } = await this.supabase
+                            .from('alunos')
+                            .select('id')
+                            .eq('turma', turmaDestino)
+                            .is('soft_delete', null);
+
+                        if (errorAlunos) {
+                            console.error('❌ Erro ao buscar alunos da turma:', errorAlunos);
+                            throw errorAlunos;
+                        }
+
+                        if (alunosTurma && alunosTurma.length > 0) {
+                            const alunosIds = alunosTurma.map(a => a.id);
+                            console.log('👶 Alunos da turma:', alunosIds);
+
+                            // Buscar responsáveis desses alunos
+                            const { data: permissoesAlunos, error: errorPermissoes } = await this.supabase
+                                .from('permissoes_aluno')
+                                .select('usuario_id')
+                                .in('aluno_id', alunosIds);
+
+                            if (errorPermissoes) {
+                                console.error('❌ Erro ao buscar permissões de alunos:', errorPermissoes);
+                                throw errorPermissoes;
+                            }
+
+                            if (permissoesAlunos && permissoesAlunos.length > 0) {
+                                const responsaveisIds = [...new Set(permissoesAlunos.map(p => p.usuario_id))];
+                                console.log('👨‍👩‍👧‍👦 IDs dos responsáveis:', responsaveisIds);
+
+                                // Buscar dados dos responsáveis
+                                const { data: responsaveis, error: errorResponsaveis } = await this.supabase
+                                    .from('usuarios')
+                                    .select('id, nome, profissao, cidade, escola')
+                                    .in('id', responsaveisIds)
+                                    .eq('profissao', 'Responsável');
+
+                                if (errorResponsaveis) {
+                                    console.error('❌ Erro ao buscar dados dos responsáveis:', errorResponsaveis);
+                                    throw errorResponsaveis;
+                                }
+
+                                usuarios = responsaveis || [];
+                            }
+                        }
+                    } else {
+                        // Busca normal por profissão (sem filtro de turma)
+                        let query = this.supabase
+                            .from('usuarios')
+                            .select('id, nome, profissao, cidade, escola')
+                            .eq('profissao', profissao);
+
+                        // Se não for Prefeito ou Secretário, filtrar por mesma cidade/escola
+                        if (!['Prefeito', 'Secretário'].includes(this.usuario.profissao)) {
+                            query = query
+                                .eq('cidade', this.usuario.cidade)
+                                .eq('escola', this.usuario.escola);
+                            console.log('🏫 Filtrando destinatários por cidade/escola:', this.usuario.cidade, this.usuario.escola);
+                        }
+
+                        const { data: usuariosEncontrados, error } = await query;
+
+                        if (error) {
+                            console.error('❌ Erro ao buscar usuários por profissão:', error);
+                            throw error;
+                        }
+
+                        usuarios = usuariosEncontrados || [];
+                    }
+
+                    console.log('👥 Usuários encontrados:', usuarios);
+
+                    destinatarios = usuarios.map(u => ({
+                        comunicado_id: comunicado.id,
+                        usuario_id: u.id
+                    }));
+
+                    console.log('📋 Destinatários preparados:', destinatarios);
+
+                } else if (tipoEnvio === 'usuarios_especificos') {
+                    const checkboxes = document.querySelectorAll('#lista-usuarios input[type="checkbox"]:checked');
+                    console.log('☑️ Checkboxes selecionados:', checkboxes.length);
+                    
+                    destinatarios = Array.from(checkboxes).map(cb => ({
+                        comunicado_id: comunicado.id,
+                        usuario_id: cb.value
+                    }));
+
+                    console.log('📋 Destinatários específicos:', destinatarios);
+                }
+
+                if (destinatarios.length > 0) {
+                    console.log('💾 Inserindo destinatários no banco:', destinatarios);
+                    
+                    const { data: insertedData, error } = await this.supabase
+                        .from('comunicados_destinatarios')
+                        .insert(destinatarios)
+                        .select();
+
+                    if (error) {
+                        console.error('❌ Erro ao inserir destinatários:', error);
+                        throw error;
+                    }
+                    
+                    console.log('✅ Destinatários inseridos com sucesso:', insertedData);
+                    console.log(`📤 Comunicado enviado para ${destinatarios.length} destinatário(s)`);
+                } else {
+                    console.warn('⚠️ Nenhum destinatário encontrado para o comunicado');
+                }
+            }
+
+            fecharModalNovo() {
+                document.getElementById('modal-novo-comunicado').classList.add('hidden');
+                document.getElementById('form-comunicado').reset();
+                document.getElementById('div-profissao-destino').classList.add('hidden');
+                document.getElementById('div-usuarios-especificos').classList.add('hidden');
+                document.getElementById('div-turma-destino').classList.add('hidden');
+            }
+
+            confirmarExclusao(comunicadoId) {
+                if (confirm('Tem certeza que deseja excluir este comunicado? Esta ação não pode ser desfeita.')) {
+                    this.excluirComunicado(comunicadoId);
+                }
+            }
+
+            async excluirComunicado(comunicadoId) {
+                try {
+                    console.log('🗑️ Excluindo comunicado:', comunicadoId);
+                    
+                    // Soft delete - marcar como excluído
+                    const { error } = await this.supabase
+                        .from('comunicados')
+                        .update({ soft_delete: new Date().toISOString() })
+                        .eq('id', comunicadoId)
+                        .eq('autor_id', this.usuario.id); // Só pode excluir próprios comunicados
+
+                    if (error) {
+                        console.error('❌ Erro ao excluir comunicado:', error);
+                        throw error;
+                    }
+
+                    console.log('✅ Comunicado excluído com sucesso');
+                    Toast.show('Comunicado excluído com sucesso', 'success');
+                    
+                    // Recarregar lista
+                    await this.carregarComunicados();
+
+                } catch (error) {
+                    console.error('❌ Erro ao excluir comunicado:', error);
+                    Toast.show('Erro ao excluir comunicado', 'error');
+                }
+            }
+        }
+
+        // ========== FUNÇÕES GLOBAIS PARA OS MODAIS ==========
         
-        // Fechar modal ao clicar fora
-        document.getElementById('media-modal').addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-backdrop')) {
-                fecharModal();
+        function fecharModalDetalhes() {
+            if (window.app) window.app.fecharModalDetalhes();
+        }
+
+        function fecharModalNovo() {
+            if (window.app) window.app.fecharModalNovo();
+        }
+
+        function marcarComoLido() {
+            if (window.app) window.app.marcarComoLido();
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        
+        let app;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                app = new ComunicadosApp();
+                window.app = app; // Para acesso global
+                await app.inicializar();
+            } catch (error) {
+                console.error('Erro ao inicializar aplicação:', error);
+                Toast.show('Erro ao inicializar aplicação', 'error');
             }
         });
         
         // Fechar modal com tecla ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                fecharModal();
+                if (window.app) {
+                    window.app.fecharModalDetalhes();
+                    window.app.fecharModalNovo();
+                }
             }
         });
     </script>

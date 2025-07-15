@@ -379,38 +379,64 @@
             escola: '',
             tipo: ''
         };
-        let permissoes = {
-            turmas: [],
-            escolas: [],
-            cidade: null
-        };
+        let permissoesEscolas = [];
 
-        // Carregar Permissões do Usuário
-        async function carregarPermissoes() {
+        // Obter cidade do usuário logado
+        const userSession = JSON.parse(localStorage.getItem('user_session'));
+        let cidadeUsuario = null;
+        if (!userSession) {
+            window.location.href = '/auth.html';
+        } else {
+            cidadeUsuario = userSession.cidade;
+            console.log('🏠 Dados do usuário logado:', userSession);
+            console.log('🌆 Cidade do usuário (campo cidade):', cidadeUsuario);
+            console.log('🔍 Tipo da cidade:', typeof cidadeUsuario);
+            
+            // Se não tiver cidade no userSession, buscar no banco
+            if (!cidadeUsuario) {
+                console.log('⚠️ Campo cidade está vazio, tentando buscar no banco...');
+            }
+        }
+
+        // Buscar cidade do usuário no banco (se não estiver no localStorage)
+        async function buscarCidadeUsuario() {
+            try {
+                if (cidadeUsuario) {
+                    console.log('✅ Cidade já carregada do localStorage:', cidadeUsuario);
+                    return cidadeUsuario;
+                }
+
+                console.log('🔍 Buscando cidade do usuário no banco...');
+                const supabase = createSupabaseClient();
+                
+                const { data: userData, error } = await supabase
+                    .from('usuarios')
+                    .select('cidade, nome')
+                    .eq('id', userSession.id)
+                    .single();
+
+                if (error) {
+                    console.error('❌ Erro ao buscar dados do usuário:', error);
+                    throw error;
+                }
+
+                console.log('👤 Dados do usuário no banco:', userData);
+                cidadeUsuario = userData.cidade;
+                console.log('🌆 Cidade encontrada no banco:', cidadeUsuario);
+                
+                return cidadeUsuario;
+            } catch (error) {
+                console.error('❌ Erro ao buscar cidade do usuário:', error);
+                return null;
+            }
+        }
+
+        // Carregar Permissões de Escolas do Usuário
+        async function carregarPermissoesEscolas() {
             try {
                 const supabase = createSupabaseClient();
-                const userSession = JSON.parse(localStorage.getItem('user_session'));
                 
-                if (!userSession) {
-                    window.location.href = '/auth.html';
-                    return;
-                }
-
-                // 1. Buscar permissões de cidade
-                const { data: permissoesCidade, error: permissoesCidadeError } = await supabase
-                    .from('permissoes_cidade')
-                    .select('cidade_id')
-                    .eq('usuario_id', userSession.id);
-
-                if (permissoesCidadeError) throw permissoesCidadeError;
-                
-                if (permissoesCidade?.length > 0) {
-                    permissoes.cidade = permissoesCidade.map(p => p.cidade_id);
-                    console.log('Permissões de cidade:', permissoes.cidade);
-                    return;
-                }
-
-                // 2. Buscar permissões de escola
+                // 1. Buscar permissões diretas de escola
                 const { data: permissoesEscola, error: permissoesEscolaError } = await supabase
                     .from('permissoes_escola')
                     .select('escola_id')
@@ -419,12 +445,12 @@
                 if (permissoesEscolaError) throw permissoesEscolaError;
                 
                 if (permissoesEscola?.length > 0) {
-                    permissoes.escolas = permissoesEscola.map(p => p.escola_id);
-                    console.log('Permissões de escola:', permissoes.escolas);
+                    permissoesEscolas = permissoesEscola.map(p => p.escola_id);
+                    console.log('Permissões diretas de escola:', permissoesEscolas);
                     return;
                 }
 
-                // 3. Buscar permissões de turma
+                // 2. Buscar permissões de turma e obter escolas das turmas
                 const { data: permissoesTurma, error: permissoesTurmaError } = await supabase
                     .from('permissoes_turma')
                     .select('turma_id')
@@ -433,83 +459,45 @@
                 if (permissoesTurmaError) throw permissoesTurmaError;
                 
                 if (permissoesTurma?.length > 0) {
-                    permissoes.turmas = permissoesTurma.map(p => p.turma_id);
+                    const turmasIds = permissoesTurma.map(p => p.turma_id);
                     
                     // Buscar escolas das turmas
                     const { data: turmas, error: turmasError } = await supabase
                         .from('turmas')
                         .select('escola_id')
-                        .in('id', permissoes.turmas);
+                        .in('id', turmasIds);
 
                     if (turmasError) throw turmasError;
                     if (turmas?.length > 0) {
-                        permissoes.escolas = [...new Set(turmas.map(t => t.escola_id))];
-                        console.log('Escolas das turmas:', permissoes.escolas);
-                        return;
+                        permissoesEscolas = [...new Set(turmas.map(t => t.escola_id))];
+                        console.log('Escolas das turmas:', permissoesEscolas);
                     }
                 }
 
-                // 4. Buscar alunos do responsável
-                const { data: permissoesAlunos, error: permissoesError } = await supabase
-                    .from('permissoes_aluno')
-                    .select('aluno_id')
-                    .eq('usuario_id', userSession.id);
-
-                if (permissoesError) throw permissoesError;
-
-                if (permissoesAlunos?.length > 0) {
-                    // Buscar escolas dos alunos
-                    const { data: alunos, error: alunosError } = await supabase
-                        .from('alunos')
-                        .select('escola_id')
-                        .in('id', permissoesAlunos.map(r => r.aluno_id))
-                        .is('soft_delete', null);
-
-                    if (alunosError) throw alunosError;
-
-                    if (alunos?.length > 0) {
-                        permissoes.escolas = [...new Set(alunos.map(a => a.escola_id))];
-                        console.log('Escolas dos alunos:', permissoes.escolas);
-                    }
-                }
-
-                console.log('Permissões finais:', permissoes);
+                console.log('Permissões finais de escolas:', permissoesEscolas);
             } catch (error) {
-                console.error('Erro ao carregar permissões:', error);
-                Toast.show('Erro ao carregar permissões', 'error');
+                console.error('Erro ao carregar permissões de escolas:', error);
             }
         }
 
-        // Carregar Escolas
+        // Carregar Escolas (para o filtro)
         async function carregarEscolas() {
             try {
-                const supabase = createSupabaseClient();
-                let query = supabase
-                    .from('escolas')
-                    .select('id, nome, cidade_id')
-                    .is('soft_delete', null);
-
-                // Se tem permissão por cidade
-                if (permissoes.cidade?.length > 0) {
-                    query = query.in('cidade_id', permissoes.cidade);
-                }
-                // Se tem permissão por escola específica
-                else if (permissoes.escolas?.length > 0) {
-                    query = query.in('id', permissoes.escolas);
-                }
-                // Se não tem nenhuma permissão
-                else {
+                if (!permissoesEscolas.length) {
                     document.getElementById('escola-filter').innerHTML = '<option value="">Nenhuma escola disponível</option>';
                     document.getElementById('escola-filter').disabled = true;
                     return;
                 }
 
-                const { data, error } = await query.order('nome');
+                const supabase = createSupabaseClient();
+                const { data, error } = await supabase
+                    .from('escolas')
+                    .select('id, nome')
+                    .in('id', permissoesEscolas)
+                    .is('soft_delete', null)
+                    .order('nome');
 
-                if (error) {
-                    console.error('Erro SQL:', error);
-                    throw error;
-                }
+                if (error) throw error;
 
                 escolas = data || [];
                 const select = document.getElementById('escola-filter');
@@ -540,49 +528,81 @@
         // Carregar Câmeras
         async function carregarCameras() {
             try {
-                if (!permissoes.cidade && !permissoes.escolas.length) {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    document.getElementById('cameras-grid').style.display = 'none';
-                    return;
-                }
+                console.log('🎥 Carregando câmeras...');
+                console.log('👤 Cidade do usuário:', cidadeUsuario);
+                console.log('🏫 Permissões de escolas:', permissoesEscolas);
 
                 const supabase = createSupabaseClient();
-                let query = supabase
-                    .from('cameras')
-                    .select(`
-                        *,
-                        escolas (
-                            id,
-                            nome
-                        )
-                    `)
-                    .is('soft_delete', null);
+                cameras = [];
 
-                // Se tiver escolas com permissão
-                if (permissoes.escolas.length > 0) {
-                    query = query.in('escola_id', permissoes.escolas);
-                } else if (permissoes.cidade) {
-                    query = query.eq('cidade_id', permissoes.cidade);
+                // 1. Buscar câmeras SITE (da cidade do usuário)
+                if (cidadeUsuario) {
+                    console.log('🌆 Buscando câmeras SITE da cidade:', cidadeUsuario);
+                    
+                    const { data: camerasSite, error: errorSite } = await supabase
+                        .from('cameras')
+                        .select(`
+                            *,
+                            escolas (
+                                id,
+                                nome
+                            )
+                        `)
+                        .eq('tipo', 'SITE')
+                        .eq('cidade_id', cidadeUsuario)
+                        .is('soft_delete', null);
+
+                    if (errorSite) {
+                        console.error('❌ Erro ao buscar câmeras SITE:', errorSite);
+                    } else {
+                        console.log('✅ Câmeras SITE encontradas:', camerasSite?.length || 0);
+                        if (camerasSite && camerasSite.length > 0) {
+                            console.log('📋 Detalhes das câmeras SITE:', camerasSite);
+                        } else {
+                            console.log('⚠️ Nenhuma câmera SITE encontrada para a cidade:', cidadeUsuario);
+                            
+                            // Debug adicional: verificar se existem câmeras SITE no banco
+                            const { data: todasCamerasSite, error: errorTodasSite } = await supabase
+                                .from('cameras')
+                                .select('id, nome, cidade_id, tipo')
+                                .eq('tipo', 'SITE')
+                                .is('soft_delete', null);
+                            
+                            console.log('🔍 Debug - Todas as câmeras SITE no banco:', todasCamerasSite);
+                        }
+                        cameras = cameras.concat(camerasSite || []);
+                    }
                 } else {
-                    // Se não tiver nem cidade nem escolas, não mostra nada
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    document.getElementById('cameras-grid').style.display = 'none';
-                    return;
+                    console.log('⚠️ Usuário não tem cidade definida, pulando busca de câmeras SITE');
                 }
 
-                const { data, error } = await query;
+                // 2. Buscar câmeras ESCOLA (das escolas com permissão)
+                if (permissoesEscolas.length > 0) {
+                    console.log('🏫 Buscando câmeras ESCOLA das escolas:', permissoesEscolas);
+                    const { data: camerasEscola, error: errorEscola } = await supabase
+                        .from('cameras')
+                        .select(`
+                            *,
+                            escolas (
+                                id,
+                                nome
+                            )
+                        `)
+                        .eq('tipo', 'ESCOLA')
+                        .in('escola_id', permissoesEscolas)
+                        .is('soft_delete', null);
 
-                if (error) {
-                    console.error('Erro SQL:', error);
-                    throw error;
+                    if (errorEscola) {
+                        console.error('❌ Erro ao buscar câmeras ESCOLA:', errorEscola);
+                    } else {
+                        console.log('✅ Câmeras ESCOLA encontradas:', camerasEscola?.length || 0);
+                        cameras = cameras.concat(camerasEscola || []);
+                    }
                 }
 
-                cameras = data || [];
                 document.getElementById('loading').style.display = 'none';
                 
-                console.log('Câmeras carregadas:', cameras.length);
+                console.log('🎯 Total de câmeras carregadas:', cameras.length);
                 
                 if (!cameras.length) {
                     document.getElementById('empty-state').classList.remove('hidden');
@@ -593,7 +613,7 @@
                 aplicarFiltros();
 
             } catch (error) {
-                console.error('Erro ao carregar câmeras:', error);
+                console.error('❌ Erro ao carregar câmeras:', error);
                 Toast.show('Erro ao carregar câmeras. Tente novamente.', 'error');
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('empty-state').classList.remove('hidden');
@@ -603,6 +623,9 @@
 
         // Aplicar Filtros
         function aplicarFiltros() {
+            console.log('🔍 Aplicando filtros:', filtros);
+            console.log('📊 Total de câmeras antes do filtro:', cameras.length);
+            
             const camerasFiltradas = cameras.filter(camera => {
                 // Se tiver escola selecionada, filtra por ela
                 if (filtros.escola && camera.escola_id !== parseInt(filtros.escola)) return false;
@@ -612,6 +635,8 @@
                 
                 return true;
             });
+
+            console.log('📋 Câmeras após filtro:', camerasFiltradas.length);
 
             const grid = document.getElementById('cameras-grid');
             const emptyState = document.getElementById('empty-state');
@@ -715,7 +740,8 @@
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', async () => {
-            await carregarPermissoes();
+            await buscarCidadeUsuario();
+            await carregarPermissoesEscolas();
             await carregarEscolas();
             await carregarCameras();
             

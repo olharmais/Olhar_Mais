@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Alunos da Turma</title>
+    <meta name="description" content="OlharMais - Lista de alunos da turma com edição de fotos">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        
+        /* Ajuste para o navbar mobile */
+        body {
+            padding-bottom: 60px; /* Altura do navbar + margem */
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        .aluno-card {
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .aluno-presente {
+            border-color: #10b981;
+        }
+        
+        .aluno-ausente {
+            border-color: #ef4444;
+        }
+        
+        .foto-aluno {
+            transition: transform 0.3s ease;
+        }
+        
+        .aluno-card:hover .foto-aluno {
+            transform: scale(1.05);
+        }
+        
+        .btn-edit-foto:hover {
+            transform: scale(1.1);
+        }
+
+        /* Estilo para cards de alunos */
+        .aluno-card {
+            transition: all 0.3s ease;
+        }
+        
+        .aluno-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .aluno-presente {
+            border: 3px solid #22c55e;
+        }
+        
+        .aluno-ausente {
+            border: 3px solid #ef4444;
+        }
+
+        .foto-aluno {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .btn-edit-foto {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-edit-foto:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="font-sans bg-white dark:bg-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4">
+        <div class="container mx-auto px-4 flex items-center">
+            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+            <div class="ml-auto">
+                <button onclick="window.location.href='notificacoes_profi.html'" class="text-gray-600 hover:text-primary transition-colors relative">
+                    <i class="ph ph-bell text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Cabeçalho -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Alunos da Turma</h2>
+            <p class="text-gray-600">Visualize e edite as fotos dos alunos</p>
+        </div>
+        
+        <!-- Métricas de Presença -->
+        <div id="metricas-presenca" class="hidden mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600" id="total-presentes">0</div>
+                    <div class="text-sm text-green-600">Presentes Hoje</div>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-red-600" id="total-ausentes">0</div>
+                    <div class="text-sm text-red-600">Ausentes Hoje</div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="total-alunos-metrica">0</div>
+                    <div class="text-sm text-blue-600">Total de Alunos</div>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-gray-600" id="percentual-presenca">0%</div>
+                    <div class="text-sm text-gray-600">% Presença</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="bg-white rounded-lg shadow p-5 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- Seletor de Turma -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Turma</label>
+                    <select id="turma-select" class="w-full border border-gray-300 rounded-full px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
+                        <option value="">Selecione uma turma</option>
+                    </select>
+                </div>
+                
+                <!-- Botão Carregar -->
+                <div class="flex items-end">
+                    <button id="carregar-alunos-btn" class="w-full bg-primary text-white rounded-full py-3 px-4 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-all" disabled>
+                        Carregar Alunos
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Filtros de Presença -->
+            <div id="filtros-presenca" class="hidden">
+                <div class="flex flex-wrap gap-2">
+                    <button id="filtro-todos" class="px-4 py-2 text-sm rounded-full border border-gray-300 bg-primary text-white transition-all">
+                        Todos
+                    </button>
+                    <button id="filtro-presentes" class="px-4 py-2 text-sm rounded-full border border-green-300 text-green-600 hover:bg-green-50 transition-all">
+                        Presentes
+                    </button>
+                    <button id="filtro-ausentes" class="px-4 py-2 text-sm rounded-full border border-red-300 text-red-600 hover:bg-red-50 transition-all">
+                        Ausentes
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+
+        
+        <!-- Lista de Alunos -->
+        <div id="alunos-container" class="hidden animate-fade-in">
+            <div id="alunos-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                <!-- Os cards dos alunos serão inseridos aqui via JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Mensagem de Carregamento -->
+        <div id="loading" class="hidden">
+            <div class="flex items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        </div>
+        
+        <!-- Mensagem de Nenhum Resultado -->
+        <div id="no-results" class="hidden">
+            <div class="text-center py-12 text-gray-600 bg-white rounded-lg shadow p-6">
+                <i class="ph ph-users text-5xl text-gray-400 mb-4"></i>
+                <p class="text-xl font-medium">Nenhum aluno encontrado</p>
+                <p class="mt-2">Selecione uma escola e turma para visualizar os alunos</p>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
+        <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <!-- Navbar JavaScript Alternativo -->
+    <script src="botoes_profi.js" type="module"></script>
+    
+    <!-- Fallback: iframe com navbar (oculto se JS alternativo funcionar) -->
+    <iframe id="navbar-iframe" src="navbar_profi.html" frameborder="0" scrolling="no" class="w-full fixed bottom-0 left-0 right-0 h-[60px] sm:hidden" allow="*" sandbox="allow-scripts allow-same-origin"></iframe>
+    
+    <script>
+        // ========== CONFIGURAÇÃO E INICIALIZAÇÃO ==========
+        
+        // Ocultar o iframe se o JS alternativo carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof adicionarBarraNavegacao === 'function') {
+                const iframe = document.getElementById('navbar-iframe');
+                if (iframe) iframe.style.display = 'none';
+            }
+        });
+
+        // ========== COMPONENTES UTILITÁRIOS ==========
+        
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            },
+            
+            success(message) { this.show(message, 'success'); },
+            error(message) { this.show(message, 'error'); },
+            warning(message) { this.show(message, 'warning'); },
+            info(message) { this.show(message, 'info'); }
+        };
+
+        // Gerenciador de Loading
+        const LoadingManager = {
+            show() {
+                document.getElementById('loading').classList.remove('hidden');
+            },
+            
+            hide() {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        };
+
+        // ========== CLASSE PRINCIPAL DA APLICAÇÃO ==========
+        
+        class AlunosEditFotoApp {
+            constructor() {
+                this.supabase = null;
+                this.userId = null;
+                this.estado = {
+                    escolaId: null,
+                    escolaNome: '',
+                    turmaId: null,
+                    turmaNome: '',
+                    alunos: [],
+                    alunosPresentes: new Set(),
+                    filtroAtivo: 'todos'
+                };
+                this.elementos = this.obterElementos();
+            }
+
+            // Obter referências dos elementos DOM
+            obterElementos() {
+                return {
+                    turmaSelect: document.getElementById('turma-select'),
+                    carregarAlunosBtn: document.getElementById('carregar-alunos-btn'),
+                    alunosContainer: document.getElementById('alunos-container'),
+                    alunosGrid: document.getElementById('alunos-grid'),
+                    metricasPresenca: document.getElementById('metricas-presenca'),
+                    filtrosPresenca: document.getElementById('filtros-presenca'),
+                    noResults: document.getElementById('no-results'),
+                    // Métricas
+                    totalAlunos: document.getElementById('total-alunos-metrica'),
+                    totalPresentes: document.getElementById('total-presentes'),
+                    totalAusentes: document.getElementById('total-ausentes'),
+                    percentualPresenca: document.getElementById('percentual-presenca'),
+                    // Filtros
+                    filtroTodos: document.getElementById('filtro-todos'),
+                    filtroPresentes: document.getElementById('filtro-presentes'),
+                    filtroAusentes: document.getElementById('filtro-ausentes')
+                };
+            }
+
+            // Inicializar aplicação
+            async inicializar() {
+                try {
+                    // Verificar autenticação
+                    const userData = await this.verificarAutenticacao();
+                    this.userId = userData.id || userData.user_id || userData.usuario_id;
+                    
+                    if (!this.userId) {
+                        throw new Error('ID do usuário não encontrado');
+                    }
+
+                    // Inicializar Supabase
+                    this.supabase = createSupabaseClient();
+                    
+                    // Carregar dados iniciais
+                    await this.carregarTurmasPermitidas();
+                    
+                    // Configurar eventos
+                    this.configurarEventos();
+                    
+                } catch (error) {
+                    console.error('Erro ao inicializar:', error);
+                    Toast.error('Erro ao carregar a página. Por favor, tente novamente.');
+                }
+            }
+
+            // Verificar autenticação do usuário
+            async verificarAutenticacao() {
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    window.location.href = '/auth.html';
+                    throw new Error('Usuário não autenticado');
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                if (userData.tipo !== 'PROFISSIONAL') {
+                    Toast.error('Acesso não autorizado para este perfil');
+                    setTimeout(() => window.location.href = '/auth.html', 2000);
+                    throw new Error('Tipo de usuário inválido');
+                }
+                
+                return userData;
+            }
+
+            // Determinar nível de acesso do usuário
+            async determinarNivelAcesso() {
+                try {
+                    const [
+                        { data: permissoesCidade },
+                        { data: permissoesEscola },
+                        { data: permissoesTurma }
+                    ] = await Promise.all([
+                        this.supabase.from('permissoes_cidade').select('cidade_id').eq('usuario_id', this.userId),
+                        this.supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', this.userId),
+                        this.supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', this.userId)
+                    ]);
+
+                    if (permissoesCidade?.length > 0) {
+                        return { nivel: 'CIDADE', ids: permissoesCidade.map(p => p.cidade_id) };
+                    }
+                    
+                    if (permissoesEscola?.length > 0) {
+                        return { nivel: 'ESCOLA', ids: permissoesEscola.map(p => p.escola_id) };
+                    }
+                    
+                    if (permissoesTurma?.length > 0) {
+                        return { nivel: 'TURMA', ids: permissoesTurma.map(p => p.turma_id) };
+                    }
+
+                    return { nivel: 'SEM_ACESSO', ids: [] };
+                } catch (error) {
+                    console.error('Erro ao determinar nível de acesso:', error);
+                    throw error;
+                }
+            }
+
+            // Buscar turmas por nível de acesso
+            async buscarTurmasPorNivel(nivelAcesso) {
+                try {
+                    switch (nivelAcesso.nivel) {
+                        case 'CIDADE':
+                            return await this.buscarTurmasPorCidade(nivelAcesso.ids);
+                        case 'ESCOLA':
+                            return await this.buscarTurmasPorEscola(nivelAcesso.ids);
+                        case 'TURMA':
+                            return await this.buscarTurmasEspecificas(nivelAcesso.ids);
+                        default:
+                            return [];
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar turmas:', error);
+                    // Fallback: buscar sem join
+                    return await this.buscarTurmasSemJoin(nivelAcesso);
+                }
+            }
+
+            // Buscar turmas por cidade
+            async buscarTurmasPorCidade(cidadeIds) {
+                const { data: escolasCidade } = await this.supabase
+                    .from('escolas')
+                    .select('id')
+                    .in('cidade_id', cidadeIds)
+                    .is('soft_delete', null);
+                
+                if (!escolasCidade?.length) return [];
+
+                const escolasIds = escolasCidade.map(e => e.id);
+                const { data: turmas } = await this.supabase
+                    .from('turmas')
+                    .select(`
+                        id, nome, periodo, escola_id,
+                        escolas!turmas_escola_id_fkey(nome)
+                    `)
+                    .in('escola_id', escolasIds)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                return turmas || [];
+            }
+
+            // Buscar turmas por escola
+            async buscarTurmasPorEscola(escolaIds) {
+                const { data: turmas } = await this.supabase
+                    .from('turmas')
+                    .select(`
+                        id, nome, periodo, escola_id,
+                        escolas!turmas_escola_id_fkey(nome)
+                    `)
+                    .in('escola_id', escolaIds)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                return turmas || [];
+            }
+
+            // Buscar turmas específicas
+            async buscarTurmasEspecificas(turmaIds) {
+                const { data: turmas } = await this.supabase
+                    .from('turmas')
+                    .select(`
+                        id, nome, periodo, escola_id,
+                        escolas!turmas_escola_id_fkey(nome)
+                    `)
+                    .in('id', turmaIds)
+                    .is('soft_delete', null)
+                    .order('nome');
+                
+                return turmas || [];
+            }
+
+            // Fallback: buscar turmas sem join
+            async buscarTurmasSemJoin(nivelAcesso) {
+                let query = this.supabase
+                    .from('turmas')
+                    .select('id, nome, periodo, escola_id')
+                    .is('soft_delete', null)
+                    .order('nome');
+
+                switch (nivelAcesso.nivel) {
+                    case 'ESCOLA':
+                        query = query.in('escola_id', nivelAcesso.ids);
+                        break;
+                    case 'TURMA':
+                        query = query.in('id', nivelAcesso.ids);
+                        break;
+                }
+
+                const { data: turmas } = await query;
+                
+                if (turmas) {
+                    // Buscar nomes das escolas separadamente
+                    for (const turma of turmas) {
+                        const { data: escola } = await this.supabase
+                            .from('escolas')
+                            .select('nome')
+                            .eq('id', turma.escola_id)
+                            .single();
+                        
+                        turma.escolas = escola;
+                    }
+                }
+                
+                return turmas || [];
+            }
+
+            // Carregar turmas permitidas
+            async carregarTurmasPermitidas() {
+                try {
+                    LoadingManager.show();
+                    
+                    const nivelAcesso = await this.determinarNivelAcesso();
+                    const turmasPermitidas = await this.buscarTurmasPorNivel(nivelAcesso);
+
+                    this.populateSelectTurmas(turmasPermitidas);
+                    
+                    LoadingManager.hide();
+                } catch (error) {
+                    console.error('Erro ao carregar turmas:', error);
+                    Toast.error('Erro ao carregar turmas');
+                    LoadingManager.hide();
+                }
+            }
+
+            // Popular select de turmas
+            populateSelectTurmas(turmas) {
+                this.elementos.turmaSelect.innerHTML = '<option value="">Selecione uma turma</option>';
+
+                if (turmas.length === 0) {
+                    Toast.warning('Você não tem permissões para nenhuma turma');
+                    return;
+                }
+
+                turmas.forEach(turma => {
+                    const option = document.createElement('option');
+                    option.value = turma.id;
+                    option.dataset.nome = turma.nome;
+                    option.dataset.periodo = turma.periodo || '';
+                    option.dataset.escolaId = turma.escola_id;
+                    option.dataset.escolaNome = turma.escolas?.nome || '';
+                    option.textContent = `${turma.nome}${turma.periodo ? ' - ' + turma.periodo : ''} (${turma.escolas?.nome || 'Escola não informada'})`;
+                    this.elementos.turmaSelect.appendChild(option);
+                });
+
+                this.elementos.turmaSelect.disabled = false;
+                this.elementos.carregarAlunosBtn.disabled = false;
+            }
+
+            // Carregar alunos da turma
+            async carregarAlunos() {
+                try {
+                    LoadingManager.show();
+                    this.ocultarContainers();
+                    
+                    // Buscar alunos
+                    const { data: alunos, error: alunosError } = await this.supabase
+                        .from('alunos')
+                        .select(`
+                            id, nome_completo, foto_url, registro_aluno,
+                            turmas (nome), series (nome)
+                        `)
+                        .eq('turma', parseInt(this.estado.turmaId))
+                        .is('soft_delete', null)
+                        .order('nome_completo');
+                    
+                    if (alunosError) throw alunosError;
+                    
+                    if (!alunos?.length) {
+                        this.mostrarSemResultados();
+                        return;
+                    }
+                    
+                    // Buscar presenças
+                    const alunosPresentes = await this.buscarPresencasHoje();
+                    
+                    // Atualizar estado
+                    this.estado.alunos = alunos;
+                    this.estado.alunosPresentes = alunosPresentes;
+                    
+                    // Atualizar interface
+                    this.atualizarMetricas(alunos, alunosPresentes);
+                    this.renderizarAlunos(alunos, alunosPresentes);
+                    this.mostrarContainers();
+                    
+                } catch (error) {
+                    console.error('Erro ao carregar alunos:', error);
+                    Toast.error('Erro ao carregar alunos');
+                    this.mostrarSemResultados();
+                } finally {
+                    LoadingManager.hide();
+                }
+            }
+
+            // Buscar presenças de hoje
+            async buscarPresencasHoje() {
+                try {
+                    const hoje = new Date().toISOString().split('T')[0];
+                    const startOfDay = new Date(hoje + 'T00:00:00-03:00');
+                    const endOfDay = new Date(hoje + 'T23:59:59.999-03:00');
+                    
+                    // Buscar info da turma
+                    const { data: turmaInfo } = await this.supabase
+                        .from('turmas')
+                        .select('nome')
+                        .eq('id', parseInt(this.estado.turmaId))
+                        .single();
+                    
+                    if (!turmaInfo) return new Set();
+                    
+                    // Buscar logs de presença
+                    const { data: logsHoje } = await this.supabase
+                        .from('view_alunos_logs')
+                        .select('nome_aluno')
+                        .eq('turma_nome', turmaInfo.nome)
+                        .gte('hora_check', startOfDay.toISOString())
+                        .lte('hora_check', endOfDay.toISOString());
+                    
+                    return new Set(logsHoje?.map(log => log.nome_aluno) || []);
+                } catch (error) {
+                    console.error('Erro ao buscar presenças:', error);
+                    return new Set();
+                }
+            }
+
+            // Atualizar métricas
+            atualizarMetricas(alunos, alunosPresentes) {
+                const total = alunos.length;
+                const presentes = alunosPresentes.size;
+                const ausentes = total - presentes;
+                const percentual = total > 0 ? Math.round((presentes / total) * 100) : 0;
+                
+                this.elementos.totalAlunos.textContent = total;
+                this.elementos.totalPresentes.textContent = presentes;
+                this.elementos.totalAusentes.textContent = ausentes;
+                this.elementos.percentualPresenca.textContent = `${percentual}%`;
+            }
+
+            // Renderizar alunos
+            renderizarAlunos(alunos, alunosPresentes) {
+                this.elementos.alunosGrid.innerHTML = '';
+                
+                alunos.forEach(aluno => {
+                    const estaPresente = alunosPresentes.has(aluno.nome_completo);
+                    const temFoto = aluno.foto_url && !this.isFotoPadrao(aluno.foto_url);
+                    
+                    const card = this.criarCardAluno(aluno, estaPresente, temFoto);
+                    this.elementos.alunosGrid.appendChild(card);
+                });
+            }
+
+            // Criar card do aluno
+            criarCardAluno(aluno, estaPresente, temFoto) {
+                const card = document.createElement('div');
+                card.className = `aluno-card bg-white rounded-lg shadow-lg overflow-hidden ${estaPresente ? 'aluno-presente' : 'aluno-ausente'}`;
+                
+                card.innerHTML = `
+                    <div class="relative">
+                        <div class="foto-container h-32 md:h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+                            ${temFoto 
+                                ? `<img src="${aluno.foto_url}" alt="${aluno.nome_completo}" class="foto-aluno w-full h-full object-cover" onerror="this.src='/assets/img/avatar-placeholder.png'">` 
+                                : `<i class="ph ph-user text-4xl md:text-6xl text-gray-400"></i>`
+                            }
+                        </div>
+                        <div class="btn-edit-foto absolute top-2 right-2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50" onclick="app.alterarFoto('${aluno.id}')">
+                            <i class="ph ph-camera text-gray-700 text-sm"></i>
+                        </div>
+                        <div class="absolute top-2 left-2">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${estaPresente ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${estaPresente ? 'Presente' : 'Ausente'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-3 md:p-4">
+                        <h3 class="font-semibold text-gray-800 text-sm md:text-lg mb-1 truncate">${aluno.nome_completo}</h3>
+                        <p class="text-gray-600 text-xs md:text-sm mb-2">RA: ${aluno.registro_aluno || 'Não informado'}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-500 truncate">
+                                ${aluno.turmas?.nome || 'Turma não informada'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            // Verificar se é foto padrão
+            isFotoPadrao(url) {
+                if (!url) return true;
+                
+                const fotosDefault = [
+                    'freepik.com',
+                    'circulo-azul-com-usuario-branco',
+                    '78370-4707',
+                    'avatar-placeholder.png',
+                    'default-avatar.png'
+                ];
+                
+                return fotosDefault.some(padrao => url.toLowerCase().includes(padrao.toLowerCase()));
+            }
+
+            // Alterar foto do aluno
+            async alterarFoto(alunoId) {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    try {
+                        LoadingManager.show();
+                        await this.processarUploadFoto(alunoId, file);
+                        Toast.success('Foto atualizada com sucesso!');
+                        await this.carregarAlunos();
+                    } catch (error) {
+                        console.error('Erro ao atualizar foto:', error);
+                        Toast.error('Erro ao atualizar foto: ' + error.message);
+                    } finally {
+                        LoadingManager.hide();
+                    }
+                };
+
+                input.click();
+            }
+
+            // Processar upload da foto
+            async processarUploadFoto(alunoId, file) {
+                // Buscar dados do aluno
+                const { data: aluno, error: alunoError } = await this.supabase
+                    .from('alunos')
+                    .select('id, escola_id')
+                    .eq('id', alunoId)
+                    .single();
+
+                if (alunoError) throw alunoError;
+
+                // Limpar registros existentes
+                await this.supabase
+                    .from('aluno_dispositivo')
+                    .delete()
+                    .eq('aluno', alunoId);
+
+                // Buscar dispositivos da escola
+                const { data: dispositivos } = await this.supabase
+                    .from('dispositivos')
+                    .select('id')
+                    .eq('escola_id', aluno.escola_id)
+                    .eq('status', 'ATIVO')
+                    .is('soft_delete', null);
+
+                // Buscar WhatsApp do usuário
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                const { data: userData } = await this.supabase
+                    .from('usuarios')
+                    .select('whatsapp')
+                    .eq('id', userSession.id)
+                    .single();
+
+                // Criar registros para dispositivos
+                if (dispositivos?.length > 0) {
+                    const novosRegistros = dispositivos.map(dispositivo => ({
+                        id_dispositivo: dispositivo.id,
+                        aluno: alunoId,
+                        escola: aluno.escola_id,
+                        numero_de_quem_cadastrou: userData.whatsapp
+                    }));
+
+                    await this.supabase
+                        .from('aluno_dispositivo')
+                        .insert(novosRegistros);
+                }
+
+                // Upload da foto
+                const fileName = `aluno_${alunoId}_${Date.now()}.jpg`;
+                const filePath = `alunos/${fileName}`;
+
+                const { error: uploadError } = await this.supabase
+                    .storage
+                    .from('fotos_alunos')
+                    .upload(filePath, file, {
+                        contentType: 'image/jpeg',
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // Obter URL pública
+                const { data: publicUrlData } = this.supabase
+                    .storage
+                    .from('fotos_alunos')
+                    .getPublicUrl(filePath);
+
+                // Atualizar aluno
+                await this.supabase
+                    .from('alunos')
+                    .update({
+                        foto_url: publicUrlData.publicUrl,
+                        mudar_no_dispositivo: true,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', alunoId);
+            }
+
+            // Filtrar alunos
+            filtrarAlunos() {
+                const cards = document.querySelectorAll('.aluno-card');
+                
+                cards.forEach(card => {
+                    const isPresente = card.classList.contains('aluno-presente');
+                    const isAusente = card.classList.contains('aluno-ausente');
+                    
+                    let mostrar = true;
+                    
+                    if (this.estado.filtroAtivo === 'presentes' && !isPresente) {
+                        mostrar = false;
+                    } else if (this.estado.filtroAtivo === 'ausentes' && !isAusente) {
+                        mostrar = false;
+                    }
+                    
+                    card.style.display = mostrar ? 'block' : 'none';
+                });
+            }
+
+            // Atualizar filtro ativo
+            atualizarFiltroAtivo(novoFiltro) {
+                this.estado.filtroAtivo = novoFiltro;
+                
+                // Atualizar visual dos botões
+                const botoes = {
+                    todos: this.elementos.filtroTodos,
+                    presentes: this.elementos.filtroPresentes,
+                    ausentes: this.elementos.filtroAusentes
+                };
+
+                Object.keys(botoes).forEach(tipo => {
+                    const botao = botoes[tipo];
+                    if (tipo === novoFiltro) {
+                        if (tipo === 'todos') {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-gray-300 bg-primary text-white transition-all';
+                        } else if (tipo === 'presentes') {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-green-300 bg-green-500 text-white transition-all';
+                        } else {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-red-300 bg-red-500 text-white transition-all';
+                        }
+                    } else {
+                        if (tipo === 'todos') {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all';
+                        } else if (tipo === 'presentes') {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-green-300 text-green-600 hover:bg-green-50 transition-all';
+                        } else {
+                            botao.className = 'px-4 py-2 text-sm rounded-full border border-red-300 text-red-600 hover:bg-red-50 transition-all';
+                        }
+                    }
+                });
+
+                this.filtrarAlunos();
+            }
+
+            // Configurar eventos
+            configurarEventos() {
+                // Seleção de turma
+                this.elementos.turmaSelect.addEventListener('change', (event) => {
+                    const turmaId = this.elementos.turmaSelect.value;
+                    const turmaOption = this.elementos.turmaSelect.options[this.elementos.turmaSelect.selectedIndex];
+                    
+                    if (turmaId) {
+                        this.estado.turmaId = turmaId;
+                        this.estado.turmaNome = turmaOption.dataset.nome;
+                        this.estado.escolaId = turmaOption.dataset.escolaId;
+                        this.estado.escolaNome = turmaOption.dataset.escolaNome;
+                        this.elementos.carregarAlunosBtn.disabled = false;
+                    } else {
+                        this.estado.turmaId = null;
+                        this.estado.turmaNome = '';
+                        this.estado.escolaId = null;
+                        this.estado.escolaNome = '';
+                        this.elementos.carregarAlunosBtn.disabled = true;
+                    }
+                    
+                    this.ocultarContainers();
+                });
+                
+                // Botão carregar alunos
+                this.elementos.carregarAlunosBtn.addEventListener('click', () => {
+                    if (this.estado.turmaId) {
+                        this.carregarAlunos();
+                    }
+                });
+                
+                // Filtros
+                this.elementos.filtroTodos.addEventListener('click', () => {
+                    this.atualizarFiltroAtivo('todos');
+                });
+                
+                this.elementos.filtroPresentes.addEventListener('click', () => {
+                    this.atualizarFiltroAtivo('presentes');
+                });
+                
+                this.elementos.filtroAusentes.addEventListener('click', () => {
+                    this.atualizarFiltroAtivo('ausentes');
+                });
+            }
+
+            // Métodos auxiliares para controle de interface
+            ocultarContainers() {
+                this.elementos.alunosContainer.classList.add('hidden');
+                this.elementos.metricasPresenca.classList.add('hidden');
+                this.elementos.filtrosPresenca.classList.add('hidden');
+                this.elementos.noResults.classList.add('hidden');
+            }
+
+            mostrarContainers() {
+                this.elementos.metricasPresenca.classList.remove('hidden');
+                this.elementos.filtrosPresenca.classList.remove('hidden');
+                this.elementos.alunosContainer.classList.remove('hidden');
+            }
+
+            mostrarSemResultados() {
+                LoadingManager.hide();
+                this.elementos.noResults.classList.remove('hidden');
+            }
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        
+        // Instância global da aplicação
+        let app;
+        
+        // Inicializar quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                app = new AlunosEditFotoApp();
+                await app.inicializar();
+            } catch (error) {
+                console.error('Erro ao inicializar aplicação:', error);
+                Toast.error('Erro ao inicializar aplicação');
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarNavbar();
+        });
+    </script>
+</body>
+</html>
