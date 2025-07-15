@@ -772,23 +772,29 @@
             }
 
             cardTipoCidade.addEventListener('click', () => {
-                if (filtros.tipo === 'SITE') {
+                const tipoAtual = cardTipoCidade.dataset.tipo; // 'SITE'
+                if (filtros.tipo === tipoAtual) {
                     filtros.tipo = '';
                     atualizarSelecaoTipo(null);
+                    console.log('🔘 Filtro de tipo removido');
                 } else {
-                    filtros.tipo = 'SITE';
+                    filtros.tipo = tipoAtual;
                     atualizarSelecaoTipo(cardTipoCidade);
+                    console.log('🌆 Filtro aplicado: Câmeras da Cidade (SITE)');
                 }
                 aplicarFiltros();
             });
 
             cardTipoEscola.addEventListener('click', () => {
-                if (filtros.tipo === 'ESCOLA') {
+                const tipoAtual = cardTipoEscola.dataset.tipo; // 'ESCOLA'
+                if (filtros.tipo === tipoAtual) {
                     filtros.tipo = '';
                     atualizarSelecaoTipo(null);
+                    console.log('🔘 Filtro de tipo removido');
                 } else {
-                    filtros.tipo = 'ESCOLA';
+                    filtros.tipo = tipoAtual;
                     atualizarSelecaoTipo(cardTipoEscola);
+                    console.log('🏫 Filtro aplicado: Câmeras das Escolas (ESCOLA)');
                 }
                 aplicarFiltros();
             });
