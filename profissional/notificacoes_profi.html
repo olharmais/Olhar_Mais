@@ -938,6 +938,9 @@
             renderizarComunicados(comunicados) {
                 const container = document.getElementById('feed-container');
                 
+                console.log('📋 Renderizando comunicados:', comunicados.length);
+                console.log('📦 Container atual tem:', container.children.length, 'elementos');
+                
                 if (comunicados.length === 0) {
                     document.getElementById('empty-state').classList.remove('hidden');
                     return;
@@ -948,6 +951,7 @@
                     container.appendChild(card);
                 });
 
+                console.log('✅ Container após renderização tem:', container.children.length, 'elementos');
                 this.filtrarComunicados();
             }
 
@@ -1754,15 +1758,25 @@
         // ========== INICIALIZAÇÃO ==========
         
         let app;
+        let appInicializada = false; // Flag para evitar inicialização dupla
 
         document.addEventListener('DOMContentLoaded', async function() {
+            // Evitar inicialização dupla
+            if (appInicializada) {
+                console.log('Aplicação já foi inicializada, ignorando evento DOMContentLoaded duplicado');
+                return;
+            }
+
             try {
+                console.log('Inicializando aplicação...');
+                appInicializada = true;
                 app = new ComunicadosApp();
                 window.app = app; // Para acesso global
                 await app.inicializar();
             } catch (error) {
                 console.error('Erro ao inicializar aplicação:', error);
                 Toast.show('Erro ao inicializar aplicação', 'error');
+                appInicializada = false; // Resetar flag em caso de erro para permitir retry
             }
         });
         

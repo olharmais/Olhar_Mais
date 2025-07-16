@@ -206,7 +206,7 @@
         }
 
         /* Ajuste do z-index do modal */
-        #media-modal {
+        #modal-detalhes {
             z-index: 9999 !important;
         }
 
@@ -224,47 +224,62 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Estilo do modal de vídeo */
+        /* Estilo do modal */
         .modal-backdrop {
             backdrop-filter: blur(5px);
             background-color: rgba(0, 0, 0, 0.5);
         }
 
-        /* Estilo para o player de vídeo responsivo */
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%; /* 16:9 */
-            height: 0;
-            overflow: hidden;
+        /* Estilo para seção de visualizações */
+        .fotos-preview img:hover {
+            z-index: 10;
+            transform: scale(1.1);
         }
 
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .rotate-180 {
+            transform: rotate(180deg);
         }
 
-        /* Estilo das abas */
-        .tab-button {
-            transition: all 0.2s ease;
+        /* Animação suave para lista expandida */
+        .lista-expandida-enter {
+            animation: slideDown 0.3s ease-out;
         }
-        
-        .tab-button.active {
-            background-color: #005ae2;
-            color: white;
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                max-height: 240px;
+                transform: translateY(0);
+            }
         }
-        
-        .tab-button:not(.active) {
-            background-color: white;
-            color: #6b7280;
-            border: 1px solid #e5e7eb;
+
+        /* Melhorar scroll dos modais */
+        .modal-content {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
         }
-        
-        .tab-button:not(.active):hover {
-            background-color: #f9fafb;
-            color: #374151;
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
         }
     </style>
 </head>
@@ -272,12 +287,26 @@
     
     <!-- Header -->
     <header class="bg-white shadow-sm py-4">
-        <div class="container mx-auto px-4 flex items-center">
-            <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
-            <div class="ml-auto flex items-center gap-4">
-                <button onclick="window.location.href='criar_notificacao.html'" class="bg-primary text-white h-[54px] px-6 rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2">
-                    <i class="ph ph-plus-circle text-xl"></i>
-                    Criar
+        <div class="container mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="history.back()" class="text-gray-600 hover:text-primary transition-colors" title="Voltar">
+                    <i class="ph ph-arrow-left text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold logo-olharmais">OlharMais</h1>
+                    <div class="flex items-center gap-2">
+                        <p class="text-sm text-gray-600">Comunicados</p>
+                        <span class="text-gray-400">•</span>
+                        <span id="user-profissao" class="text-sm font-medium text-primary bg-primary-light px-2 py-1 rounded-full">
+                            Carregando...
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='criar_notificacao.html'" class="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary-dark transition-colors">
+                    <i class="ph ph-plus"></i>
+                    <span>Criar</span>
                 </button>
                 <button onclick="window.location.href='cameras_gestor.html'" class="text-gray-600 hover:text-primary transition-colors" title="Câmeras">
                     <i class="ph ph-video-camera text-xl"></i>
@@ -288,29 +317,39 @@
     
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-6">
-        <!-- Cabeçalho -->
+        <!-- Abas -->
         <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Comunicados</h2>
-            <p class="text-gray-600">Gerencie seus comunicados enviados e recebidos</p>
-        </div>
-        
-        <!-- Abas de Navegação -->
-        <div class="bg-white rounded-lg shadow-sm p-2 mb-6">
-            <div class="flex">
-                <button id="tab-enviados" class="tab-button active flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2" onclick="alternarAba('enviados')">
-                    <i class="ph ph-paper-plane-tilt"></i>
+            <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                <button id="tab-enviados" class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm">
                     Enviados
                 </button>
-                <button id="tab-recebidos" class="tab-button flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2" onclick="alternarAba('recebidos')">
-                    <i class="ph ph-tray"></i>
+                <button id="tab-recebidos" class="flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700">
                     Recebidos
                 </button>
             </div>
         </div>
         
-        <!-- Feed de Notificações -->
+        <!-- Filtros -->
+        <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
+            <div class="flex flex-wrap gap-2">
+                <button class="filter-btn active px-3 py-1 text-sm rounded-full border border-gray-300 bg-primary text-white" data-filter="todos">
+                    Todos
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-green-300 text-green-600 hover:bg-green-50" data-filter="informativo">
+                    🟢 Informativos
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-yellow-300 text-yellow-600 hover:bg-yellow-50" data-filter="importante">
+                    🟡 Importantes
+                </button>
+                <button class="filter-btn px-3 py-1 text-sm rounded-full border border-red-300 text-red-600 hover:bg-red-50" data-filter="urgente">
+                    🔴 Urgentes
+                </button>
+            </div>
+        </div>
+        
+        <!-- Feed de Comunicados -->
         <div id="feed-container" class="space-y-4">
-            <!-- As notificações serão inseridas aqui via JavaScript -->
+            <!-- Os comunicados serão inseridos aqui via JavaScript -->
         </div>
         
         <!-- Loading State -->
@@ -321,43 +360,68 @@
         <!-- Estado Vazio -->
         <div id="empty-state" class="hidden py-12 text-center">
             <i class="ph ph-chat-circle-dots text-gray-400 text-5xl mb-4"></i>
-            <p class="text-gray-600" id="empty-message">Nenhum comunicado encontrado</p>
+            <p class="text-gray-600">Nenhum comunicado encontrado</p>
         </div>
     </main>
     
-    <!-- Modal de Mídia -->
-    <div id="media-modal" class="fixed inset-0 z-[9999] hidden">
+    <!-- Modal de Detalhes do Comunicado -->
+    <div id="modal-detalhes" class="fixed inset-0 z-[9999] hidden">
         <div class="modal-backdrop absolute inset-0"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl fade-in my-8">
-                <!-- Cabeçalho do Modal -->
-                <div class="p-4 border-b flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-800" id="modal-title"></h3>
-                    <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="ph ph-x text-xl"></i>
-                    </button>
-                </div>
-                
-                <!-- Conteúdo do Modal -->
-                <div class="p-4">
-                    <!-- Container de Mídia -->
-                    <div id="media-container" class="mb-4 rounded-lg overflow-hidden">
-                        <!-- A mídia será inserida aqui -->
+        <div class="absolute inset-0 flex items-start justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl fade-in my-4 max-h-[90vh] overflow-y-auto modal-content">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span id="badge-importancia" class="px-2 py-1 text-xs rounded-full"></span>
+                                <span id="data-comunicado" class="text-sm text-gray-500"></span>
+                            </div>
+                            <h3 id="titulo-comunicado" class="text-xl font-bold text-gray-800"></h3>
+                        </div>
+                        <button onclick="fecharModalDetalhes()" class="text-gray-500 hover:text-gray-700">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
                     </div>
                     
-                    <!-- Descrição -->
-                    <p id="modal-description" class="text-gray-600"></p>
+                    <div class="mb-4">
+                        <div class="flex items-center text-sm text-gray-600 mb-2">
+                            <i class="ph ph-user mr-2"></i>
+                            <span id="autor-comunicado"></span>
+                        </div>
+                    </div>
                     
-                    <!-- Metadados -->
-                    <div class="mt-4 pt-4 border-t">
-                        <div class="flex items-center text-sm text-gray-500">
-                            <i class="ph ph-map-pin mr-2"></i>
-                            <span id="modal-cidade"></span>
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <p id="conteudo-comunicado" class="text-gray-700 whitespace-pre-wrap"></p>
+                    </div>
+                    
+                    <!-- Seção de Visualizações -->
+                    <div id="secao-visualizacoes" class="mb-4 hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-gray-800 flex items-center">
+                                <i class="ph ph-eye mr-2"></i>
+                                Visualizado por <span id="contador-visualizacoes" class="ml-1 text-primary">0</span>
+                            </h4>
+                            <button id="btn-expandir-visualizacoes" class="text-primary text-sm hover:text-primary-dark flex items-center">
+                                <span>Ver todos</span>
+                                <i class="ph ph-caret-down ml-1 transition-transform duration-200"></i>
+                            </button>
                         </div>
-                        <div class="flex items-center text-sm text-gray-500 mt-2">
-                            <i class="ph ph-buildings mr-2"></i>
-                            <span id="modal-escolas"></span>
+                        
+                        <!-- Fotos em linha (preview) -->
+                        <div id="fotos-preview" class="flex -space-x-2 mb-3">
+                            <!-- Fotos serão inseridas aqui -->
                         </div>
+                        
+                        <!-- Lista expandida (inicialmente oculta) -->
+                        <div id="lista-expandida" class="hidden space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Lista completa será inserida aqui -->
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button onclick="marcarComoLido()" id="btn-marcar-lido" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                            Marcar como Lido
+                        </button>
                     </div>
                 </div>
             </div>
@@ -373,11 +437,8 @@
     <script src="botoes_gestor.js" type="module"></script>
     
     <script>
-        // Estado global da aplicação
-        let estadoApp = {
-            abaAtiva: 'enviados'
-        };
-
+        // ========== COMPONENTES UTILITÁRIOS ==========
+        
         // Toast Component
         const Toast = {
             element: document.getElementById('toast'),
@@ -405,302 +466,158 @@
             }
         };
         
-        // Função para alternar entre abas
-        function alternarAba(aba) {
-            estadoApp.abaAtiva = aba;
-            
-            // Atualizar botões das abas
-            document.getElementById('tab-enviados').classList.toggle('active', aba === 'enviados');
-            document.getElementById('tab-recebidos').classList.toggle('active', aba === 'recebidos');
-            
-            // Mostrar loading
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('feed-container').innerHTML = '';
-            
-            // Carregar conteúdo da aba
-            if (aba === 'enviados') {
-                carregarComunicadosEnviados();
-            } else {
-                carregarComunicadosRecebidos();
+        // ========== CLASSE PRINCIPAL ==========
+        
+        class ComunicadosGestorApp {
+            constructor() {
+                this.supabase = null;
+                this.usuario = null;
+                this.tabAtiva = 'enviados';
+                this.filtroAtivo = 'todos';
+                this.comunicadoAtual = null;
             }
-        }
-        
-        // Função para formatar data
-        function formatarData(data) {
-            return new Date(data).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        
-        // Função para criar card de comunicado enviado
-        function criarCardComunicadoEnviado(comunicado) {
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in cursor-pointer hover:shadow-md transition-shadow';
-            
-            const badges = {
-                'informativo': '🟢 Informativo',
-                'importante': '🟡 Importante',
-                'urgente': '🔴 Urgente'
-            };
 
-            const badgeColors = {
-                'informativo': 'bg-green-100 text-green-800',
-                'importante': 'bg-yellow-100 text-yellow-800',
-                'urgente': 'bg-red-100 text-red-800'
-            };
-            
-            card.innerHTML = `
-                <div class="p-4">
-                    <div class="flex items-start justify-between mb-3">
-                        <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
-                            ${badges[comunicado.nivel_importancia]}
-                        </span>
-                        <span class="text-sm text-gray-500">${formatarData(comunicado.created_at)}</span>
-                    </div>
-                    
-                    <h3 class="font-semibold text-gray-800 mb-2">${comunicado.titulo}</h3>
-                    <p class="text-gray-600 text-sm line-clamp-3 mb-4">${comunicado.conteudo}</p>
-                    
-                    <div class="flex items-center justify-between text-sm">
-                        <div class="flex items-center text-gray-500">
-                            <i class="ph ph-users mr-1"></i>
-                            <span>Para: ${comunicado.profissao_destino.replace(/,/g, ', ')}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="event.stopPropagation(); confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado">
-                                <i class="ph ph-trash text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            card.addEventListener('click', () => abrirModalComunicadoEnviado(comunicado));
-            return card;
-        }
-        
-        // Função para criar card de comunicado recebido
-        function criarCardComunicadoRecebido(comunicado, destinatario) {
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in cursor-pointer hover:shadow-md transition-shadow';
-            
-            const badges = {
-                'informativo': '🟢 Informativo',
-                'importante': '🟡 Importante',
-                'urgente': '🔴 Urgente'
-            };
-
-            const badgeColors = {
-                'informativo': 'bg-green-100 text-green-800',
-                'importante': 'bg-yellow-100 text-yellow-800',
-                'urgente': 'bg-red-100 text-red-800'
-            };
-            
-            const isLido = destinatario.lido;
-            const cardOpacity = isLido ? 'opacity-70' : '';
-            
-            card.innerHTML = `
-                <div class="p-4 ${cardOpacity}">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
-                                ${badges[comunicado.nivel_importancia]}
-                            </span>
-                            ${!isLido ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
-                        </div>
-                        <span class="text-sm text-gray-500">${formatarData(comunicado.created_at)}</span>
-                    </div>
-                    
-                    <h3 class="font-semibold text-gray-800 mb-2">${comunicado.titulo}</h3>
-                    <p class="text-gray-600 text-sm line-clamp-3 mb-4">${comunicado.conteudo}</p>
-                    
-                    <div class="flex items-center justify-between text-sm">
-                        <div class="flex items-center text-gray-500">
-                            <i class="ph ph-user mr-1"></i>
-                            <span>De: ${comunicado.usuarios?.nome || 'Prefeito'}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-gray-500">
-                            ${isLido ? 
-                                `<i class="ph ph-check-circle text-green-500" title="Lido em ${formatarData(destinatario.data_leitura)}"></i>` : 
-                                '<i class="ph ph-circle text-blue-500" title="Não lido"></i>'
-                            }
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            card.addEventListener('click', () => abrirModalComunicadoRecebido(comunicado, destinatario));
-            return card;
-        }
-        
-        // Função para abrir modal de detalhes do comunicado enviado
-        async function abrirModalComunicadoEnviado(comunicado) {
-            try {
-                // Buscar quantos secretários receberam o comunicado
-                const supabase = createSupabaseClient();
-                const { data: destinatarios, error } = await supabase
-                    .from('comunicados_destinatarios')
-                    .select('usuario_id, lido, data_leitura')
-                    .eq('comunicado_id', comunicado.id);
-
-                if (error) throw error;
-
-                const totalDestinatarios = destinatarios?.length || 0;
-                const totalLidos = destinatarios?.filter(d => d.lido).length || 0;
-                
-                // Preencher dados do modal
-                document.getElementById('modal-title').textContent = comunicado.titulo;
-                document.getElementById('modal-description').textContent = comunicado.conteudo;
-                document.getElementById('modal-cidade').textContent = `Enviado para ${totalDestinatarios} secretário(s)`;
-                document.getElementById('modal-escolas').textContent = `${totalLidos} visualizaram`;
-                
-                // Limpar container de mídia (comunicados não têm mídia)
-                const mediaContainer = document.getElementById('media-container');
-                mediaContainer.innerHTML = `
-                    <div class="bg-gray-50 rounded-lg p-6 text-center">
-                        <i class="ph ph-chat-circle-dots text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-gray-600">Comunicado enviado</p>
-                        <p class="text-sm text-gray-500 mt-1">Nível: ${comunicado.nivel_importancia}</p>
-                    </div>
-                `;
-                
-                // Mostrar modal
-                document.getElementById('media-modal').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error('Erro ao abrir modal:', error);
-                Toast.show('Erro ao carregar detalhes do comunicado', 'error');
-            }
-        }
-        
-        // Função para abrir modal de detalhes do comunicado recebido
-        async function abrirModalComunicadoRecebido(comunicado, destinatario) {
-            try {
-                const supabase = createSupabaseClient();
-                
-                // Marcar como lido se ainda não foi lido
-                if (!destinatario.lido) {
-                    await supabase
-                        .from('comunicados_destinatarios')
-                        .update({ 
-                            lido: true, 
-                            data_leitura: new Date().toISOString() 
-                        })
-                        .eq('id', destinatario.id);
-                    
-                    // Atualizar estado local
-                    destinatario.lido = true;
-                    destinatario.data_leitura = new Date().toISOString();
-                }
-                
-                // Preencher dados do modal
-                document.getElementById('modal-title').textContent = comunicado.titulo;
-                document.getElementById('modal-description').textContent = comunicado.conteudo;
-                document.getElementById('modal-cidade').textContent = `De: ${comunicado.usuarios?.nome || 'Prefeito'}`;
-                document.getElementById('modal-escolas').textContent = `Recebido em ${formatarData(comunicado.created_at)}`;
-                
-                // Limpar container de mídia (comunicados não têm mídia)
-                const mediaContainer = document.getElementById('media-container');
-                mediaContainer.innerHTML = `
-                    <div class="bg-blue-50 rounded-lg p-6 text-center">
-                        <i class="ph ph-envelope-open text-4xl text-blue-400 mb-2"></i>
-                        <p class="text-gray-600">Comunicado recebido</p>
-                        <p class="text-sm text-gray-500 mt-1">Nível: ${comunicado.nivel_importancia}</p>
-                    </div>
-                `;
-                
-                // Mostrar modal
-                document.getElementById('media-modal').classList.remove('hidden');
-                
-                // Recarregar a lista para atualizar o status de lido
-                setTimeout(() => {
-                    if (estadoApp.abaAtiva === 'recebidos') {
-                        carregarComunicadosRecebidos();
-                    }
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Erro ao abrir modal:', error);
-                Toast.show('Erro ao carregar detalhes do comunicado', 'error');
-            }
-        }
-        
-        // Função para confirmar exclusão
-        function confirmarExclusao(comunicadoId) {
-            if (confirm('Tem certeza que deseja excluir este comunicado? Esta ação não pode ser desfeita.')) {
-                excluirComunicado(comunicadoId);
-            }
-        }
-
-        // Função para excluir comunicado
-        async function excluirComunicado(comunicadoId) {
-            try {
-                const supabase = createSupabaseClient();
-                const userSession = JSON.parse(localStorage.getItem('user_session'));
-                
-                // Soft delete - marcar como excluído
-                const { error } = await supabase
-                    .from('comunicados')
-                    .update({ soft_delete: new Date().toISOString() })
-                    .eq('id', comunicadoId)
-                    .eq('autor_id', userSession.id); // Só pode excluir próprios comunicados
-
-                if (error) throw error;
-
-                Toast.show('Comunicado excluído com sucesso', 'success');
-                
-                // Recarregar lista
-                await carregarComunicadosEnviados();
-
-            } catch (error) {
-                console.error('Erro ao excluir comunicado:', error);
-                Toast.show('Erro ao excluir comunicado', 'error');
-            }
-        }
-        
-        // Função para fechar modal
-        function fecharModal() {
-            const modal = document.getElementById('media-modal');
-            modal.classList.add('hidden');
-            document.getElementById('media-container').innerHTML = '';
-        }
-        
-        // Carregar comunicados enviados
-        async function carregarComunicadosEnviados() {
-            try {
-                const userSession = localStorage.getItem('user_session');
-                if (!userSession) {
-                    window.location.href = '/auth.html';
-                    return;
-                }
-                
-                const userData = JSON.parse(userSession);
-                
-                if (userData.tipo !== 'GESTOR') {
-                    Toast.show('Acesso não autorizado para este perfil', 'error');
-                    setTimeout(() => {
+            async inicializar() {
+                try {
+                    // Verificar autenticação
+                    const userSession = localStorage.getItem('user_session');
+                    if (!userSession) {
                         window.location.href = '/auth.html';
-                    }, 2000);
-                    return;
+                        return;
+                    }
+                    
+                    this.usuario = JSON.parse(userSession);
+                    this.supabase = createSupabaseClient();
+
+                    // Buscar dados completos do usuário
+                    await this.carregarDadosUsuario();
+                    
+                    // Configurar interface
+                    this.configurarInterface();
+                    
+                    // Configurar eventos
+                    this.configurarEventos();
+                    
+                    // Carregar comunicados
+                    await this.carregarComunicados();
+
+                } catch (error) {
+                    console.error('Erro ao inicializar:', error);
+                    Toast.show('Erro ao carregar a página', 'error');
                 }
+            }
+
+            async carregarDadosUsuario() {
+                const { data: userData, error } = await this.supabase
+                    .from('usuarios')
+                    .select('*')
+                    .eq('id', this.usuario.id)
+                    .single();
+
+                if (error) throw error;
                 
-                const supabase = createSupabaseClient();
+                this.usuario = { ...this.usuario, ...userData };
+                console.log('Dados do usuário:', this.usuario);
+            }
+
+            configurarInterface() {
+                const profissao = this.usuario.profissao;
                 
-                console.log('Buscando comunicados enviados pelo gestor:', userData.id);
+                // Atualizar profissão no header
+                const profissaoElement = document.getElementById('user-profissao');
+                if (profissao) {
+                    profissaoElement.textContent = profissao;
+                    profissaoElement.className = 'text-sm font-medium text-primary bg-primary-light px-2 py-1 rounded-full';
+                } else {
+                    profissaoElement.textContent = 'Sem profissão';
+                    profissaoElement.className = 'text-sm font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full';
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+            }
+
+            configurarEventos() {
+                // Abas
+                document.getElementById('tab-enviados').addEventListener('click', () => this.trocarAba('enviados'));
+                document.getElementById('tab-recebidos').addEventListener('click', () => this.trocarAba('recebidos'));
+
+                // Filtros
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.aplicarFiltro(btn.dataset.filter));
+                });
+
+                // Fechar modal clicando fora
+                document.getElementById('modal-detalhes').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-backdrop')) this.fecharModalDetalhes();
+                });
+            }
+
+            trocarAba(aba) {
+                this.tabAtiva = aba;
+                
+                // Atualizar visual das abas
+                document.getElementById('tab-enviados').className = aba === 'enviados' 
+                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
+                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
+                
+                document.getElementById('tab-recebidos').className = aba === 'recebidos'
+                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
+                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
+
+                this.carregarComunicados();
+            }
+
+            aplicarFiltro(filtro) {
+                this.filtroAtivo = filtro;
+                
+                // Atualizar visual dos filtros
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-primary', 'text-white');
+                    btn.classList.add('text-gray-600', 'hover:bg-gray-50');
+                });
+
+                const btnAtivo = document.querySelector(`[data-filter="${filtro}"]`);
+                btnAtivo.classList.add('active', 'bg-primary', 'text-white');
+                btnAtivo.classList.remove('text-gray-600', 'hover:bg-gray-50');
+
+                this.filtrarComunicados();
+            }
+
+            async carregarComunicados() {
+                try {
+                    document.getElementById('loading').classList.remove('hidden');
+                    document.getElementById('feed-container').innerHTML = '';
+                    document.getElementById('empty-state').classList.add('hidden');
+
+                    let comunicados = [];
+
+                    if (this.tabAtiva === 'enviados') {
+                        comunicados = await this.buscarComunicadosEnviados();
+                    } else {
+                        comunicados = await this.buscarComunicadosRecebidos();
+                    }
+
+                    this.renderizarComunicados(comunicados);
+
+                } catch (error) {
+                    console.error('Erro ao carregar comunicados:', error);
+                    Toast.show('Erro ao carregar comunicados', 'error');
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            }
+
+            async buscarComunicadosEnviados() {
+                console.log('Buscando comunicados enviados pelo gestor:', this.usuario.id);
                 
                 // Buscar comunicados enviados pelo gestor
-                const { data: comunicados, error: comunicadosError } = await supabase
+                const { data: comunicados, error: comunicadosError } = await this.supabase
                     .from('comunicados')
                     .select(`
                         *,
                         usuarios!comunicados_autor_id_fkey(nome, profissao)
                     `)
-                    .eq('autor_id', userData.id)
+                    .eq('autor_id', this.usuario.id)
                     .is('soft_delete', null)
                     .order('created_at', { ascending: false });
                 
@@ -710,59 +627,14 @@
                 }
                 
                 console.log('Comunicados enviados encontrados:', comunicados?.length || 0);
-                
-                // Mostrar estado vazio se não houver comunicados
-                const emptyState = document.getElementById('empty-state');
-                const feedContainer = document.getElementById('feed-container');
-                
-                if (!comunicados || comunicados.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    document.getElementById('empty-message').textContent = 'Nenhum comunicado enviado encontrado';
-                    feedContainer.innerHTML = '';
-                } else {
-                    emptyState.classList.add('hidden');
-                    feedContainer.innerHTML = '';
-                    
-                    // Renderizar cards
-                    comunicados.forEach(comunicado => {
-                        const card = criarCardComunicadoEnviado(comunicado);
-                        feedContainer.appendChild(card);
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Erro ao carregar comunicados enviados:', error);
-                Toast.show('Erro ao carregar comunicados enviados', 'error');
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
+                return comunicados || [];
             }
-        }
 
-        // Carregar comunicados recebidos
-        async function carregarComunicadosRecebidos() {
-            try {
-                const userSession = localStorage.getItem('user_session');
-                if (!userSession) {
-                    window.location.href = '/auth.html';
-                    return;
-                }
-                
-                const userData = JSON.parse(userSession);
-                
-                if (userData.tipo !== 'GESTOR') {
-                    Toast.show('Acesso não autorizado para este perfil', 'error');
-                    setTimeout(() => {
-                        window.location.href = '/auth.html';
-                    }, 2000);
-                    return;
-                }
-                
-                const supabase = createSupabaseClient();
-                
-                console.log('Buscando comunicados recebidos pelo gestor:', userData.id);
+            async buscarComunicadosRecebidos() {
+                console.log('Buscando comunicados recebidos pelo gestor:', this.usuario.id);
                 
                 // Buscar comunicados recebidos pelo gestor (caso ele seja secretário)
-                const { data: comunicadosRecebidos, error: recebidosError } = await supabase
+                const { data: comunicadosRecebidos, error: recebidosError } = await this.supabase
                     .from('comunicados_destinatarios')
                     .select(`
                         *,
@@ -771,7 +643,7 @@
                             usuarios!comunicados_autor_id_fkey(nome, profissao)
                         )
                     `)
-                    .eq('usuario_id', userData.id)
+                    .eq('usuario_id', this.usuario.id)
                     .is('comunicados.soft_delete', null)
                     .order('created_at', { ascending: false });
                 
@@ -782,49 +654,357 @@
                 
                 console.log('Comunicados recebidos encontrados:', comunicadosRecebidos?.length || 0);
                 
-                // Mostrar estado vazio se não houver comunicados
-                const emptyState = document.getElementById('empty-state');
-                const feedContainer = document.getElementById('feed-container');
+                // Transformar dados para formato compatível
+                return (comunicadosRecebidos || []).map(destinatario => ({
+                    ...destinatario.comunicados,
+                    autor_nome: destinatario.comunicados.usuarios?.nome || 'Prefeito',
+                    lido: destinatario.lido,
+                    data_leitura: destinatario.data_leitura,
+                    destinatario_id: destinatario.id
+                }));
+            }
+
+            renderizarComunicados(comunicados) {
+                const container = document.getElementById('feed-container');
                 
-                if (!comunicadosRecebidos || comunicadosRecebidos.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    document.getElementById('empty-message').textContent = 'Nenhum comunicado recebido encontrado';
-                    feedContainer.innerHTML = '';
-                } else {
-                    emptyState.classList.add('hidden');
-                    feedContainer.innerHTML = '';
-                    
-                    // Renderizar cards
-                    comunicadosRecebidos.forEach(destinatario => {
-                        const card = criarCardComunicadoRecebido(destinatario.comunicados, destinatario);
-                        feedContainer.appendChild(card);
-                    });
+                if (comunicados.length === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
                 }
+
+                comunicados.forEach(comunicado => {
+                    const card = this.criarCardComunicado(comunicado);
+                    container.appendChild(card);
+                });
+
+                this.filtrarComunicados();
+            }
+
+            criarCardComunicado(comunicado) {
+                const card = document.createElement('div');
+                card.className = 'comunicado-card bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow';
+                card.dataset.importancia = comunicado.nivel_importancia;
                 
-            } catch (error) {
-                console.error('Erro ao carregar comunicados recebidos:', error);
-                Toast.show('Erro ao carregar comunicados recebidos', 'error');
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
+                const badges = {
+                    'informativo': '🟢 Informativo',
+                    'importante': '🟡 Importante',
+                    'urgente': '🔴 Urgente'
+                };
+
+                const badgeColors = {
+                    'informativo': 'bg-green-100 text-green-800',
+                    'importante': 'bg-yellow-100 text-yellow-800',
+                    'urgente': 'bg-red-100 text-red-800'
+                };
+
+                const isLido = this.tabAtiva === 'recebidos' ? comunicado.lido : true;
+                const indicadorLeitura = this.tabAtiva === 'recebidos' 
+                    ? (isLido ? '' : '<div class="w-3 h-3 bg-primary rounded-full"></div>')
+                    : '';
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
+                                ${badges[comunicado.nivel_importancia]}
+                            </span>
+                            ${indicadorLeitura}
+                        </div>
+                        <span class="text-sm text-gray-500">${this.formatarData(comunicado.created_at)}</span>
+                    </div>
+                    
+                    <h3 class="font-semibold text-gray-800 mb-2 ${!isLido ? 'font-bold' : ''}">${comunicado.titulo}</h3>
+                    
+                    <p class="text-gray-600 text-sm line-clamp-2 mb-3">${comunicado.conteudo}</p>
+                    
+                    <div class="flex items-center justify-between text-sm text-gray-500">
+                        <div class="flex items-center">
+                            <i class="ph ph-user mr-1"></i>
+                            <span>${this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${this.tabAtiva === 'recebidos' && !isLido ? '<span class="text-primary font-medium">Novo</span>' : ''}
+                            ${this.tabAtiva === 'enviados' ? `<button onclick="event.stopPropagation(); app.confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado"><i class="ph ph-trash text-sm"></i></button>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => this.abrirModalDetalhes(comunicado));
+                return card;
+            }
+            
+            filtrarComunicados() {
+                const cards = document.querySelectorAll('.comunicado-card');
+                
+                cards.forEach(card => {
+                    const importancia = card.dataset.importancia;
+                    const mostrar = this.filtroAtivo === 'todos' || this.filtroAtivo === importancia;
+                    card.style.display = mostrar ? 'block' : 'none';
+                });
+            }
+
+            formatarData(data) {
+                return new Date(data).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            async abrirModalDetalhes(comunicado) {
+                this.comunicadoAtual = comunicado;
+                
+                const badges = {
+                    'informativo': '🟢 Informativo',
+                    'importante': '🟡 Importante', 
+                    'urgente': '🔴 Urgente'
+                };
+
+                const badgeColors = {
+                    'informativo': 'bg-green-100 text-green-800',
+                    'importante': 'bg-yellow-100 text-yellow-800',
+                    'urgente': 'bg-red-100 text-red-800'
+                };
+
+                document.getElementById('badge-importancia').textContent = badges[comunicado.nivel_importancia];
+                document.getElementById('badge-importancia').className = `px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}`;
+                document.getElementById('data-comunicado').textContent = this.formatarData(comunicado.created_at);
+                document.getElementById('titulo-comunicado').textContent = comunicado.titulo;
+                document.getElementById('autor-comunicado').textContent = this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você';
+                document.getElementById('conteudo-comunicado').textContent = comunicado.conteudo;
+
+                // Mostrar/ocultar botão de marcar como lido
+                const btnMarcarLido = document.getElementById('btn-marcar-lido');
+                if (this.tabAtiva === 'recebidos' && !comunicado.lido) {
+                    btnMarcarLido.classList.remove('hidden');
+                } else {
+                    btnMarcarLido.classList.add('hidden');
+                }
+
+                // Carregar visualizações se for comunicado enviado
+                if (this.tabAtiva === 'enviados') {
+                    await this.carregarVisualizacoes(comunicado.id);
+                } else {
+                    document.getElementById('secao-visualizacoes').classList.add('hidden');
+                }
+
+                document.getElementById('modal-detalhes').classList.remove('hidden');
+            }
+
+            async carregarVisualizacoes(comunicadoId) {
+                try {
+                    // Buscar destinatários que já leram o comunicado
+                    const { data: visualizacoes, error } = await this.supabase
+                        .from('comunicados_destinatarios')
+                        .select(`
+                            usuario_id,
+                            lido,
+                            data_leitura,
+                            usuarios!inner(nome, foto_url)
+                        `)
+                        .eq('comunicado_id', comunicadoId)
+                        .eq('lido', true)
+                        .order('data_leitura', { ascending: false });
+
+                    if (error) throw error;
+
+                    if (visualizacoes && visualizacoes.length > 0) {
+                        this.exibirVisualizacoes(visualizacoes);
+                        document.getElementById('secao-visualizacoes').classList.remove('hidden');
+                    } else {
+                        document.getElementById('secao-visualizacoes').classList.add('hidden');
+                    }
+
+                } catch (error) {
+                    console.error('Erro ao carregar visualizações:', error);
+                    document.getElementById('secao-visualizacoes').classList.add('hidden');
+                }
+            }
+
+            exibirVisualizacoes(visualizacoes) {
+                const contadorEl = document.getElementById('contador-visualizacoes');
+                const fotosPreviewEl = document.getElementById('fotos-preview');
+                const listaExpandidaEl = document.getElementById('lista-expandida');
+
+                // Atualizar contador
+                contadorEl.textContent = visualizacoes.length;
+
+                // Limpar conteúdo anterior
+                fotosPreviewEl.innerHTML = '';
+                listaExpandidaEl.innerHTML = '';
+
+                // Mostrar até 5 fotos no preview
+                const maxPreview = 5;
+                const fotosParaPreview = visualizacoes.slice(0, maxPreview);
+                const restantes = visualizacoes.length - maxPreview;
+
+                fotosParaPreview.forEach((viz) => {
+                    const fotoUrl = viz.usuarios.foto_url || '/assets/img/avatar-placeholder.png';
+                    const nomeCompleto = viz.usuarios.nome;
+                    
+                    const img = document.createElement('img');
+                    img.src = fotoUrl;
+                    img.alt = nomeCompleto;
+                    img.className = 'w-8 h-8 rounded-full border-2 border-white shadow-sm object-cover cursor-pointer hover:scale-110 transition-transform';
+                    img.title = nomeCompleto;
+                    img.onerror = () => img.src = '/assets/img/avatar-placeholder.png';
+                    
+                    fotosPreviewEl.appendChild(img);
+                });
+
+                // Mostrar indicador de "mais pessoas" se necessário
+                if (restantes > 0) {
+                    const maisDiv = document.createElement('div');
+                    maisDiv.className = 'w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-xs font-medium text-gray-600';
+                    maisDiv.textContent = `+${restantes}`;
+                    maisDiv.title = `E mais ${restantes} pessoa${restantes > 1 ? 's' : ''}`;
+                    fotosPreviewEl.appendChild(maisDiv);
+                }
+
+                // Criar lista expandida
+                visualizacoes.forEach(viz => {
+                    const fotoUrl = viz.usuarios.foto_url || '/assets/img/avatar-placeholder.png';
+                    const nomeCompleto = viz.usuarios.nome;
+                    const dataLeitura = new Date(viz.data_leitura).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex items-center p-2 hover:bg-gray-50 rounded-lg';
+                    itemDiv.innerHTML = `
+                        <img src="${fotoUrl}" alt="${nomeCompleto}" class="w-10 h-10 rounded-full mr-3 object-cover border-2 border-gray-200" onerror="this.src='/assets/img/avatar-placeholder.png'">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800">${nomeCompleto}</div>
+                            <div class="text-sm text-gray-500">Lido em ${dataLeitura}</div>
+                        </div>
+                        <i class="ph ph-check-circle text-green-500"></i>
+                    `;
+                    listaExpandidaEl.appendChild(itemDiv);
+                });
+
+                // Configurar botão de expandir/contrair
+                this.configurarBotaoExpandir();
+            }
+
+            configurarBotaoExpandir() {
+                const btnExpandir = document.getElementById('btn-expandir-visualizacoes');
+                const listaExpandida = document.getElementById('lista-expandida');
+                const icone = btnExpandir.querySelector('i');
+                const texto = btnExpandir.querySelector('span');
+
+                btnExpandir.onclick = () => {
+                    const isExpanded = !listaExpandida.classList.contains('hidden');
+                    
+                    if (isExpanded) {
+                        listaExpandida.classList.add('hidden');
+                        icone.classList.remove('rotate-180');
+                        texto.textContent = 'Ver todos';
+                    } else {
+                        listaExpandida.classList.remove('hidden');
+                        icone.classList.add('rotate-180');
+                        texto.textContent = 'Ocultar';
+                    }
+                };
+            }
+
+            async marcarComoLido() {
+                try {
+                    const { error } = await this.supabase
+                        .from('comunicados_destinatarios')
+                        .update({ 
+                            lido: true, 
+                            data_leitura: new Date().toISOString() 
+                        })
+                        .eq('comunicado_id', this.comunicadoAtual.id)
+                        .eq('usuario_id', this.usuario.id);
+
+                    if (error) throw error;
+
+                    Toast.show('Comunicado marcado como lido', 'success');
+                    this.fecharModalDetalhes();
+                    this.carregarComunicados();
+
+                } catch (error) {
+                    console.error('Erro ao marcar como lido:', error);
+                    Toast.show('Erro ao marcar como lido', 'error');
+                }
+            }
+
+            fecharModalDetalhes() {
+                document.getElementById('modal-detalhes').classList.add('hidden');
+                this.comunicadoAtual = null;
+            }
+
+            confirmarExclusao(comunicadoId) {
+                if (confirm('Tem certeza que deseja excluir este comunicado? Esta ação não pode ser desfeita.')) {
+                    this.excluirComunicado(comunicadoId);
+                }
+            }
+
+            async excluirComunicado(comunicadoId) {
+                try {
+                    console.log('🗑️ Excluindo comunicado:', comunicadoId);
+                    
+                    // Soft delete - marcar como excluído
+                    const { error } = await this.supabase
+                        .from('comunicados')
+                        .update({ soft_delete: new Date().toISOString() })
+                        .eq('id', comunicadoId)
+                        .eq('autor_id', this.usuario.id); // Só pode excluir próprios comunicados
+
+                    if (error) {
+                        console.error('❌ Erro ao excluir comunicado:', error);
+                        throw error;
+                    }
+
+                    console.log('✅ Comunicado excluído com sucesso');
+                    Toast.show('Comunicado excluído com sucesso', 'success');
+                    
+                    // Recarregar lista
+                    await this.carregarComunicados();
+
+                } catch (error) {
+                    console.error('❌ Erro ao excluir comunicado:', error);
+                    Toast.show('Erro ao excluir comunicado', 'error');
+                }
             }
         }
 
-        // Carregar comunicados quando a página carregar
-        document.addEventListener('DOMContentLoaded', function() {
-            carregarComunicadosEnviados(); // Começar com a aba de enviados
-        });
+        // ========== FUNÇÕES GLOBAIS PARA OS MODAIS ==========
         
-        // Fechar modal ao clicar fora
-        document.getElementById('media-modal').addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-backdrop')) {
-                fecharModal();
+        function fecharModalDetalhes() {
+            if (window.app) window.app.fecharModalDetalhes();
+        }
+
+        function marcarComoLido() {
+            if (window.app) window.app.marcarComoLido();
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        
+        let app;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                app = new ComunicadosGestorApp();
+                window.app = app; // Para acesso global
+                await app.inicializar();
+            } catch (error) {
+                console.error('Erro ao inicializar aplicação:', error);
+                Toast.show('Erro ao inicializar aplicação', 'error');
             }
         });
         
         // Fechar modal com tecla ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                fecharModal();
+                if (window.app) {
+                    window.app.fecharModalDetalhes();
+                }
             }
         });
     </script>
