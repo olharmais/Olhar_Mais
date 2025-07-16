@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OlharMais - Notificações</title>
-    <meta name="description" content="OlharMais - Feed de Notificações">
+    <title>OlharMais - Comunicados</title>
+    <meta name="description" content="OlharMais - Comunicados Enviados e Recebidos">
     <meta name="theme-color" content="#005ae2">
     
     <!-- Definições preliminares para evitar erros antes do carregamento -->
@@ -245,6 +245,27 @@
             width: 100%;
             height: 100%;
         }
+
+        /* Estilo das abas */
+        .tab-button {
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            background-color: #005ae2;
+            color: white;
+        }
+        
+        .tab-button:not(.active) {
+            background-color: white;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .tab-button:not(.active):hover {
+            background-color: #f9fafb;
+            color: #374151;
+        }
     </style>
 </head>
 <body class="font-sans">
@@ -269,8 +290,22 @@
     <main class="container mx-auto px-4 py-6">
         <!-- Cabeçalho -->
         <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Notificações</h2>
-            <p class="text-gray-600">Acompanhe as últimas atualizações</p>
+            <h2 class="text-2xl font-bold text-gray-800">Comunicados</h2>
+            <p class="text-gray-600">Gerencie seus comunicados enviados e recebidos</p>
+        </div>
+        
+        <!-- Abas de Navegação -->
+        <div class="bg-white rounded-lg shadow-sm p-2 mb-6">
+            <div class="flex">
+                <button id="tab-enviados" class="tab-button active flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2" onclick="alternarAba('enviados')">
+                    <i class="ph ph-paper-plane-tilt"></i>
+                    Enviados
+                </button>
+                <button id="tab-recebidos" class="tab-button flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2" onclick="alternarAba('recebidos')">
+                    <i class="ph ph-tray"></i>
+                    Recebidos
+                </button>
+            </div>
         </div>
         
         <!-- Feed de Notificações -->
@@ -285,8 +320,8 @@
         
         <!-- Estado Vazio -->
         <div id="empty-state" class="hidden py-12 text-center">
-            <i class="ph ph-bell-slash text-gray-400 text-5xl mb-4"></i>
-            <p class="text-gray-600">Nenhuma notificação encontrada</p>
+            <i class="ph ph-chat-circle-dots text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-600" id="empty-message">Nenhum comunicado encontrado</p>
         </div>
     </main>
     
@@ -338,6 +373,11 @@
     <script src="botoes_gestor.js" type="module"></script>
     
     <script>
+        // Estado global da aplicação
+        let estadoApp = {
+            abaAtiva: 'enviados'
+        };
+
         // Toast Component
         const Toast = {
             element: document.getElementById('toast'),
@@ -365,6 +405,27 @@
             }
         };
         
+        // Função para alternar entre abas
+        function alternarAba(aba) {
+            estadoApp.abaAtiva = aba;
+            
+            // Atualizar botões das abas
+            document.getElementById('tab-enviados').classList.toggle('active', aba === 'enviados');
+            document.getElementById('tab-recebidos').classList.toggle('active', aba === 'recebidos');
+            
+            // Mostrar loading
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('feed-container').innerHTML = '';
+            
+            // Carregar conteúdo da aba
+            if (aba === 'enviados') {
+                carregarComunicadosEnviados();
+            } else {
+                carregarComunicadosRecebidos();
+            }
+        }
+        
         // Função para formatar data
         function formatarData(data) {
             return new Date(data).toLocaleDateString('pt-BR', {
@@ -376,140 +437,229 @@
             });
         }
         
-        // Função para extrair ID do vídeo do YouTube
-        function extrairIdYoutube(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
-        }
-        
-        // Função para criar card de notificação
-        function criarCardNotificacao(notificacao) {
+        // Função para criar card de comunicado enviado
+        function criarCardComunicadoEnviado(comunicado) {
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in';
+            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in cursor-pointer hover:shadow-md transition-shadow';
             
-            // Determinar se é imagem ou vídeo (YouTube ou upload)
-            let mediaHtml = '';
-            if (notificacao.tipo_midia === 'imagem' && notificacao.imagem_url) {
-                // Imagem
-                mediaHtml = `
-                    <div class="aspect-video bg-gray-100">
-                        <img src="${notificacao.imagem_url}" 
-                             alt="${notificacao.titulo}"
-                             class="w-full h-full object-cover cursor-pointer"
-                             onclick="abrirModal('${notificacao.id}')">
-                    </div>
-                `;
-            } else if (notificacao.tipo_midia === 'youtube' && notificacao.video_url) {
-                // Vídeo do YouTube
-                const videoId = extrairIdYoutube(notificacao.video_url);
-                if (videoId) {
-                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                    mediaHtml = `
-                        <div class="aspect-video bg-gray-100 relative cursor-pointer group"
-                             onclick="abrirModal('${notificacao.id}')">
-                            <img src="${thumbnailUrl}" 
-                                 alt="${notificacao.titulo}"
-                                 class="w-full h-full object-cover">
-                            <div class="absolute inset-0 flex items-center justify-center bg-black/5 group-hover:opacity-100 transition-opacity">
-                                <i class="ph ph-play-circle text-white text-6xl"></i>
-                            </div>
-                            <div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-lg text-sm flex items-center gap-1">
-                                <i class="ph ph-video-camera"></i>
-                                <span>Vídeo</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else if (notificacao.tipo_midia === 'video_upload' && notificacao.video_file_url) {
-                // Vídeo enviado
-                mediaHtml = `
-                    <div class="aspect-video bg-gray-100">
-                        <video controls class="w-full h-full object-cover cursor-pointer" onclick="abrirModal('${notificacao.id}')">
-                            <source src="${notificacao.video_file_url}" type="video/mp4" />
-                            Seu navegador não suporta vídeo.
-                        </video>
-                    </div>
-                `;
-            }
+            const badges = {
+                'informativo': '🟢 Informativo',
+                'importante': '🟡 Importante',
+                'urgente': '🔴 Urgente'
+            };
+
+            const badgeColors = {
+                'informativo': 'bg-green-100 text-green-800',
+                'importante': 'bg-yellow-100 text-yellow-800',
+                'urgente': 'bg-red-100 text-red-800'
+            };
             
             card.innerHTML = `
-                ${mediaHtml}
                 <div class="p-4">
-                    <h3 class="font-semibold text-gray-800 mb-2">${notificacao.titulo}</h3>
-                    <p class="text-gray-600 text-sm line-clamp-2 mb-4">${notificacao.descricao}</p>
+                    <div class="flex items-start justify-between mb-3">
+                        <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
+                            ${badges[comunicado.nivel_importancia]}
+                        </span>
+                        <span class="text-sm text-gray-500">${formatarData(comunicado.created_at)}</span>
+                    </div>
+                    
+                    <h3 class="font-semibold text-gray-800 mb-2">${comunicado.titulo}</h3>
+                    <p class="text-gray-600 text-sm line-clamp-3 mb-4">${comunicado.conteudo}</p>
+                    
                     <div class="flex items-center justify-between text-sm">
                         <div class="flex items-center text-gray-500">
-                            <i class="ph ph-map-pin mr-1"></i>
-                            <span>${notificacao.cidade_nome}</span>
+                            <i class="ph ph-users mr-1"></i>
+                            <span>Para: Secretários</span>
                         </div>
-                        <span class="text-gray-400">${formatarData(notificacao.created_at)}</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="event.stopPropagation(); confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
             
+            card.addEventListener('click', () => abrirModalComunicadoEnviado(comunicado));
             return card;
         }
         
-        // Função para abrir modal
-        async function abrirModal(id) {
+        // Função para criar card de comunicado recebido
+        function criarCardComunicadoRecebido(comunicado, destinatario) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-sm overflow-hidden fade-in cursor-pointer hover:shadow-md transition-shadow';
+            
+            const badges = {
+                'informativo': '🟢 Informativo',
+                'importante': '🟡 Importante',
+                'urgente': '🔴 Urgente'
+            };
+
+            const badgeColors = {
+                'informativo': 'bg-green-100 text-green-800',
+                'importante': 'bg-yellow-100 text-yellow-800',
+                'urgente': 'bg-red-100 text-red-800'
+            };
+            
+            const isLido = destinatario.lido;
+            const cardOpacity = isLido ? 'opacity-70' : '';
+            
+            card.innerHTML = `
+                <div class="p-4 ${cardOpacity}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}">
+                                ${badges[comunicado.nivel_importancia]}
+                            </span>
+                            ${!isLido ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                        </div>
+                        <span class="text-sm text-gray-500">${formatarData(comunicado.created_at)}</span>
+                    </div>
+                    
+                    <h3 class="font-semibold text-gray-800 mb-2">${comunicado.titulo}</h3>
+                    <p class="text-gray-600 text-sm line-clamp-3 mb-4">${comunicado.conteudo}</p>
+                    
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center text-gray-500">
+                            <i class="ph ph-user mr-1"></i>
+                            <span>De: ${comunicado.usuarios?.nome || 'Prefeito'}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500">
+                            ${isLido ? 
+                                `<i class="ph ph-check-circle text-green-500" title="Lido em ${formatarData(destinatario.data_leitura)}"></i>` : 
+                                '<i class="ph ph-circle text-blue-500" title="Não lido"></i>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => abrirModalComunicadoRecebido(comunicado, destinatario));
+            return card;
+        }
+        
+        // Função para abrir modal de detalhes do comunicado enviado
+        async function abrirModalComunicadoEnviado(comunicado) {
             try {
+                // Buscar quantos secretários receberam o comunicado
                 const supabase = createSupabaseClient();
-                
-                const { data: notificacao, error } = await supabase
-                    .from('notificacoes')
-                    .select(`
-                        *,
-                        cidades:cidade_id(nome)
-                    `)
-                    .eq('id', id)
-                    .single();
-                
+                const { data: destinatarios, error } = await supabase
+                    .from('comunicados_destinatarios')
+                    .select('usuario_id, lido, data_leitura')
+                    .eq('comunicado_id', comunicado.id);
+
                 if (error) throw error;
+
+                const totalDestinatarios = destinatarios?.length || 0;
+                const totalLidos = destinatarios?.filter(d => d.lido).length || 0;
                 
                 // Preencher dados do modal
-                document.getElementById('modal-title').textContent = notificacao.titulo;
-                document.getElementById('modal-description').textContent = notificacao.descricao;
-                document.getElementById('modal-cidade').textContent = notificacao.cidades?.nome || 'Cidade não identificada';
-                document.getElementById('modal-escolas').textContent = 'Todas as escolas da cidade';
+                document.getElementById('modal-title').textContent = comunicado.titulo;
+                document.getElementById('modal-description').textContent = comunicado.conteudo;
+                document.getElementById('modal-cidade').textContent = `Enviado para ${totalDestinatarios} secretário(s)`;
+                document.getElementById('modal-escolas').textContent = `${totalLidos} visualizaram`;
                 
-                // Preparar container de mídia
+                // Limpar container de mídia (comunicados não têm mídia)
                 const mediaContainer = document.getElementById('media-container');
-                
-                if (notificacao.tipo_midia === 'imagem' && notificacao.imagem_url) {
-                    // Modal de imagem
-                    mediaContainer.innerHTML = `
-                        <img src="${notificacao.imagem_url}" alt="${notificacao.titulo}" class="w-full h-auto rounded-lg">
-                    `;
-                } else if (notificacao.tipo_midia === 'youtube' && notificacao.video_url) {
-                    // Modal YouTube
-                    const videoId = extrairIdYoutube(notificacao.video_url);
-                    if (videoId) {
-                        mediaContainer.innerHTML = `
-                            <div class="video-container">
-                                <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1"
-                                        frameborder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowfullscreen></iframe>
-                            </div>
-                        `;
-                    }
-                } else if (notificacao.tipo_midia === 'video_upload' && notificacao.video_file_url) {
-                    // Modal de vídeo enviado
-                    mediaContainer.innerHTML = `
-                        <video controls class="w-full rounded-lg">
-                            <source src="${notificacao.video_file_url}" type="video/mp4" />
-                            Seu navegador não suporta vídeo.
-                        </video>
-                    `;
-                }
+                mediaContainer.innerHTML = `
+                    <div class="bg-gray-50 rounded-lg p-6 text-center">
+                        <i class="ph ph-chat-circle-dots text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-600">Comunicado enviado</p>
+                        <p class="text-sm text-gray-500 mt-1">Nível: ${comunicado.nivel_importancia}</p>
+                    </div>
+                `;
                 
                 // Mostrar modal
                 document.getElementById('media-modal').classList.remove('hidden');
                 
             } catch (error) {
                 console.error('Erro ao abrir modal:', error);
-                Toast.show('Erro ao carregar detalhes da notificação', 'error');
+                Toast.show('Erro ao carregar detalhes do comunicado', 'error');
+            }
+        }
+        
+        // Função para abrir modal de detalhes do comunicado recebido
+        async function abrirModalComunicadoRecebido(comunicado, destinatario) {
+            try {
+                const supabase = createSupabaseClient();
+                
+                // Marcar como lido se ainda não foi lido
+                if (!destinatario.lido) {
+                    await supabase
+                        .from('comunicados_destinatarios')
+                        .update({ 
+                            lido: true, 
+                            data_leitura: new Date().toISOString() 
+                        })
+                        .eq('id', destinatario.id);
+                    
+                    // Atualizar estado local
+                    destinatario.lido = true;
+                    destinatario.data_leitura = new Date().toISOString();
+                }
+                
+                // Preencher dados do modal
+                document.getElementById('modal-title').textContent = comunicado.titulo;
+                document.getElementById('modal-description').textContent = comunicado.conteudo;
+                document.getElementById('modal-cidade').textContent = `De: ${comunicado.usuarios?.nome || 'Prefeito'}`;
+                document.getElementById('modal-escolas').textContent = `Recebido em ${formatarData(comunicado.created_at)}`;
+                
+                // Limpar container de mídia (comunicados não têm mídia)
+                const mediaContainer = document.getElementById('media-container');
+                mediaContainer.innerHTML = `
+                    <div class="bg-blue-50 rounded-lg p-6 text-center">
+                        <i class="ph ph-envelope-open text-4xl text-blue-400 mb-2"></i>
+                        <p class="text-gray-600">Comunicado recebido</p>
+                        <p class="text-sm text-gray-500 mt-1">Nível: ${comunicado.nivel_importancia}</p>
+                    </div>
+                `;
+                
+                // Mostrar modal
+                document.getElementById('media-modal').classList.remove('hidden');
+                
+                // Recarregar a lista para atualizar o status de lido
+                setTimeout(() => {
+                    if (estadoApp.abaAtiva === 'recebidos') {
+                        carregarComunicadosRecebidos();
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao abrir modal:', error);
+                Toast.show('Erro ao carregar detalhes do comunicado', 'error');
+            }
+        }
+        
+        // Função para confirmar exclusão
+        function confirmarExclusao(comunicadoId) {
+            if (confirm('Tem certeza que deseja excluir este comunicado? Esta ação não pode ser desfeita.')) {
+                excluirComunicado(comunicadoId);
+            }
+        }
+
+        // Função para excluir comunicado
+        async function excluirComunicado(comunicadoId) {
+            try {
+                const supabase = createSupabaseClient();
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
+                
+                // Soft delete - marcar como excluído
+                const { error } = await supabase
+                    .from('comunicados')
+                    .update({ soft_delete: new Date().toISOString() })
+                    .eq('id', comunicadoId)
+                    .eq('autor_id', userSession.id); // Só pode excluir próprios comunicados
+
+                if (error) throw error;
+
+                Toast.show('Comunicado excluído com sucesso', 'success');
+                
+                // Recarregar lista
+                await carregarComunicadosEnviados();
+
+            } catch (error) {
+                console.error('Erro ao excluir comunicado:', error);
+                Toast.show('Erro ao excluir comunicado', 'error');
             }
         }
         
@@ -520,8 +670,8 @@
             document.getElementById('media-container').innerHTML = '';
         }
         
-        // Carregar notificações
-        async function carregarNotificacoes() {
+        // Carregar comunicados enviados
+        async function carregarComunicadosEnviados() {
             try {
                 const userSession = localStorage.getItem('user_session');
                 if (!userSession) {
@@ -541,102 +691,129 @@
                 
                 const supabase = createSupabaseClient();
                 
-                // Buscar a cidade do usuário logado
-                const { data: usuario, error: errorUsuario } = await supabase
-                    .from('usuarios')
-                    .select('cidade')
-                    .eq('id', userData.id)
-                    .single();
+                console.log('Buscando comunicados enviados pelo gestor:', userData.id);
                 
-                if (errorUsuario) {
-                    console.error('Erro ao buscar cidade do usuário:', errorUsuario);
-                    Toast.show('Erro ao identificar sua cidade', 'error');
-                    return;
-                }
-                
-                if (!usuario?.cidade) {
-                    console.warn('Usuário não possui cidade definida');
-                    Toast.show('Você não está associado a nenhuma cidade', 'warning');
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    return;
-                }
-                
-                console.log('Cidade do usuário:', usuario.cidade);
-                
-                // Buscar nome da cidade para exibição
-                const { data: cidadeInfo, error: errorCidade } = await supabase
-                    .from('cidades')
-                    .select('nome')
-                    .eq('id', usuario.cidade)
-                    .single();
-                
-                if (!errorCidade && cidadeInfo) {
-                    console.log('Nome da cidade:', cidadeInfo.nome);
-                }
-                
-                // Buscar notificações da cidade do usuário diretamente da tabela notificacoes
-                const { data: notificacoes, error: notificacoesError } = await supabase
-                    .from('notificacoes')
+                // Buscar comunicados enviados pelo gestor (prefeito)
+                const { data: comunicados, error: comunicadosError } = await supabase
+                    .from('comunicados')
                     .select(`
                         *,
-                        cidades:cidade_id(nome)
+                        usuarios!comunicados_autor_id_fkey(nome, profissao)
                     `)
-                    .eq('cidade_id', usuario.cidade)
+                    .eq('autor_id', userData.id)
+                    .eq('profissao_destino', 'Secretário')
+                    .is('soft_delete', null)
                     .order('created_at', { ascending: false });
                 
-                if (notificacoesError) {
-                    console.error('Erro ao buscar notificações:', notificacoesError);
-                    throw notificacoesError;
+                if (comunicadosError) {
+                    console.error('Erro ao buscar comunicados:', comunicadosError);
+                    throw comunicadosError;
                 }
                 
-                console.log('Notificações encontradas:', notificacoes?.length || 0);
+                console.log('Comunicados enviados encontrados:', comunicados?.length || 0);
                 
-                // Formatar os dados para uso no template
-                const notificacoesFormatadas = notificacoes?.map(n => ({
-                    id: n.id,
-                    titulo: n.titulo,
-                    descricao: n.descricao,
-                    imagem_url: n.imagem_url,
-                    video_url: n.video_url,
-                    video_file_url: n.video_file_url,
-                    tipo_midia: n.tipo_midia,
-                    created_at: n.created_at,
-                    updated_at: n.updated_at,
-                    cidade_id: n.cidade_id,
-                    cidade_nome: n.cidades?.nome || 'Cidade não identificada',
-                    escolas_ids: [], // Não usado mais
-                    escolas_nomes: [] // Não usado mais
-                })) || [];
-                
-                // Mostrar estado vazio se não houver notificações
+                // Mostrar estado vazio se não houver comunicados
                 const emptyState = document.getElementById('empty-state');
                 const feedContainer = document.getElementById('feed-container');
                 
-                if (notificacoesFormatadas.length === 0) {
+                if (!comunicados || comunicados.length === 0) {
                     emptyState.classList.remove('hidden');
+                    document.getElementById('empty-message').textContent = 'Nenhum comunicado enviado encontrado';
                     feedContainer.innerHTML = '';
                 } else {
                     emptyState.classList.add('hidden');
                     feedContainer.innerHTML = '';
                     
                     // Renderizar cards
-                    notificacoesFormatadas.forEach(notificacao => {
-                        const card = criarCardNotificacao(notificacao);
+                    comunicados.forEach(comunicado => {
+                        const card = criarCardComunicadoEnviado(comunicado);
                         feedContainer.appendChild(card);
                     });
                 }
                 
             } catch (error) {
-                console.error('Erro ao carregar notificações:', error);
-                Toast.show('Erro ao carregar notificações', 'error');
+                console.error('Erro ao carregar comunicados enviados:', error);
+                Toast.show('Erro ao carregar comunicados enviados', 'error');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
         }
-        
-        // Carregar notificações quando a página carregar
-        document.addEventListener('DOMContentLoaded', carregarNotificacoes);
+
+        // Carregar comunicados recebidos
+        async function carregarComunicadosRecebidos() {
+            try {
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                
+                if (userData.tipo !== 'GESTOR') {
+                    Toast.show('Acesso não autorizado para este perfil', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+                
+                const supabase = createSupabaseClient();
+                
+                console.log('Buscando comunicados recebidos pelo gestor:', userData.id);
+                
+                // Buscar comunicados recebidos pelo gestor (caso ele seja secretário)
+                const { data: comunicadosRecebidos, error: recebidosError } = await supabase
+                    .from('comunicados_destinatarios')
+                    .select(`
+                        *,
+                        comunicados!inner(
+                            *,
+                            usuarios!comunicados_autor_id_fkey(nome, profissao)
+                        )
+                    `)
+                    .eq('usuario_id', userData.id)
+                    .is('comunicados.soft_delete', null)
+                    .order('created_at', { ascending: false });
+                
+                if (recebidosError) {
+                    console.error('Erro ao buscar comunicados recebidos:', recebidosError);
+                    throw recebidosError;
+                }
+                
+                console.log('Comunicados recebidos encontrados:', comunicadosRecebidos?.length || 0);
+                
+                // Mostrar estado vazio se não houver comunicados
+                const emptyState = document.getElementById('empty-state');
+                const feedContainer = document.getElementById('feed-container');
+                
+                if (!comunicadosRecebidos || comunicadosRecebidos.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    document.getElementById('empty-message').textContent = 'Nenhum comunicado recebido encontrado';
+                    feedContainer.innerHTML = '';
+                } else {
+                    emptyState.classList.add('hidden');
+                    feedContainer.innerHTML = '';
+                    
+                    // Renderizar cards
+                    comunicadosRecebidos.forEach(destinatario => {
+                        const card = criarCardComunicadoRecebido(destinatario.comunicados, destinatario);
+                        feedContainer.appendChild(card);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar comunicados recebidos:', error);
+                Toast.show('Erro ao carregar comunicados recebidos', 'error');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Carregar comunicados quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarComunicadosEnviados(); // Começar com a aba de enviados
+        });
         
         // Fechar modal ao clicar fora
         document.getElementById('media-modal').addEventListener('click', (e) => {
