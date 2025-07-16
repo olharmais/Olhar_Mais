@@ -283,7 +283,7 @@
                         <i class="ph ph-chat-circle-dots text-2xl text-primary"></i>
                         <div>
                             <div class="font-semibold text-gray-800">Comunicado</div>
-                            <div class="text-sm text-gray-600">Mensagem para secretários</div>
+                            <div class="text-sm text-gray-600" id="comunicado-description">Mensagem para profissionais</div>
                         </div>
                     </div>
                 </label>
@@ -370,25 +370,24 @@
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Enviar para</label>
                     <select id="select-tipo-envio" class="w-full h-[54px] border border-gray-300 rounded-lg px-4 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
-                        <option value="todos_secretarios">Todos os Secretários</option>
-                        <option value="secretarios_especificos">Secretários Específicos</option>
+                        <!-- As opções serão preenchidas dinamicamente baseado no tipo de gestor -->
                     </select>
                 </div>
                 
-                <!-- Secretários Específicos -->
-                <div id="div-secretarios-especificos" class="mb-6 hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Secretários</label>
+                <!-- Destinatários Específicos -->
+                <div id="div-destinatarios-especificos" class="mb-6 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" id="label-destinatarios">Destinatários</label>
                     
                     <!-- Campo de busca -->
                     <div class="mb-3">
                         <div class="relative">
-                            <input type="text" id="busca-secretario" placeholder="Digite o nome do secretário para buscar..." class="w-full h-[54px] border border-gray-300 rounded-lg px-4 pl-12 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
+                            <input type="text" id="busca-destinatario" placeholder="Digite o nome para buscar..." class="w-full h-[54px] border border-gray-300 rounded-lg px-4 pl-12 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all">
                             <i class="ph ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                         </div>
                     </div>
                     
-                    <div id="lista-secretarios" class="border border-gray-300 rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
-                        <!-- Lista de secretários será inserida aqui -->
+                    <div id="lista-destinatarios" class="border border-gray-300 rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
+                        <!-- Lista de destinatários será inserida aqui -->
                     </div>
                 </div>
                 
@@ -463,8 +462,93 @@
             tipoConteudo: 'story',
             tipoMidia: 'video_upload', // Sempre vídeo carregado para stories
             arquivo: null,
-            secretarios: []
+            destinatarios: [],
+            tipoGestor: null, // 'Prefeito' ou 'Secretário'
+            profissoesDestino: []
         };
+
+        // Detectar tipo de gestor e configurar interface
+        async function detectarTipoGestor() {
+            try {
+                console.log('Iniciando detecção do tipo de gestor...');
+                
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.log('Sem sessão de usuário, redirecionando...');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                console.log('Dados do usuário da sessão:', userData);
+                
+                const supabase = createSupabaseClient();
+                if (!supabase) {
+                    console.error('Cliente Supabase não disponível ainda');
+                    // Tentar novamente em 1 segundo
+                    setTimeout(detectarTipoGestor, 1000);
+                    return;
+                }
+                
+                // Buscar profissão do usuário
+                console.log('Buscando profissão do usuário ID:', userData.id);
+                const { data: usuario, error } = await supabase
+                    .from('usuarios')
+                    .select('profissao')
+                    .eq('id', userData.id)
+                    .single();
+
+                if (error) {
+                    console.error('Erro ao buscar dados do usuário:', error);
+                    throw error;
+                }
+
+                console.log('Dados do usuário retornados:', usuario);
+                
+                formState.tipoGestor = usuario.profissao;
+                configurarInterface(usuario.profissao);
+
+            } catch (error) {
+                console.error('Erro ao detectar tipo de gestor:', error);
+                Toast.show('Erro ao carregar dados do usuário', 'error');
+            }
+        }
+
+        // Configurar interface baseado no tipo de gestor
+        function configurarInterface(profissao) {
+            console.log('Configurando interface para profissão:', profissao);
+            
+            const comunicadoDescription = document.getElementById('comunicado-description');
+            const selectTipoEnvio = document.getElementById('select-tipo-envio');
+            
+            if (profissao === 'Prefeito') {
+                // Prefeito envia para Secretários
+                comunicadoDescription.textContent = 'Mensagem para secretários';
+                formState.profissoesDestino = ['Secretário'];
+                
+                selectTipoEnvio.innerHTML = `
+                    <option value="todos_profissao">Todos os Secretários</option>
+                    <option value="especificos">Secretários Específicos</option>
+                `;
+                
+                console.log('Configurado para Prefeito. Profissões de destino:', formState.profissoesDestino);
+                
+            } else if (profissao === 'Secretário') {
+                // Secretário envia para Diretores, Coordenadores e Professores
+                comunicadoDescription.textContent = 'Mensagem para equipe educacional';
+                formState.profissoesDestino = ['Diretor', 'Coordenador', 'Professor'];
+                
+                selectTipoEnvio.innerHTML = `
+                    <option value="todos_profissao">Toda a Equipe Educacional</option>
+                    <option value="especificos">Profissionais Específicos</option>
+                    <option value="por_profissao">Por Profissão</option>
+                `;
+                
+                console.log('Configurado para Secretário. Profissões de destino:', formState.profissoesDestino);
+            } else {
+                console.warn('Profissão não reconhecida:', profissao);
+            }
+        }
 
         // Alternância entre Story e Comunicado
         function alternarTipoConteudo(tipo) {
@@ -484,92 +568,179 @@
                 comunicadoSection.classList.remove('hidden');
                 btnText.textContent = 'Enviar Comunicado';
                 statusText.textContent = 'Enviando comunicado...';
-                carregarSecretarios();
+                // Não carregar destinatários automaticamente, esperar seleção do tipo
             }
         }
 
         // Gerenciar tipo de envio de comunicados
         document.getElementById('select-tipo-envio').addEventListener('change', function(e) {
-            const divSecretarios = document.getElementById('div-secretarios-especificos');
-            if (e.target.value === 'secretarios_especificos') {
-                divSecretarios.classList.remove('hidden');
-                carregarSecretarios();
+            const divDestinatarios = document.getElementById('div-destinatarios-especificos');
+            const labelDestinatarios = document.getElementById('label-destinatarios');
+            
+            if (e.target.value === 'especificos') {
+                divDestinatarios.classList.remove('hidden');
+                labelDestinatarios.textContent = formState.tipoGestor === 'Prefeito' ? 'Secretários' : 'Profissionais';
+                carregarDestinatarios('todos');
+            } else if (e.target.value === 'por_profissao') {
+                divDestinatarios.classList.remove('hidden');
+                labelDestinatarios.textContent = 'Selecionar por Profissão';
+                mostrarOpcoesProfissao();
             } else {
-                divSecretarios.classList.add('hidden');
+                divDestinatarios.classList.add('hidden');
             }
         });
 
-        // Carregar lista de secretários
-        async function carregarSecretarios() {
+        // Mostrar opções de profissão (apenas para Secretários)
+        function mostrarOpcoesProfissao() {
+            const container = document.getElementById('lista-destinatarios');
+            container.innerHTML = `
+                <div class="space-y-3">
+                    <label class="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                        <input type="checkbox" value="Diretor" class="mr-3 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                        <div class="flex items-center">
+                            <i class="ph ph-briefcase text-lg text-gray-600 mr-3"></i>
+                            <span class="font-medium">Diretores</span>
+                        </div>
+                    </label>
+                    <label class="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                        <input type="checkbox" value="Coordenador" class="mr-3 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                        <div class="flex items-center">
+                            <i class="ph ph-clipboard text-lg text-gray-600 mr-3"></i>
+                            <span class="font-medium">Coordenadores</span>
+                        </div>
+                    </label>
+                    <label class="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                        <input type="checkbox" value="Professor" class="mr-3 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                        <div class="flex items-center">
+                            <i class="ph ph-chalkboard-teacher text-lg text-gray-600 mr-3"></i>
+                            <span class="font-medium">Professores</span>
+                        </div>
+                    </label>
+                </div>
+            `;
+            
+            // Configurar busca desabilitada para seleção por profissão
+            document.getElementById('busca-destinatario').style.display = 'none';
+        }
+
+        // Carregar lista de destinatários
+        async function carregarDestinatarios(filtro = 'todos') {
             try {
                 const supabase = createSupabaseClient();
+                const userSession = JSON.parse(localStorage.getItem('user_session'));
                 
-                // Buscar todos os secretários (sem filtro de cidade, pois gestor pode enviar para qualquer secretário)
-                const { data: secretarios, error } = await supabase
+                console.log('Carregando destinatários...');
+                console.log('Tipo de gestor:', formState.tipoGestor);
+                console.log('Profissões de destino:', formState.profissoesDestino);
+                
+                // Buscar cidade do usuário para filtrar destinatários da mesma cidade
+                const { data: usuario, error: userError } = await supabase
                     .from('usuarios')
-                    .select('id, nome, foto_url, cidade')
-                    .eq('profissao', 'Secretário')
+                    .select('cidade')
+                    .eq('id', userSession.id)
+                    .single();
+
+                if (userError) throw userError;
+
+                console.log('Cidade do usuário:', usuario.cidade);
+
+                let query = supabase
+                    .from('usuarios')
+                    .select('id, nome, foto_url, profissao, cidade')
+                    .eq('cidade', usuario.cidade) // Filtrar pela mesma cidade
                     .order('nome');
+
+                // Aplicar filtro de profissões baseado no tipo de gestor
+                if (formState.profissoesDestino && formState.profissoesDestino.length > 0) {
+                    console.log('Aplicando filtro de profissões:', formState.profissoesDestino);
+                    query = query.in('profissao', formState.profissoesDestino);
+                } else {
+                    console.warn('Nenhuma profissão de destino definida!');
+                }
+
+                const { data: destinatarios, error } = await query;
 
                 if (error) throw error;
 
-                formState.secretarios = secretarios || [];
-                renderizarSecretarios(formState.secretarios);
+                console.log('Destinatários encontrados:', destinatarios?.length || 0, destinatarios);
+
+                formState.destinatarios = destinatarios || [];
+                renderizarDestinatarios(formState.destinatarios);
+
+                // Configurar busca
+                configurarBuscaDestinatarios();
 
             } catch (error) {
-                console.error('Erro ao carregar secretários:', error);
-                Toast.show('Erro ao carregar secretários', 'error');
+                console.error('Erro ao carregar destinatários:', error);
+                Toast.show('Erro ao carregar destinatários', 'error');
             }
         }
 
-        // Renderizar lista de secretários
-        function renderizarSecretarios(secretarios) {
-            const container = document.getElementById('lista-secretarios');
+        // Renderizar lista de destinatários
+        function renderizarDestinatarios(destinatarios) {
+            const container = document.getElementById('lista-destinatarios');
             container.innerHTML = '';
 
-            if (secretarios.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum secretário encontrado</p>';
+            // Mostrar campo de busca novamente (pode ter sido escondido na seleção por profissão)
+            document.getElementById('busca-destinatario').style.display = 'block';
+
+            if (destinatarios.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum destinatário encontrado</p>';
                 return;
             }
             
-            secretarios.forEach(secretario => {
+            destinatarios.forEach(destinatario => {
                 const div = document.createElement('div');
-                div.className = 'secretario-item flex items-center p-3 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0';
+                div.className = 'destinatario-item flex items-center p-3 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0';
                 
-                // Determinar foto do secretário
-                const fotoUrl = secretario.foto_url || '/assets/img/avatar-placeholder.png';
+                // Determinar foto do destinatário
+                const fotoUrl = destinatario.foto_url || '/assets/img/avatar-placeholder.png';
+                
+                // Ícone baseado na profissão
+                let icone = 'ph-user';
+                switch(destinatario.profissao) {
+                    case 'Secretário': icone = 'ph-briefcase'; break;
+                    case 'Diretor': icone = 'ph-buildings'; break;
+                    case 'Coordenador': icone = 'ph-clipboard'; break;
+                    case 'Professor': icone = 'ph-chalkboard-teacher'; break;
+                }
                 
                 div.innerHTML = `
-                    <input type="checkbox" id="sec-${secretario.id}" value="${secretario.id}" class="checkbox-secretario mr-3">
+                    <input type="checkbox" id="dest-${destinatario.id}" value="${destinatario.id}" class="checkbox-secretario mr-3">
                     <div class="flex items-center flex-1">
-                        <img src="${fotoUrl}" alt="${secretario.nome}" class="w-10 h-10 rounded-full mr-3 object-cover border-2 border-gray-200 shadow-sm" onerror="this.src='/assets/img/avatar-placeholder.png'">
-                        <label for="sec-${secretario.id}" class="flex-1 cursor-pointer">
-                            <div class="font-medium text-gray-800">${secretario.nome}</div>
-                            <div class="text-sm text-gray-500">Secretário</div>
+                        <img src="${fotoUrl}" alt="${destinatario.nome}" class="w-10 h-10 rounded-full mr-3 object-cover border-2 border-gray-200 shadow-sm" onerror="this.src='/assets/img/avatar-placeholder.png'">
+                        <label for="dest-${destinatario.id}" class="flex-1 cursor-pointer">
+                            <div class="font-medium text-gray-800">${destinatario.nome}</div>
+                            <div class="text-sm text-gray-500 flex items-center gap-1">
+                                <i class="${icone}"></i>
+                                ${destinatario.profissao}
+                            </div>
                         </label>
                     </div>
                 `;
                 container.appendChild(div);
             });
-
-            // Configurar busca de secretários
-            configurarBuscaSecretarios();
         }
 
-        // Configurar busca de secretários
-        function configurarBuscaSecretarios() {
-            const campoBusca = document.getElementById('busca-secretario');
+        // Configurar busca de destinatários
+        function configurarBuscaDestinatarios() {
+            const campoBusca = document.getElementById('busca-destinatario');
             if (campoBusca) {
-                campoBusca.addEventListener('input', (e) => {
+                // Remover listeners anteriores
+                campoBusca.replaceWith(campoBusca.cloneNode(true));
+                const novoCampoBusca = document.getElementById('busca-destinatario');
+                
+                novoCampoBusca.addEventListener('input', (e) => {
                     const termo = e.target.value.toLowerCase().trim();
                     
                     if (termo === '') {
-                        renderizarSecretarios(formState.secretarios);
+                        renderizarDestinatarios(formState.destinatarios);
                     } else {
-                        const secretariosFiltrados = formState.secretarios.filter(secretario => 
-                            secretario.nome.toLowerCase().includes(termo)
+                        const destinatariosFiltrados = formState.destinatarios.filter(destinatario => 
+                            destinatario.nome.toLowerCase().includes(termo) ||
+                            destinatario.profissao.toLowerCase().includes(termo)
                         );
-                        renderizarSecretarios(secretariosFiltrados);
+                        renderizarDestinatarios(destinatariosFiltrados);
                     }
                 });
             }
@@ -727,14 +898,22 @@
             const supabase = createSupabaseClient();
             const userSession = JSON.parse(localStorage.getItem('user_session'));
             
+            // Determinar profissões de destino baseado no tipo de gestor
+            let profissoesDestino;
+            if (formState.tipoGestor === 'Prefeito') {
+                profissoesDestino = ['Secretário'];
+            } else if (formState.tipoGestor === 'Secretário') {
+                profissoesDestino = ['Diretor', 'Coordenador', 'Professor'];
+            }
+            
             // Criar comunicado
             const comunicadoData = {
                 titulo,
                 conteudo,
                 autor_id: userSession.id,
                 nivel_importancia: importancia,
-                tipo_envio: 'todos_profissao',
-                profissao_destino: 'Secretário'
+                tipo_envio: tipoEnvio === 'todos_profissao' ? 'todos_profissao' : 'especificos',
+                profissao_destino: profissoesDestino.join(',') // Guardar como string separada por vírgula
             };
 
             const { data: comunicado, error: errorComunicado } = await supabase
@@ -745,27 +924,37 @@
         
             if (errorComunicado) throw errorComunicado;
 
-            // Criar destinatários (secretários)
+            // Criar destinatários
             let destinatarios = [];
 
-            if (tipoEnvio === 'todos_secretarios') {
-                // Buscar todos os secretários
-                const { data: secretarios, error: errorSecretarios } = await supabase
+            if (tipoEnvio === 'todos_profissao') {
+                // Buscar usuários da mesma cidade com as profissões de destino
+                const { data: usuario, error: userError } = await supabase
+                    .from('usuarios')
+                    .select('cidade')
+                    .eq('id', userSession.id)
+                    .single();
+
+                if (userError) throw userError;
+
+                const { data: usuariosDestino, error: errorUsuarios } = await supabase
                     .from('usuarios')
                     .select('id')
-                    .eq('profissao', 'Secretário');
+                    .eq('cidade', usuario.cidade)
+                    .in('profissao', profissoesDestino);
 
-                if (errorSecretarios) throw errorSecretarios;
+                if (errorUsuarios) throw errorUsuarios;
 
-                destinatarios = (secretarios || []).map(s => ({
+                destinatarios = (usuariosDestino || []).map(u => ({
                     comunicado_id: comunicado.id,
-                    usuario_id: s.id
+                    usuario_id: u.id
                 }));
-            } else {
-                // Secretários específicos
-                const checkboxes = document.querySelectorAll('#lista-secretarios input[type="checkbox"]:checked');
+
+            } else if (tipoEnvio === 'especificos') {
+                // Usuários específicos selecionados
+                const checkboxes = document.querySelectorAll('#lista-destinatarios input[type="checkbox"]:checked');
                 if (checkboxes.length === 0) {
-                    Toast.show('Selecione pelo menos um secretário', 'error');
+                    Toast.show('Selecione pelo menos um destinatário', 'error');
                     document.querySelector('button[type="submit"]').disabled = false;
                     document.getElementById('submit-status').classList.add('hidden');
                     return;
@@ -774,6 +963,40 @@
                 destinatarios = Array.from(checkboxes).map(cb => ({
                     comunicado_id: comunicado.id,
                     usuario_id: cb.value
+                }));
+
+            } else if (tipoEnvio === 'por_profissao') {
+                // Profissões específicas selecionadas (apenas para Secretários)
+                const checkboxes = document.querySelectorAll('#lista-destinatarios input[type="checkbox"]:checked');
+                if (checkboxes.length === 0) {
+                    Toast.show('Selecione pelo menos uma profissão', 'error');
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('submit-status').classList.add('hidden');
+                    return;
+                }
+
+                const profissoesSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+
+                // Buscar usuários da mesma cidade com as profissões selecionadas
+                const { data: usuario, error: userError } = await supabase
+                    .from('usuarios')
+                    .select('cidade')
+                    .eq('id', userSession.id)
+                    .single();
+
+                if (userError) throw userError;
+
+                const { data: usuariosDestino, error: errorUsuarios } = await supabase
+                    .from('usuarios')
+                    .select('id')
+                    .eq('cidade', usuario.cidade)
+                    .in('profissao', profissoesSelecionadas);
+
+                if (errorUsuarios) throw errorUsuarios;
+
+                destinatarios = (usuariosDestino || []).map(u => ({
+                    comunicado_id: comunicado.id,
+                    usuario_id: u.id
                 }));
             }
 
@@ -792,6 +1015,22 @@
                 window.location.href = 'notificacoes_gestor.html';
             }, 2000);
         }
+
+        // Inicialização da página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguardar as configurações carregarem antes de detectar o tipo de gestor
+            const tentarInicializar = () => {
+                if (window._configLoading) {
+                    console.log('Aguardando configurações carregarem...');
+                    setTimeout(tentarInicializar, 500);
+                } else {
+                    console.log('Configurações carregadas, iniciando detecção do tipo de gestor...');
+                    detectarTipoGestor();
+                }
+            };
+            
+            tentarInicializar();
+        });
     </script>
 </body>
 </html> 

@@ -469,7 +469,7 @@
                     <div class="flex items-center justify-between text-sm">
                         <div class="flex items-center text-gray-500">
                             <i class="ph ph-users mr-1"></i>
-                            <span>Para: Secretários</span>
+                            <span>Para: ${comunicado.profissao_destino.replace(/,/g, ', ')}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="event.stopPropagation(); confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado">
@@ -693,7 +693,7 @@
                 
                 console.log('Buscando comunicados enviados pelo gestor:', userData.id);
                 
-                // Buscar comunicados enviados pelo gestor (prefeito)
+                // Buscar comunicados enviados pelo gestor
                 const { data: comunicados, error: comunicadosError } = await supabase
                     .from('comunicados')
                     .select(`
@@ -701,7 +701,6 @@
                         usuarios!comunicados_autor_id_fkey(nome, profissao)
                     `)
                     .eq('autor_id', userData.id)
-                    .eq('profissao_destino', 'Secretário')
                     .is('soft_delete', null)
                     .order('created_at', { ascending: false });
                 
