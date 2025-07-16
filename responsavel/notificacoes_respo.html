@@ -372,25 +372,16 @@
                     </div>
                 </div>
             </div>
-            <button id="btn-novo-comunicado" class="hidden bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary-dark transition-colors">
-                <i class="ph ph-plus"></i>
-                <span>Criar</span>
-            </button>
+
         </div>
     </header>
     
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-6">
-        <!-- Abas -->
+        <!-- Título -->
         <div class="mb-6">
-            <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-                <button id="tab-recebidos" class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm">
-                    Recebidos
-                </button>
-                <button id="tab-enviados" class="hidden flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700">
-                    Enviados
-                </button>
-            </div>
+            <h2 class="text-xl font-semibold text-gray-800">Comunicados Recebidos</h2>
+            <p class="text-sm text-gray-600 mt-1">Mensagens e comunicados da escola</p>
         </div>
         
         <!-- Filtros -->
@@ -651,7 +642,6 @@
                     'Coordenador': ['Professor'],
                     'Professor': ['Responsável']
                 };
-                this.tabAtiva = 'recebidos';
                 this.filtroAtivo = 'todos';
                 this.comunicadoAtual = null;
                 this.todosUsuarios = [];
@@ -720,31 +710,18 @@
                     return;
                 }
 
-                // Verificar se pode criar comunicados
-                const podeEnviar = this.hierarquiaProfissoes[profissao];
-                if (podeEnviar) {
-                    document.getElementById('btn-novo-comunicado').classList.remove('hidden');
-                    document.getElementById('tab-enviados').classList.remove('hidden');
-                }
+                // Responsáveis não criam comunicados, apenas recebem
 
                 document.getElementById('loading').classList.add('hidden');
             }
 
             configurarEventos() {
-                // Abas
-                document.getElementById('tab-recebidos').addEventListener('click', () => this.trocarAba('recebidos'));
-                document.getElementById('tab-enviados').addEventListener('click', () => this.trocarAba('enviados'));
-
                 // Filtros
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.addEventListener('click', () => this.aplicarFiltro(btn.dataset.filter));
                 });
 
-                // Botões de modal
-                document.getElementById('btn-novo-comunicado').addEventListener('click', () => this.abrirModalNovo());
-                document.getElementById('form-comunicado').addEventListener('submit', (e) => this.enviarComunicado(e));
-                document.getElementById('select-tipo-envio').addEventListener('change', () => this.alterarTipoEnvio());
-                document.getElementById('select-profissao-destino').addEventListener('change', () => this.alterarProfissaoDestino());
+                // Responsáveis não têm botões de criar comunicado
 
                 // Fechar modais clicando fora
                 document.getElementById('modal-detalhes').addEventListener('click', (e) => {
@@ -755,20 +732,7 @@
                 });
             }
 
-            trocarAba(aba) {
-                this.tabAtiva = aba;
-                
-                // Atualizar visual das abas
-                document.getElementById('tab-recebidos').className = aba === 'recebidos' 
-                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
-                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
-                
-                document.getElementById('tab-enviados').className = aba === 'enviados'
-                    ? 'flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-primary shadow-sm'
-                    : 'flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700';
 
-                this.carregarComunicados();
-            }
 
             aplicarFiltro(filtro) {
                 this.filtroAtivo = filtro;
@@ -792,14 +756,8 @@
                     document.getElementById('feed-container').innerHTML = '';
                     document.getElementById('empty-state').classList.add('hidden');
 
-                    let comunicados = [];
-
-                    if (this.tabAtiva === 'recebidos') {
-                        comunicados = await this.buscarComunicadosRecebidos();
-                    } else {
-                        comunicados = await this.buscarComunicadosEnviados();
-                    }
-
+                    // Responsáveis só recebem comunicados
+                    const comunicados = await this.buscarComunicadosRecebidos();
                     this.renderizarComunicados(comunicados);
 
                 } catch (error) {
@@ -920,20 +878,7 @@
                 }
             }
 
-            async buscarComunicadosEnviados() {
-                const { data, error } = await this.supabase
-                    .from('comunicados')
-                    .select(`
-                        *,
-                        usuarios!comunicados_autor_id_fkey(nome, profissao)
-                    `)
-                    .eq('autor_id', this.usuario.id)
-                    .is('soft_delete', null)
-                    .order('created_at', { ascending: false });
 
-                if (error) throw error;
-                return data || [];
-            }
 
             renderizarComunicados(comunicados) {
                 const container = document.getElementById('feed-container');
@@ -972,10 +917,8 @@
                     'urgente': 'bg-red-100 text-red-800'
                 };
 
-                const isLido = this.tabAtiva === 'recebidos' ? comunicado.lido : true;
-                const indicadorLeitura = this.tabAtiva === 'recebidos' 
-                    ? (isLido ? '' : '<div class="w-3 h-3 bg-primary rounded-full"></div>')
-                    : '';
+                const isLido = comunicado.lido;
+                const indicadorLeitura = isLido ? '' : '<div class="w-3 h-3 bg-primary rounded-full"></div>';
 
             card.innerHTML = `
                     <div class="flex items-start justify-between mb-3">
@@ -995,11 +938,10 @@
                     <div class="flex items-center justify-between text-sm text-gray-500">
                         <div class="flex items-center">
                             <i class="ph ph-user mr-1"></i>
-                            <span>${this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você'}</span>
+                            <span>${comunicado.autor_nome}</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${this.tabAtiva === 'recebidos' && !isLido ? '<span class="text-primary font-medium">Novo</span>' : ''}
-                            ${this.tabAtiva === 'enviados' ? `<button onclick="event.stopPropagation(); app.confirmarExclusao('${comunicado.id}')" class="text-red-500 hover:text-red-700 transition-colors p-1" title="Excluir comunicado"><i class="ph ph-trash text-sm"></i></button>` : ''}
+                            ${!isLido ? '<span class="text-primary font-medium">Novo</span>' : ''}
                         </div>
                 </div>
             `;
@@ -1046,23 +988,19 @@
                 document.getElementById('badge-importancia').className = `px-2 py-1 text-xs rounded-full ${badgeColors[comunicado.nivel_importancia]}`;
                 document.getElementById('data-comunicado').textContent = this.formatarData(comunicado.created_at);
                 document.getElementById('titulo-comunicado').textContent = comunicado.titulo;
-                document.getElementById('autor-comunicado').textContent = this.tabAtiva === 'recebidos' ? comunicado.autor_nome : 'Você';
+                document.getElementById('autor-comunicado').textContent = comunicado.autor_nome;
                 document.getElementById('conteudo-comunicado').textContent = comunicado.conteudo;
 
                 // Mostrar/ocultar botão de marcar como lido
                 const btnMarcarLido = document.getElementById('btn-marcar-lido');
-                if (this.tabAtiva === 'recebidos' && !comunicado.lido) {
+                if (!comunicado.lido) {
                     btnMarcarLido.classList.remove('hidden');
                 } else {
                     btnMarcarLido.classList.add('hidden');
                 }
 
-                // Carregar visualizações se for comunicado enviado
-                if (this.tabAtiva === 'enviados') {
-                    await this.carregarVisualizacoes(comunicado.id);
-                } else {
-                    document.getElementById('secao-visualizacoes').classList.add('hidden');
-                }
+                // Responsáveis não veem visualizações (eles só recebem comunicados)
+                document.getElementById('secao-visualizacoes').classList.add('hidden');
 
                 document.getElementById('modal-detalhes').classList.remove('hidden');
             }
