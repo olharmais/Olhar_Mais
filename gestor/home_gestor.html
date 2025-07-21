@@ -340,7 +340,19 @@
             color: white;
             cursor: pointer;
             padding: 0.5rem;
-            margin-left: auto;
+        }
+
+        .stories-delete {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .stories-delete.danger {
+            color: #ef4444;
         }
 
         .story-escola-info {
@@ -513,6 +525,17 @@
                     </div>
                     <i class="ph ph-caret-right text-gray-400"></i>
                 </a>
+
+                <a href="relatorio_gestor.html" class="bg-white rounded-lg p-4 shadow-sm flex items-center">
+                    <div class="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center mr-4">
+                        <i class="ph ph-file-text text-xl text-primary"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <h4 class="font-medium text-gray-800">Relatório de Presença</h4>
+                        <p class="text-sm text-gray-600">Gere relatórios detalhados para impressão</p>
+                    </div>
+                    <i class="ph ph-caret-right text-gray-400"></i>
+                </a>
             </div>
         </div>
         
@@ -549,9 +572,14 @@
                     <div class="story-time">há 2 horas</div>
                 </div>
             </div>
-            <button class="stories-close">
-                <i class="ph ph-x text-2xl"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button class="stories-delete" id="btn-delete-story">
+                    <i class="ph ph-trash text-xl"></i>
+                </button>
+                <button class="stories-close">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
         </div>
         
         <div class="stories-content">
@@ -606,8 +634,19 @@
             }
         };
         
+        // Flag para evitar múltiplas execuções simultâneas
+        let dashboardCarregando = false;
+
         // Carregar dados do dashboard
         document.addEventListener('DOMContentLoaded', async function() {
+            // Prevenir múltiplas execuções
+            if (dashboardCarregando) {
+                console.log('Dashboard já está carregando, ignorando chamada duplicada');
+                return;
+            }
+            
+            dashboardCarregando = true;
+            
             try {
                 // Verificar se o usuário está logado
                 const userSession = localStorage.getItem('user_session');
@@ -729,6 +768,9 @@
                 let todasTurmasIds = [];
                 
                 const escolasContainer = document.getElementById('escolas-container');
+                
+                // Limpar container antes de adicionar novas escolas (evitar duplicação)
+                escolasContainer.innerHTML = '';
                 
                 for (const escola of escolasPermitidas) {
                     // Buscar cidade da escola
@@ -913,6 +955,9 @@
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 Toast.show('Erro ao carregar dados do dashboard', 'error');
+            } finally {
+                // Liberar flag para permitir novas tentativas em caso de erro
+                dashboardCarregando = false;
             }
         });
 
@@ -920,6 +965,7 @@
         let currentStoryIndex = 0;
         let storiesData = [];
         let storyProgressInterval;
+        let deleteStoryState = false; // false = primeiro clique, true = segundo clique
 
         // Função para carregar os stories
         async function carregarStories() {
@@ -1055,6 +1101,11 @@
             const modal = document.querySelector('.stories-modal');
             const video = modal.querySelector('.stories-video');
             
+            // Resetar estado do botão de excluir
+            deleteStoryState = false;
+            const deleteBtn = document.getElementById('btn-delete-story');
+            deleteBtn.classList.remove('danger');
+            
             // Atualizar informações do story
             modal.querySelector('.story-escola-nome').textContent = story.cidades?.nome || 'Cidade';
             modal.querySelector('.story-time').textContent = formatarTempoRelativo(story.created_at);
@@ -1123,10 +1174,83 @@
             video.src = '';
             modal.classList.remove('active');
             clearInterval(storyProgressInterval);
+            
+            // Resetar estado do botão de excluir
+            deleteStoryState = false;
+            const deleteBtn = document.getElementById('btn-delete-story');
+            deleteBtn.classList.remove('danger');
+        }
+
+        // Função para excluir story
+        async function excluirStory() {
+            try {
+                const story = storiesData[currentStoryIndex];
+                if (!story) return;
+
+                if (!deleteStoryState) {
+                    // Primeiro clique - muda para vermelho
+                    deleteStoryState = true;
+                    const deleteBtn = document.getElementById('btn-delete-story');
+                    deleteBtn.classList.add('danger');
+                    Toast.show('Clique novamente para confirmar a exclusão', 'warning');
+                    return;
+                }
+
+                // Segundo clique - excluir do banco
+                const supabase = createSupabaseClient();
+                
+                const { error } = await supabase
+                    .from('notificacoes')
+                    .delete()
+                    .eq('id', story.id);
+
+                if (error) throw error;
+
+                Toast.show('Story excluído com sucesso!', 'success');
+                
+                // Remover o story da lista
+                storiesData.splice(currentStoryIndex, 1);
+                
+                // Se não há mais stories, fechar modal
+                if (storiesData.length === 0) {
+                    fecharStories();
+                    document.querySelector('.stories-container').style.display = 'none';
+                    return;
+                }
+                
+                // Se era o último story, voltar para o anterior
+                if (currentStoryIndex >= storiesData.length) {
+                    currentStoryIndex = storiesData.length - 1;
+                }
+                
+                // Recarregar os stories na tela
+                renderizarStories();
+                
+                // Abrir o próximo story ou fechar se não houver mais
+                if (storiesData.length > 0) {
+                    abrirStory(currentStoryIndex);
+                } else {
+                    fecharStories();
+                }
+
+            } catch (error) {
+                console.error('Erro ao excluir story:', error);
+                Toast.show('Erro ao excluir story', 'error');
+                
+                // Resetar estado em caso de erro
+                deleteStoryState = false;
+                const deleteBtn = document.getElementById('btn-delete-story');
+                deleteBtn.classList.remove('danger');
+            }
         }
 
         // Event Listeners
         document.querySelector('.stories-close').addEventListener('click', fecharStories);
+
+        document.getElementById('btn-delete-story').addEventListener('click', (e) => {
+            e.stopPropagation();
+            excluirStory();
+        });
 
         document.querySelector('.stories-nav-prev').addEventListener('click', (e) => {
             e.stopPropagation();

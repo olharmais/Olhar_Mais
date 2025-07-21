@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Dashboard do Profissional</title>
+    <meta name="description" content="Dashboard personalizado para profissionais da educação">
+    <meta name="theme-color" content="#1e40af">
+    
+    <!-- Definições preliminares -->
+    <script>
+        // Variáveis globais para configuração
+        let _config = null;
+        let _supabaseClient = null;
+        let _configLoaded = false;
+        
+        // Função placeholder até o Supabase carregar
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível"); 
+            return null; 
+        };
+        window._configLoading = true;
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Configuração via Lambda -->
+    <script>
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    _config = result.data;
+                    
+                    // Criar cliente Supabase uma única vez
+                    _supabaseClient = supabase.createClient(
+                        _config.SUPABASE_URL1,
+                        _config.SUPABASE_KEY1,
+                        {
+                            db: { schema: 'public' },
+                            auth: {
+                                autoRefreshToken: true,
+                                persistSession: true,
+                                detectSessionInUrl: true
+                            }
+                        }
+                    );
+                    
+                    // Substituir as funções de supabase.js pelas nossas versões
+                    window.createSupabaseClient = function() {
+                        return _supabaseClient;
+                    };
+                    
+                    // Marcar como carregado e liberar a execução
+                    _configLoaded = true;
+                    window._configLoading = false;
+                    
+                    console.log('✅ Configurações carregadas via Lambda');
+                    return true;
+                } else {
+                    throw new Error('Falha ao carregar configurações');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar configurações:', error);
+                alert('Erro ao conectar ao servidor. Verifique sua conexão.');
+                return false;
+            }
+        }
+        
+        // Carregar configurações ao carregar a página
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('⏳ Carregando configurações...');
+            await carregarConfiguracoes();
+        });
+    </script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: #e5e7eb;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .dashboard-container {
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 80px 1fr;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(31, 41, 55, 0.8) 100%);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .main-content {
+            padding: 16px;
+            height: calc(100vh - 80px);
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 100px 1fr;
+            gap: 16px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            height: 100px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        
+        .metric-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .metric-trend {
+            text-align: right;
+            font-size: 10px;
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        
+        .view-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .view-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .chart-container canvas {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        .ranking-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        .ranking-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .ranking-list::-webkit-scrollbar-track {
+            background: rgba(31, 41, 55, 0.3);
+            border-radius: 2px;
+        }
+        
+        .ranking-list::-webkit-scrollbar-thumb {
+            background: rgba(75, 85, 99, 0.6);
+            border-radius: 2px;
+        }
+        
+        .dashboard-view {
+            transition: opacity 0.5s ease-in-out;
+            opacity: 1;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .dashboard-view.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .view-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(156, 163, 175, 0.3);
+            border: 1px solid rgba(156, 163, 175, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-indicator.active {
+            background: #60a5fa;
+            border-color: #60a5fa;
+            transform: scale(1.3);
+        }
+        
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+        .trend-neutral { color: #f59e0b; }
+
+        /* View específicas - altura fixa para evitar overflow */
+        .dashboard-view > .grid {
+            height: calc(100vh - 80px - 100px - 32px - 40px); /* total - header - metrics - padding - indicators */
+        }
+
+        .dashboard-view[data-view="1"] > .grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .dashboard-view[data-view="2"] > .grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .dashboard-view[data-view="3"] > .grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* Responsividade */
+        @media (max-width: 1400px) {
+            .metrics-grid {
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                height: 120px;
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: 12px;
+            }
+            
+            .dashboard-view[data-view="1"] > .grid,
+            .dashboard-view[data-view="2"] > .grid,
+            .dashboard-view[data-view="3"] > .grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="flex items-center justify-between w-full">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                            <i class="ph ph-chalkboard-teacher text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h1 id="profissional-nome" class="text-xl font-bold text-white">Dashboard Profissional</h1>
+                            <p id="nivel-acesso" class="text-sm text-gray-400">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <div id="info-permissoes" class="text-right hidden md:block">
+                        <div class="text-sm font-medium text-white" id="scope-info">-</div>
+                        <div class="text-xs text-gray-400" id="scope-details">-</div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 bg-green-500/20 text-green-300 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                        <span class="text-sm font-medium">Live</span>
+                    </div>
+                    
+                    <div class="text-right">
+                        <div class="text-xs text-gray-500">Agora</div>
+                        <div id="current-time" class="text-sm font-medium text-white">--:--</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Métricas Principais -->
+            <div class="metrics-grid">
+                <!-- Total de Alunos -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon bg-purple-500/20 text-purple-400">
+                            <i class="ph ph-student"></i>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="alunos-trend" class="trend-up">-</span>
+                        </div>
+                    </div>
+                    <div class="metric-value text-purple-400" id="total-alunos">-</div>
+                    <div class="metric-label">Total de Alunos</div>
+                </div>
+
+                <!-- Presentes Hoje -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon bg-green-500/20 text-green-400">
+                            <i class="ph ph-check-circle"></i>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="presentes-trend" class="trend-up">-</span>
+                        </div>
+                    </div>
+                    <div class="metric-value text-green-400" id="presentes-hoje">-</div>
+                    <div class="metric-label">Presentes Hoje</div>
+                </div>
+
+                <!-- Frequência Média -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon bg-blue-500/20 text-blue-400">
+                            <i class="ph ph-chart-line-up"></i>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="freq-trend" class="trend-up">-</span>
+                        </div>
+                    </div>
+                    <div class="metric-value text-blue-400" id="frequencia-media">-</div>
+                    <div class="metric-label">Frequência Média</div>
+                </div>
+
+                <!-- Turmas Ativas -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon bg-yellow-500/20 text-yellow-400">
+                            <i class="ph ph-users-three"></i>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="turmas-trend" class="trend-neutral">-</span>
+                        </div>
+                    </div>
+                    <div class="metric-value text-yellow-400" id="total-turmas">-</div>
+                    <div class="metric-label">Turmas Ativas</div>
+                </div>
+
+                <!-- Alertas -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon bg-red-500/20 text-red-400">
+                            <i class="ph ph-warning-circle"></i>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="alertas-trend" class="trend-down">-</span>
+                        </div>
+                    </div>
+                    <div class="metric-value text-red-400" id="total-alertas">-</div>
+                    <div class="metric-label">Alertas Ativos</div>
+                </div>
+            </div>
+
+            <!-- Views do Dashboard -->
+            <div id="dashboard-views" class="relative w-full h-full">
+                <!-- View 1: Visão Geral -->
+                <div class="dashboard-view absolute w-full h-full" data-view="1">
+                    <div class="grid gap-4 h-full">
+                        <!-- Frequência por Turma -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-chart-bar text-blue-400"></i>
+                                Frequência por Turma
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="chart-turmas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Melhores Alunos -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-star text-yellow-400"></i>
+                                Top 10 - Melhor Frequência
+                            </h3>
+                            <div class="ranking-list" id="melhores-alunos">
+                                <!-- Preenchido via JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Resumo de Atividades -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-activity text-green-400"></i>
+                                Atividade Recente
+                            </h3>
+                            <div class="ranking-list" id="atividade-recente">
+                                <!-- Preenchido via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 2: Análise Detalhada -->
+                <div class="dashboard-view absolute w-full h-full hidden" data-view="2">
+                    <div class="grid gap-4 h-full">
+                        <!-- Tendências Semanais -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-chart-line text-purple-400"></i>
+                                Tendências dos Últimos 7 Dias
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="chart-tendencias"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Distribuição por Horário -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-clock text-orange-400"></i>
+                                Distribuição por Horário
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="chart-horarios"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 3: Alunos Críticos e Ações -->
+                <div class="dashboard-view absolute w-full h-full hidden" data-view="3">
+                    <div class="grid gap-4 h-full">
+                        <!-- Alunos com Baixa Frequência -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-warning text-red-400"></i>
+                                Alunos com Baixa Frequência
+                            </h3>
+                            <div class="ranking-list" id="alunos-criticos">
+                                <!-- Preenchido via JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Estatísticas Comparativas -->
+                        <div class="view-card">
+                            <h3 class="view-title">
+                                <i class="ph ph-chart-pie text-cyan-400"></i>
+                                Comparativo de Performance
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="chart-comparativo"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicadores de View -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3 items-center">
+                    <button class="view-indicator active" data-view="1"></button>
+                    <button class="view-indicator" data-view="2"></button>
+                    <button class="view-indicator" data-view="3"></button>
+                    
+                    <!-- Contador de tempo -->
+                    <div class="ml-6 flex items-center gap-2 bg-gray-800/80 px-3 py-1 rounded-full backdrop-blur-sm">
+                        <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+                        <span id="contador-tempo" class="text-sm font-mono text-white">15s</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let graficos = {};
+        let intervaloAtualizacao = null;
+        let intervaloViews = null;
+        let intervaloCronometro = null;
+        let dadosProfissional = {};
+        let viewAtual = 1;
+        let totalViews = 3;
+        let tempoRestante = 15;
+        
+        // Função para atualizar contador
+        function atualizarContador() {
+            const elemento = document.getElementById('contador-tempo');
+            if (elemento) {
+                elemento.textContent = `${tempoRestante}s`;
+            }
+            
+            tempoRestante--;
+            if (tempoRestante < 0) {
+                tempoRestante = 15;
+            }
+        }
+        
+        // Função para alternar entre as views
+        function alternarView(novaView) {
+            console.log('Alternando para view:', novaView);
+            const views = document.querySelectorAll('.dashboard-view');
+            const indicators = document.querySelectorAll('.view-indicator');
+            
+            views.forEach(view => {
+                if (parseInt(view.dataset.view) === novaView) {
+                    view.classList.remove('hidden');
+                } else {
+                    view.classList.add('hidden');
+                }
+            });
+            
+            indicators.forEach(indicator => {
+                if (parseInt(indicator.dataset.view) === novaView) {
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+            });
+            
+            viewAtual = novaView;
+        }
+        
+        // Função para iniciar rotação automática das views
+        function iniciarRotacaoViews() {
+            console.log('Iniciando rotação de views');
+            if (intervaloViews) clearInterval(intervaloViews);
+            if (intervaloCronometro) clearInterval(intervaloCronometro);
+            
+            // Resetar contador
+            tempoRestante = 15;
+            atualizarContador();
+            
+            // Cronômetro de 1 segundo
+            intervaloCronometro = setInterval(atualizarContador, 1000);
+            
+            // Rotação de views a cada 15 segundos
+            intervaloViews = setInterval(() => {
+                let proximaView = viewAtual + 1;
+                if (proximaView > totalViews) proximaView = 1;
+                alternarView(proximaView);
+                tempoRestante = 15; // Reset contador
+            }, 15000);
+        }
+        
+        // Função para atualizar relógio
+        function atualizarRelogio() {
+            const agora = new Date();
+            document.getElementById('current-time').textContent = 
+                agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Funções utilitárias
+        function formatarNumero(num) {
+            return new Intl.NumberFormat('pt-BR').format(num);
+        }
+        
+        function formatarPercentual(num) {
+            return num.toFixed(1) + '%';
+        }
+        
+        // Determinar nível de acesso do profissional
+        async function determinarNivelAcesso(supabase, userId) {
+            try {
+                console.log('⏳ Determinando nível de acesso para usuário:', userId);
+                
+                const [
+                    { data: permissoesCidade },
+                    { data: permissoesEscola },
+                    { data: permissoesTurma }
+                ] = await Promise.all([
+                    supabase.from('permissoes_cidade').select('cidade_id').eq('usuario_id', userId),
+                    supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userId),
+                    supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userId)
+                ]);
+
+                if (permissoesCidade?.length > 0) {
+                    return {
+                        nivel: 'CIDADE',
+                        ids: permissoesCidade.map(p => p.cidade_id),
+                        descricao: `${permissoesCidade.length} cidade(s)`
+                    };
+                }
+                
+                if (permissoesEscola?.length > 0) {
+                    return {
+                        nivel: 'ESCOLA',
+                        ids: permissoesEscola.map(p => p.escola_id),
+                        descricao: `${permissoesEscola.length} escola(s)`
+                    };
+                }
+                
+                if (permissoesTurma?.length > 0) {
+                    return {
+                        nivel: 'TURMA',
+                        ids: permissoesTurma.map(p => p.turma_id),
+                        descricao: `${permissoesTurma.length} turma(s)`
+                    };
+                }
+
+                return { 
+                    nivel: 'SEM_ACESSO', 
+                    ids: [],
+                    descricao: 'Sem permissões'
+                };
+            } catch (error) {
+                console.error('❌ Erro ao determinar nível de acesso:', error);
+                throw error;
+            }
+        }
+        
+        // Carregar dados baseado no nível de acesso
+        async function carregarDados() {
+            console.log('Iniciando carregamento de dados...');
+            
+            try {
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('❌ Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                const userData = JSON.parse(userSession);
+                console.log('✅ Dados do usuário:', userData.nome, userData.tipo);
+                
+                if (userData.tipo !== 'PROFISSIONAL') {
+                    console.error('❌ Usuário não é PROFISSIONAL');
+                    alert('Acesso não autorizado');
+                    setTimeout(() => window.location.href = '/auth.html', 2000);
+                    return;
+                }
+                
+                // Aguardar configuração estar pronta
+                console.log('⏳ Aguardando configuração do Supabase...');
+                while (window._configLoading) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                const supabase = window.createSupabaseClient();
+                if (!supabase) {
+                    throw new Error('Cliente Supabase não disponível');
+                }
+                console.log('✅ Cliente Supabase pronto');
+                
+                // Atualizar header
+                document.getElementById('profissional-nome').textContent = userData.nome;
+                
+                // Determinar nível de acesso
+                const nivelAcesso = await determinarNivelAcesso(supabase, userData.id);
+                console.log('✅ Nível de acesso:', nivelAcesso);
+                
+                document.getElementById('nivel-acesso').textContent = `Acesso: ${nivelAcesso.nivel}`;
+                document.getElementById('scope-info').textContent = nivelAcesso.descricao;
+                document.getElementById('scope-details').textContent = `${nivelAcesso.ids.length} entidade(s)`;
+                
+                // Armazenar dados globalmente
+                dadosProfissional = {
+                    usuario: userData,
+                    nivelAcesso: nivelAcesso,
+                    supabase: supabase
+                };
+                
+                // Carregar dados baseado no nível
+                await carregarDadosPersonalizados();
+                
+                console.log('🎉 Carregamento concluído com sucesso!');
+                
+            } catch (error) {
+                console.error('💥 Erro geral ao carregar dados:', error);
+                alert('Erro no carregamento: ' + error.message);
+            }
+        }
+        
+        // Carregar dados personalizados baseado nas permissões
+        async function carregarDadosPersonalizados() {
+            const { nivelAcesso, supabase } = dadosProfissional;
+            
+            console.log('⏳ Carregando dados personalizados para nível:', nivelAcesso.nivel);
+            
+            let turmasPermitidas = [];
+            let escolasPermitidas = [];
+            
+            // Buscar turmas e escolas baseado no nível de acesso
+            switch (nivelAcesso.nivel) {
+                case 'CIDADE':
+                    // Buscar escolas da cidade
+                    const { data: escolasCidade } = await supabase
+                        .from('escolas')
+                        .select('id, nome, cidade_id')
+                        .in('cidade_id', nivelAcesso.ids)
+                        .is('soft_delete', null);
+                    
+                    escolasPermitidas = escolasCidade || [];
+                    
+                    // Buscar turmas das escolas
+                    if (escolasPermitidas.length > 0) {
+                        const { data: turmasCidade } = await supabase
+                            .from('turmas')
+                            .select('id, nome, escola_id, serie_id')
+                            .in('escola_id', escolasPermitidas.map(e => e.id))
+                            .is('soft_delete', null);
+                        
+                        turmasPermitidas = turmasCidade || [];
+                    }
+                    break;
+
+                case 'ESCOLA':
+                    // Buscar escolas específicas
+                    const { data: escolasEspecificas } = await supabase
+                        .from('escolas')
+                        .select('id, nome, cidade_id')
+                        .in('id', nivelAcesso.ids)
+                        .is('soft_delete', null);
+                    
+                    escolasPermitidas = escolasEspecificas || [];
+                    
+                    // Buscar turmas das escolas
+                    const { data: turmasEscola } = await supabase
+                        .from('turmas')
+                        .select('id, nome, escola_id, serie_id')
+                        .in('escola_id', nivelAcesso.ids)
+                        .is('soft_delete', null);
+                    
+                    turmasPermitidas = turmasEscola || [];
+                    break;
+
+                case 'TURMA':
+                    // Buscar turmas específicas
+                    const { data: turmasEspecificas } = await supabase
+                        .from('turmas')
+                        .select('id, nome, escola_id, serie_id')
+                        .in('id', nivelAcesso.ids)
+                        .is('soft_delete', null);
+                    
+                    turmasPermitidas = turmasEspecificas || [];
+                    
+                    // Buscar escolas das turmas
+                    if (turmasPermitidas.length > 0) {
+                        const escolasIds = [...new Set(turmasPermitidas.map(t => t.escola_id))];
+                        const { data: escolasTurmas } = await supabase
+                            .from('escolas')
+                            .select('id, nome, cidade_id')
+                            .in('id', escolasIds)
+                            .is('soft_delete', null);
+                        
+                        escolasPermitidas = escolasTurmas || [];
+                    }
+                    break;
+            }
+            
+            console.log('✅ Dados carregados:', {
+                escolas: escolasPermitidas.length,
+                turmas: turmasPermitidas.length
+            });
+            
+            // Atualizar métricas principais
+            await atualizarMetricasPrincipais(turmasPermitidas, escolasPermitidas);
+            
+            // Carregar dados das views
+            await carregarDadosViews(turmasPermitidas, escolasPermitidas);
+        }
+        
+        // Função para atualizar métricas principais
+        async function atualizarMetricasPrincipais(turmas, escolas) {
+            const { supabase } = dadosProfissional;
+            
+            try {
+                if (turmas.length === 0) {
+                    // Sem turmas - zerar métricas
+                    document.getElementById('total-alunos').textContent = '0';
+                    document.getElementById('presentes-hoje').textContent = '0';
+                    document.getElementById('frequencia-media').textContent = '0%';
+                    document.getElementById('total-turmas').textContent = '0';
+                    document.getElementById('total-alertas').textContent = '0';
+                    return;
+                }
+                
+                const turmasIds = turmas.map(t => t.id);
+                
+                // Buscar alunos das turmas
+                const { data: alunos } = await supabase
+                    .from('alunos')
+                    .select('id, nome_completo')
+                    .in('turma', turmasIds)
+                    .is('soft_delete', null);
+                
+                const totalAlunos = alunos?.length || 0;
+                
+                // Buscar presença de hoje
+                const hoje = new Date().toISOString().split('T')[0];
+                const { data: presencaHoje } = await supabase
+                    .from('view_alunos_logs')
+                    .select('nome_aluno')
+                    .gte('hora_check', hoje)
+                    .lt('hora_check', hoje + 'T23:59:59.999Z');
+                
+                // Filtrar apenas alunos das turmas permitidas
+                const alunosNomes = alunos?.map(a => a.nome_completo) || [];
+                const presentesHoje = presencaHoje?.filter(p => 
+                    alunosNomes.includes(p.nome_aluno)
+                ) || [];
+                
+                const totalPresentes = new Set(presentesHoje.map(p => p.nome_aluno)).size;
+                const frequenciaMedia = totalAlunos > 0 ? (totalPresentes / totalAlunos) * 100 : 0;
+                
+                // Buscar alunos críticos
+                const { data: alunosCriticos } = await supabase
+                    .from('view_alunos_criticos')
+                    .select('aluno_id')
+                    .in('escola_id', escolas.map(e => e.id))
+                    .lt('percentual_presenca', 75);
+                
+                const totalAlertas = alunosCriticos?.length || 0;
+                
+                // Atualizar interface
+                document.getElementById('total-alunos').textContent = formatarNumero(totalAlunos);
+                document.getElementById('presentes-hoje').textContent = formatarNumero(totalPresentes);
+                document.getElementById('frequencia-media').textContent = formatarPercentual(frequenciaMedia);
+                document.getElementById('total-turmas').textContent = formatarNumero(turmas.length);
+                document.getElementById('total-alertas').textContent = formatarNumero(totalAlertas);
+                
+                // Atualizar trends (simulado)
+                document.getElementById('alunos-trend').textContent = `${turmas.length} turmas`;
+                document.getElementById('presentes-trend').textContent = `${formatarPercentual(frequenciaMedia)}`;
+                document.getElementById('freq-trend').textContent = frequenciaMedia >= 80 ? '+5%' : '-2%';
+                document.getElementById('turmas-trend').textContent = `${escolas.length} escolas`;
+                document.getElementById('alertas-trend').textContent = totalAlertas === 0 ? 'Nenhum' : `${totalAlertas}`;
+                
+                console.log('✅ Métricas principais atualizadas');
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar métricas principais:', error);
+            }
+        }
+        
+        // Carregar dados específicos das views
+        async function carregarDadosViews(turmas, escolas) {
+            try {
+                // View 1: Visão Geral
+                await carregarView1(turmas, escolas);
+                
+                // View 2: Análise Detalhada
+                await carregarView2(turmas, escolas);
+                
+                // View 3: Alunos Críticos
+                await carregarView3(turmas, escolas);
+                
+                console.log('✅ Todas as views carregadas');
+            } catch (error) {
+                console.error('❌ Erro ao carregar views:', error);
+            }
+        }
+        
+        // View 1: Visão Geral
+        async function carregarView1(turmas, escolas) {
+            const { supabase } = dadosProfissional;
+            
+            // Gráfico de frequência por turma
+            await criarGraficoTurmas(turmas);
+            
+            // Melhores alunos
+            await carregarMelhoresAlunos(turmas);
+            
+            // Atividade recente
+            await carregarAtividadeRecente(escolas);
+        }
+        
+        // View 2: Análise Detalhada
+        async function carregarView2(turmas, escolas) {
+            // Tendências semanais
+            await criarGraficoTendencias(turmas);
+            
+            // Distribuição por horário
+            await criarGraficoHorarios(turmas);
+        }
+        
+        // View 3: Alunos Críticos
+        async function carregarView3(turmas, escolas) {
+            // Alunos com baixa frequência
+            await carregarAlunosCriticos(escolas);
+            
+            // Gráfico comparativo
+            await criarGraficoComparativo(turmas);
+        }
+        
+        // Implementações dos gráficos e listas serão adicionadas...
+        // [Continua no próximo bloco...]
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Iniciando aplicação...');
+            
+            // Verificar login
+            const userSession = localStorage.getItem('user_session');
+            if (!userSession) {
+                console.error('Usuário não logado');
+                window.location.href = '/auth.html';
+                return;
+            }
+            
+            // Iniciar carregamento
+            atualizarRelogio();
+            carregarDados();
+            
+            // Configurar atualizações
+            setInterval(atualizarRelogio, 60000);
+            setInterval(carregarDados, 300000);
+            
+            // Iniciar rotação de views
+            iniciarRotacaoViews();
+            
+            // Configurar cliques nos indicadores
+            const indicators = document.querySelectorAll('.view-indicator');
+            indicators.forEach(indicator => {
+                indicator.addEventListener('click', () => {
+                    const novaView = parseInt(indicator.dataset.view);
+                    alternarView(novaView);
+                    
+                    // Reiniciar intervalos
+                    if (intervaloViews) clearInterval(intervaloViews);
+                    if (intervaloCronometro) clearInterval(intervaloCronometro);
+                    iniciarRotacaoViews();
+                });
+            });
+        });
+        
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (intervaloViews) clearInterval(intervaloViews);
+            if (intervaloCronometro) clearInterval(intervaloCronometro);
+            if (intervaloAtualizacao) clearInterval(intervaloAtualizacao);
+        });
+        
+        // Funções auxiliares para os gráficos e dados
+        // (Implementações completas a seguir...)
+        
+        // Criar gráfico de frequência por turma
+        async function criarGraficoTurmas(turmas) {
+            const ctx = document.getElementById('chart-turmas').getContext('2d');
+            
+            if (graficos.turmas) {
+                graficos.turmas.destroy();
+                graficos.turmas = null;
+            }
+            
+            const { supabase } = dadosProfissional;
+            const dadosFrequencia = [];
+            
+            const hoje = new Date().toISOString().split('T')[0];
+            
+            for (const turma of turmas.slice(0, 10)) { // Limitar a 10 turmas
+                try {
+                    // Buscar alunos da turma
+                    const { data: alunos } = await supabase
+                        .from('alunos')
+                        .select('id, nome_completo')
+                        .eq('turma', turma.id)
+                        .is('soft_delete', null);
+                    
+                    const totalAlunos = alunos?.length || 0;
+                    
+                    // Buscar presença de hoje
+                    const { data: presencaHoje } = await supabase
+                        .from('view_alunos_logs')
+                        .select('nome_aluno')
+                        .gte('hora_check', hoje)
+                        .lt('hora_check', hoje + 'T23:59:59.999Z');
+                    
+                    const alunosNomes = alunos?.map(a => a.nome_completo) || [];
+                    const presentesHoje = presencaHoje?.filter(p => 
+                        alunosNomes.includes(p.nome_aluno)
+                    ) || [];
+                    
+                    const totalPresentes = new Set(presentesHoje.map(p => p.nome_aluno)).size;
+                    const frequencia = totalAlunos > 0 ? (totalPresentes / totalAlunos) * 100 : 0;
+                    
+                    dadosFrequencia.push({
+                        nome: turma.nome,
+                        frequencia: frequencia
+                    });
+                } catch (error) {
+                    console.error(`Erro ao processar turma ${turma.nome}:`, error);
+                }
+            }
+            
+            try {
+                graficos.turmas = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: dadosFrequencia.map(d => d.nome),
+                        datasets: [{
+                            label: 'Frequência (%)',
+                            data: dadosFrequencia.map(d => d.frequencia),
+                            backgroundColor: dadosFrequencia.map(d => 
+                                d.frequencia >= 85 ? '#10b981' : 
+                                d.frequencia >= 75 ? '#f59e0b' : '#ef4444'
+                            ),
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#e2e8f0', maxRotation: 45 },
+                                grid: { color: 'rgba(226, 232, 240, 0.1)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { 
+                                    color: '#e2e8f0',
+                                    callback: value => value + '%'
+                                },
+                                grid: { color: 'rgba(226, 232, 240, 0.1)' }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao criar gráfico de turmas:', error);
+            }
+        }
+        
+        // Carregar melhores alunos
+        async function carregarMelhoresAlunos(turmas) {
+            const container = document.getElementById('melhores-alunos');
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const turmasIds = turmas.map(t => t.id);
+                
+                // Buscar alunos com melhor frequência
+                const { data: alunosFrequencia } = await supabase
+                    .from('view_alunos_criticos')
+                    .select('aluno_nome, escola_nome, percentual_presenca')
+                    .in('escola_id', [...new Set(turmas.map(t => t.escola_id))])
+                    .gte('percentual_presenca', 80)
+                    .order('percentual_presenca', { ascending: false })
+                    .limit(10);
+                
+                if (!alunosFrequencia || alunosFrequencia.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400 p-4">
+                            <i class="ph ph-student text-4xl mb-2"></i>
+                            <p class="text-center">Nenhum aluno com alta frequência encontrado</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const html = alunosFrequencia.map((aluno, index) => {
+                    const freq = parseFloat(aluno.percentual_presenca);
+                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐';
+                    
+                    return `
+                        <div class="p-3 bg-blue-800/30 rounded-lg mb-2 border border-green-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="text-xl">${medalha}</div>
+                                    <div>
+                                        <h4 class="font-medium text-white text-sm">${aluno.aluno_nome}</h4>
+                                        <p class="text-xs text-gray-400">${aluno.escola_nome}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-bold text-green-400">${freq.toFixed(1)}%</div>
+                                    <div class="text-xs text-gray-400">Frequência</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar melhores alunos:', error);
+                container.innerHTML = '<p class="text-red-400">Erro ao carregar dados</p>';
+            }
+        }
+        
+        // Carregar atividade recente
+        async function carregarAtividadeRecente(escolas) {
+            const container = document.getElementById('atividade-recente');
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const escolasNomes = escolas.map(e => e.nome);
+                
+                // Buscar logs recentes
+                const { data: logsRecentes } = await supabase
+                    .from('view_alunos_logs')
+                    .select('nome_aluno, nome_colégio, hora_check, turma')
+                    .in('nome_colégio', escolasNomes)
+                    .order('hora_check', { ascending: false })
+                    .limit(15);
+                
+                if (!logsRecentes || logsRecentes.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400 p-4">
+                            <i class="ph ph-clock text-4xl mb-2"></i>
+                            <p class="text-center">Nenhuma atividade recente</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const html = logsRecentes.map(log => {
+                    const dataHora = new Date(log.hora_check);
+                    const tempoRelativo = calcularTempoRelativo(dataHora);
+                    
+                    return `
+                        <div class="p-3 bg-blue-800/20 rounded-lg mb-2">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium text-white text-sm">${log.nome_aluno}</h4>
+                                    <p class="text-xs text-gray-400">${log.nome_colégio} • ${log.turma}</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-green-400">✓ Presente</div>
+                                    <div class="text-xs text-gray-500">${tempoRelativo}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar atividade recente:', error);
+                container.innerHTML = '<p class="text-red-400">Erro ao carregar dados</p>';
+            }
+        }
+        
+        // Criar gráfico de tendências semanais
+        async function criarGraficoTendencias(turmas) {
+            const ctx = document.getElementById('chart-tendencias').getContext('2d');
+            
+            if (graficos.tendencias) {
+                graficos.tendencias.destroy();
+                graficos.tendencias = null;
+            }
+            
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const escolasIds = [...new Set(turmas.map(t => t.escola_id))];
+                const ultimosDias = [];
+                
+                // Gerar últimos 7 dias
+                for (let i = 6; i >= 0; i--) {
+                    const data = new Date();
+                    data.setDate(data.getDate() - i);
+                    ultimosDias.push({
+                        data: data.toISOString().split('T')[0],
+                        label: data.toLocaleDateString('pt-BR', { weekday: 'short' })
+                    });
+                }
+                
+                const dadosTendencia = [];
+                
+                for (const dia of ultimosDias) {
+                    // Buscar logs do dia
+                    const { data: logsDia } = await supabase
+                        .from('view_alunos_logs')
+                        .select('nome_aluno, nome_colégio')
+                        .gte('hora_check', dia.data)
+                        .lt('hora_check', dia.data + 'T23:59:59.999Z');
+                    
+                    // Filtrar logs das escolas permitidas
+                    const escolasNomes = await Promise.all(
+                        escolasIds.map(async id => {
+                            const { data: escola } = await supabase
+                                .from('escolas')
+                                .select('nome')
+                                .eq('id', id)
+                                .single();
+                            return escola?.nome;
+                        })
+                    );
+                    
+                    const logsPermitidos = logsDia?.filter(log => 
+                        escolasNomes.includes(log.nome_colégio)
+                    ) || [];
+                    
+                    const presentesUnicos = new Set(logsPermitidos.map(log => log.nome_aluno)).size;
+                    
+                    dadosTendencia.push({
+                        label: dia.label,
+                        presentes: presentesUnicos
+                    });
+                }
+                
+                graficos.tendencias = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dadosTendencia.map(d => d.label),
+                        datasets: [{
+                            label: 'Alunos Presentes',
+                            data: dadosTendencia.map(d => d.presentes),
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#e2e8f0' },
+                                grid: { color: 'rgba(226, 232, 240, 0.1)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#e2e8f0' },
+                                grid: { color: 'rgba(226, 232, 240, 0.1)' }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao criar gráfico de tendências:', error);
+            }
+        }
+        
+        // Criar gráfico de distribuição por horário
+        async function criarGraficoHorarios(turmas) {
+            const ctx = document.getElementById('chart-horarios').getContext('2d');
+            
+            if (graficos.horarios) {
+                graficos.horarios.destroy();
+                graficos.horarios = null;
+            }
+            
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const escolasIds = [...new Set(turmas.map(t => t.escola_id))];
+                const hoje = new Date().toISOString().split('T')[0];
+                
+                // Buscar escolas para filtrar
+                const escolasNomes = await Promise.all(
+                    escolasIds.map(async id => {
+                        const { data: escola } = await supabase
+                            .from('escolas')
+                            .select('nome')
+                            .eq('id', id)
+                            .single();
+                        return escola?.nome;
+                    })
+                );
+                
+                // Buscar logs de hoje
+                const { data: logsHoje } = await supabase
+                    .from('view_alunos_logs')
+                    .select('hora_check, nome_colégio')
+                    .gte('hora_check', hoje)
+                    .lt('hora_check', hoje + 'T23:59:59.999Z');
+                
+                // Filtrar logs das escolas permitidas
+                const logsPermitidos = logsHoje?.filter(log => 
+                    escolasNomes.includes(log.nome_colégio)
+                ) || [];
+                
+                // Agrupar por horário
+                const horarios = {
+                    '07-09': 0, '09-11': 0, '11-13': 0,
+                    '13-15': 0, '15-17': 0, '17-19': 0
+                };
+                
+                logsPermitidos.forEach(log => {
+                    const hora = new Date(log.hora_check).getHours();
+                    if (hora >= 7 && hora < 9) horarios['07-09']++;
+                    else if (hora >= 9 && hora < 11) horarios['09-11']++;
+                    else if (hora >= 11 && hora < 13) horarios['11-13']++;
+                    else if (hora >= 13 && hora < 15) horarios['13-15']++;
+                    else if (hora >= 15 && hora < 17) horarios['15-17']++;
+                    else if (hora >= 17 && hora < 19) horarios['17-19']++;
+                });
+                
+                graficos.horarios = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(horarios),
+                        datasets: [{
+                            data: Object.values(horarios),
+                            backgroundColor: [
+                                '#f59e0b', '#10b981', '#3b82f6',
+                                '#8b5cf6', '#ef4444', '#06b6d4'
+                            ],
+                            borderWidth: 2,
+                            borderColor: 'rgba(255, 255, 255, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#e2e8f0',
+                                    font: { size: 12 },
+                                    padding: 15
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao criar gráfico de horários:', error);
+            }
+        }
+        
+        // Carregar alunos críticos
+        async function carregarAlunosCriticos(escolas) {
+            const container = document.getElementById('alunos-criticos');
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const escolasIds = escolas.map(e => e.id);
+                
+                // Buscar alunos críticos
+                const { data: alunosCriticos } = await supabase
+                    .from('view_alunos_criticos')
+                    .select('aluno_nome, escola_nome, percentual_presenca, turma_nome')
+                    .in('escola_id', escolasIds)
+                    .lt('percentual_presenca', 75)
+                    .order('percentual_presenca', { ascending: true })
+                    .limit(10);
+                
+                if (!alunosCriticos || alunosCriticos.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400 p-8">
+                            <i class="ph ph-smiley text-6xl mb-4 text-green-400"></i>
+                            <h4 class="text-xl font-semibold text-green-400 mb-2">Excelente!</h4>
+                            <p class="text-center">Todos os alunos com boa frequência</p>
+                            <p class="text-sm text-gray-500 mt-2">Nenhum aluno abaixo de 75%</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const html = alunosCriticos.map((aluno, index) => {
+                    const freq = parseFloat(aluno.percentual_presenca);
+                    const corFreq = freq < 50 ? 'text-red-500' : freq < 70 ? 'text-orange-500' : 'text-yellow-500';
+                    
+                    return `
+                        <div class="p-3 bg-blue-800/30 rounded-lg mb-2 border border-red-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                                        <span class="text-red-400 font-semibold text-sm">${index + 1}</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-white text-sm">${aluno.aluno_nome}</h4>
+                                        <p class="text-xs text-gray-400">${aluno.escola_nome} • ${aluno.turma_nome}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-bold ${corFreq}">${freq.toFixed(1)}%</div>
+                                    <div class="text-xs text-gray-400">Frequência</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar alunos críticos:', error);
+                container.innerHTML = '<p class="text-red-400">Erro ao carregar dados</p>';
+            }
+        }
+        
+        // Criar gráfico comparativo
+        async function criarGraficoComparativo(turmas) {
+            const ctx = document.getElementById('chart-comparativo').getContext('2d');
+            
+            if (graficos.comparativo) {
+                graficos.comparativo.destroy();
+                graficos.comparativo = null;
+            }
+            
+            const { supabase } = dadosProfissional;
+            
+            try {
+                const escolasIds = [...new Set(turmas.map(t => t.escola_id))];
+                
+                // Calcular estatísticas
+                let excelente = 0; // > 90%
+                let bom = 0;       // 75-90%
+                let regular = 0;   // 60-75%
+                let critico = 0;   // < 60%
+                
+                const { data: todosAlunos } = await supabase
+                    .from('view_alunos_criticos')
+                    .select('percentual_presenca')
+                    .in('escola_id', escolasIds);
+                
+                todosAlunos?.forEach(aluno => {
+                    const freq = parseFloat(aluno.percentual_presenca);
+                    if (freq >= 90) excelente++;
+                    else if (freq >= 75) bom++;
+                    else if (freq >= 60) regular++;
+                    else critico++;
+                });
+                
+                graficos.comparativo = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Excelente (>90%)', 'Bom (75-90%)', 'Regular (60-75%)', 'Crítico (<60%)'],
+                        datasets: [{
+                            data: [excelente, bom, regular, critico],
+                            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                            borderWidth: 2,
+                            borderColor: 'rgba(255, 255, 255, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#e2e8f0',
+                                    font: { size: 11 },
+                                    padding: 10
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao criar gráfico comparativo:', error);
+            }
+        }
+        
+        // Função auxiliar para tempo relativo
+        function calcularTempoRelativo(data) {
+            const agora = new Date();
+            const diferenca = agora - data;
+            const minutos = Math.floor(diferenca / (1000 * 60));
+            const horas = Math.floor(diferenca / (1000 * 60 * 60));
+            
+            if (minutos < 1) return 'Agora';
+            if (minutos < 60) return `${minutos}min`;
+            if (horas < 24) return `${horas}h`;
+            return data.toLocaleDateString('pt-BR');
+        }
+    </script>
+</body>
+</html> 

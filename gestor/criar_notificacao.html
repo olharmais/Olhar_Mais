@@ -20,6 +20,9 @@
     
     <!-- Carregamento de configurações da Lambda -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Biblioteca para geração de vídeos -->
+    <script src="https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js"></script>
     <script>
         // Tela de carregamento inicial
         document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
@@ -237,6 +240,56 @@
             font-size: 12px;
             font-weight: bold;
         }
+
+        /* Estilos para os tipos de story */
+        .story-type-card {
+            transition: all 0.3s ease;
+        }
+
+        .story-type-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 90, 226, 0.15);
+        }
+
+        .story-type-card.selected {
+            border-color: #005ae2;
+            background-color: #E6F0FF;
+        }
+
+        /* Canvas para preview */
+        .canvas-preview {
+            max-width: 100%;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+        }
+
+        /* Estilo para o editor de texto */
+        .text-editor {
+            min-height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .text-editor canvas {
+            border-radius: 8px;
+        }
+
+        /* Loading para geração de vídeo */
+        .generating-video {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Gradientes para fundos */
+        .bg-gradient-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .bg-gradient-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .bg-gradient-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .bg-gradient-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
     </style>
 </head>
 <body class="font-sans">
@@ -299,14 +352,46 @@
                     Criar Story
                 </h3>
                 
-                <!-- Tipo de Mídia -->
+                <!-- Tipos de Story -->
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Mídia</label>
-                    <div class="bg-primary-light border border-primary rounded-lg p-4 flex items-center justify-center gap-2 text-primary">
-                        <i class="ph ph-upload"></i>
-                        <span>Vídeo Carregado</span>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de Story</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Vídeo -->
+                        <div class="story-type-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer selected" data-type="video">
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="ph ph-video text-2xl text-blue-600"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-800 mb-1">Vídeo</h4>
+                                <p class="text-sm text-gray-600">Envie um vídeo do seu dispositivo</p>
                     </div>
                 </div>
+                        
+                        <!-- Texto -->
+                        <div class="story-type-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer" data-type="text">
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="ph ph-text-aa text-2xl text-green-600"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-800 mb-1">Texto</h4>
+                                <p class="text-sm text-gray-600">Crie um story com texto personalizado</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Imagem -->
+                        <div class="story-type-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer" data-type="image">
+                            <div class="text-center">
+                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="ph ph-image text-2xl text-purple-600"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-800 mb-1">Imagem</h4>
+                                <p class="text-sm text-gray-600">Transforme uma imagem em story</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+
                 
                 <!-- Upload de Vídeo -->
                 <div id="upload-video" class="mb-6">
@@ -324,21 +409,72 @@
                     </div>
                 </div>
                 
-                <!-- Título do Story -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Título do Story</label>
-                    <input type="text" id="titulo-story" 
-                           class="w-full h-[54px] border border-gray-300 rounded-lg px-4 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all"
-                           placeholder="Digite um título claro e objetivo">
+                <!-- Editor de Texto -->
+                <div id="text-editor-section" class="mb-6 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Editor de Texto</label>
+                    
+                    <!-- Configurações do texto -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Texto</label>
+                                <textarea id="story-text-input" rows="3" placeholder="Digite seu texto aqui..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none"></textarea>
+                            </div>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da Fonte</label>
+                                    <input type="range" id="font-size-slider" min="20" max="80" value="48" class="w-full">
+                                    <span id="font-size-value" class="text-sm text-gray-600">48px</span>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do Texto</label>
+                                    <input type="color" id="text-color" value="#ffffff" class="w-full h-10 border border-gray-300 rounded">
+                                </div>
+                            </div>
                 </div>
                 
-                <!-- Descrição do Story -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                    <textarea id="descricao-story" rows="4"
-                              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-light focus:outline-none transition-all resize-none"
-                              placeholder="Descreva os detalhes do story"></textarea>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fundo</label>
+                            <div class="flex gap-2">
+                                <button type="button" class="bg-gradient-1 w-8 h-8 rounded border-2 border-gray-300" data-bg="gradient-1"></button>
+                                <button type="button" class="bg-gradient-2 w-8 h-8 rounded border-2 border-gray-300" data-bg="gradient-2"></button>
+                                <button type="button" class="bg-gradient-3 w-8 h-8 rounded border-2 border-gray-300" data-bg="gradient-3"></button>
+                                <button type="button" class="bg-gradient-4 w-8 h-8 rounded border-2 border-gray-300" data-bg="gradient-4"></button>
+                            </div>
                 </div>
+                    </div>
+                    
+                    <!-- Preview do texto -->
+                    <div class="text-editor">
+                        <canvas id="text-canvas" width="360" height="640" style="max-width: 300px; max-height: 533px;"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Upload de Imagem -->
+                <div id="upload-image-section" class="mb-6 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Imagem</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors relative" id="upload-image-file">
+                        <input type="file" id="image-file-input" accept="image/*" class="hidden">
+                        <div id="image-file-placeholder" class="py-8">
+                            <i class="ph ph-image text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-600">Clique para fazer upload de uma imagem</p>
+                            <p class="text-sm text-gray-500">JPG, PNG, GIF (máx. 10MB)</p>
+                        </div>
+                        <div id="image-file-preview" class="hidden">
+                            <img class="max-w-full max-h-64 mx-auto rounded-lg" alt="Preview">
+                        </div>
+                    </div>
+                    
+                    <!-- Preview da imagem no canvas -->
+                    <div id="image-canvas-container" class="mt-4 hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Preview do Story</label>
+                        <div class="text-editor">
+                            <canvas id="image-canvas" width="360" height="640" style="max-width: 300px; max-height: 533px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+
             </div>
             
             <!-- Seção de Comunicado (inicialmente oculta) -->
@@ -426,6 +562,21 @@
         <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
     </div>
     
+    <!-- Modal de Loading para Geração de Vídeo -->
+    <div id="video-generation-modal" class="fixed inset-0 z-[9999] hidden generating-video flex items-center justify-center">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div class="text-center">
+                <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Gerando seu story...</h3>
+                <p class="text-gray-600 mb-4">Isso pode levar alguns segundos</p>
+                <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div id="generation-progress" class="bg-primary h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="generation-status" class="text-sm text-gray-500 mt-2">Iniciando...</p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Navbar -->
     <script src="botoes_gestor.js" type="module"></script>
     
@@ -460,12 +611,387 @@
         // Estado do formulário
         let formState = {
             tipoConteudo: 'story',
+            tipoStory: 'video', // 'video', 'text', 'image'
             tipoMidia: 'video_upload', // Sempre vídeo carregado para stories
             arquivo: null,
             destinatarios: [],
             tipoGestor: null, // 'Prefeito' ou 'Secretário'
-            profissoesDestino: []
+            profissoesDestino: [],
+            textConfig: {
+                text: '',
+                fontSize: 48,
+                color: '#ffffff',
+                background: 'gradient-1'
+            },
+            generatedVideo: null
         };
+
+        // Video generator ready
+        let videoGeneratorReady = true;
+
+        // Inicializar gerador de vídeo (não precisa mais)
+        async function initFFmpeg() {
+            videoGeneratorReady = true;
+            console.log('Gerador de vídeo pronto');
+        }
+
+        // Alternar tipo de story
+        function alternarTipoStory(tipo) {
+            formState.tipoStory = tipo;
+            
+            // Atualizar visual dos cards
+            document.querySelectorAll('.story-type-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-type="${tipo}"]`).classList.add('selected');
+            
+            // Mostrar/ocultar seções
+            document.getElementById('upload-video').style.display = tipo === 'video' ? 'block' : 'none';
+            document.getElementById('text-editor-section').style.display = tipo === 'text' ? 'block' : 'none';
+            document.getElementById('upload-image-section').style.display = tipo === 'image' ? 'block' : 'none';
+            
+            // Limpar arquivo anterior
+            formState.arquivo = null;
+            formState.generatedVideo = null;
+            
+            // Se for texto, inicializar canvas
+            if (tipo === 'text') {
+                videoGeneratorReady = true;
+                renderTextCanvas();
+            }
+            
+            // Se for imagem, preparar gerador
+            if (tipo === 'image') {
+                videoGeneratorReady = true;
+            }
+        }
+
+        // Renderizar canvas de texto
+        function renderTextCanvas() {
+            const canvas = document.getElementById('text-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Aplicar gradiente de fundo
+            const gradient = getGradientForCanvas(ctx, formState.textConfig.background);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Configurar texto
+            ctx.fillStyle = formState.textConfig.color;
+            ctx.font = `bold ${formState.textConfig.fontSize}px Inter, Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Quebrar texto em linhas
+            const text = formState.textConfig.text || 'Digite seu texto aqui...';
+            const lines = wrapText(ctx, text, canvas.width - 80);
+            
+            // Desenhar cada linha
+            const lineHeight = formState.textConfig.fontSize * 1.2;
+            const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
+            
+            lines.forEach((line, index) => {
+                ctx.fillText(line, canvas.width / 2, startY + index * lineHeight);
+            });
+        }
+
+        // Quebrar texto em linhas
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = '';
+            
+            for (let word of words) {
+                const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                const metrics = ctx.measureText(testLine);
+                
+                if (metrics.width > maxWidth && currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            return lines;
+        }
+
+        // Gerar vídeo usando canvas animado
+        function generateVideoFromCanvas(canvas, duration = 10000) {
+            return new Promise((resolve, reject) => {
+                const stream = canvas.captureStream(30); // 30 FPS
+                
+                // Tentar diferentes formatos baseado no suporte do navegador
+                let mimeType = 'video/webm;codecs=vp8'; // Mais compatível que vp9
+                
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm';
+                }
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/mp4';
+                }
+                
+                console.log('Usando formato:', mimeType);
+                
+                const recorder = new MediaRecorder(stream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 2500000 // 2.5 Mbps para boa qualidade
+                });
+                
+                const chunks = [];
+                
+                recorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                    }
+                };
+                
+                recorder.onstop = () => {
+                    // Converter para MP4 se possível, senão manter o formato original
+                    let finalType = mimeType.includes('mp4') ? 'video/mp4' : 'video/webm';
+                    const blob = new Blob(chunks, { type: finalType });
+                    resolve(blob);
+                };
+                
+                recorder.onerror = (event) => {
+                    console.error('Erro na gravação:', event.error);
+                    reject(event.error);
+                };
+                
+                recorder.start(100); // Capturar dados a cada 100ms
+                
+                // Parar gravação após duração especificada
+                setTimeout(() => {
+                    if (recorder.state === 'recording') {
+                        recorder.stop();
+                    }
+                    // Parar todas as tracks do stream
+                    stream.getTracks().forEach(track => track.stop());
+                }, duration);
+            });
+        }
+
+        // Obter gradiente para canvas
+        function getGradientForCanvas(ctx, type) {
+            const gradient = ctx.createLinearGradient(0, 0, 360, 640);
+            
+            switch (type) {
+                case 'gradient-1':
+                    gradient.addColorStop(0, '#667eea');
+                    gradient.addColorStop(1, '#764ba2');
+                    break;
+                case 'gradient-2':
+                    gradient.addColorStop(0, '#f093fb');
+                    gradient.addColorStop(1, '#f5576c');
+                    break;
+                case 'gradient-3':
+                    gradient.addColorStop(0, '#4facfe');
+                    gradient.addColorStop(1, '#00f2fe');
+                    break;
+                case 'gradient-4':
+                    gradient.addColorStop(0, '#43e97b');
+                    gradient.addColorStop(1, '#38f9d7');
+                    break;
+                default:
+                    gradient.addColorStop(0, '#667eea');
+                    gradient.addColorStop(1, '#764ba2');
+            }
+            
+            return gradient;
+        }
+
+        // Renderizar canvas de imagem
+        function renderImageCanvas(imageFile) {
+            const canvas = document.getElementById('image-canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                // Limpar canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Calcular dimensões para centralizar e ajustar a imagem
+                const canvasRatio = canvas.width / canvas.height;
+                const imageRatio = img.width / img.height;
+                
+                let drawWidth, drawHeight, drawX, drawY;
+                
+                if (imageRatio > canvasRatio) {
+                    // Imagem mais larga que o canvas
+                    drawWidth = canvas.width;
+                    drawHeight = canvas.width / imageRatio;
+                    drawX = 0;
+                    drawY = (canvas.height - drawHeight) / 2;
+                } else {
+                    // Imagem mais alta que o canvas
+                    drawHeight = canvas.height;
+                    drawWidth = canvas.height * imageRatio;
+                    drawX = (canvas.width - drawWidth) / 2;
+                    drawY = 0;
+                }
+                
+                // Desenhar imagem
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                
+                // Mostrar container do canvas
+                document.getElementById('image-canvas-container').classList.remove('hidden');
+            };
+            
+            img.src = URL.createObjectURL(imageFile);
+        }
+
+        // Gerar vídeo de texto
+        async function generateTextVideo() {
+            showGenerationModal();
+            updateGenerationProgress(10, 'Preparando gravação...');
+            
+            try {
+                const canvas = document.getElementById('text-canvas');
+                
+                updateGenerationProgress(30, 'Iniciando gravação...');
+                
+                // Criar uma animação suave para o texto durante 10 segundos
+                const ctx = canvas.getContext('2d');
+                let animationFrame = 0;
+                const totalFrames = 300; // 10 segundos * 30fps
+                
+                const textAnimation = () => {
+                    const progress = animationFrame / totalFrames;
+                    
+                    // Fade in nos primeiros 2 segundos
+                    if (progress < 0.2) {
+                        ctx.globalAlpha = progress / 0.2;
+                    } 
+                    // Fade out nos últimos 2 segundos
+                    else if (progress > 0.8) {
+                        ctx.globalAlpha = 1 - ((progress - 0.8) / 0.2);
+                    } 
+                    // Opacidade total no meio
+                    else {
+                        ctx.globalAlpha = 1;
+                    }
+                    
+                    renderTextCanvas();
+                    animationFrame++;
+                    
+                    if (animationFrame < totalFrames) {
+                        requestAnimationFrame(textAnimation);
+                    }
+                };
+                
+                updateGenerationProgress(50, 'Gravando vídeo...');
+                
+                // Iniciar animação e gravação
+                textAnimation();
+                const videoBlob = await generateVideoFromCanvas(canvas, 10000);
+                
+                updateGenerationProgress(90, 'Finalizando...');
+                
+                // Resetar canvas
+                ctx.globalAlpha = 1;
+                renderTextCanvas();
+                
+                updateGenerationProgress(100, 'Concluído!');
+                
+                setTimeout(() => {
+                    hideGenerationModal();
+                    Toast.show('Vídeo gerado com sucesso!', 'success');
+                }, 1000);
+                
+                return videoBlob;
+                
+            } catch (error) {
+                console.error('Erro ao gerar vídeo de texto:', error);
+                hideGenerationModal();
+                Toast.show('Erro ao gerar vídeo', 'error');
+                return null;
+            }
+        }
+
+        // Gerar vídeo de imagem
+        async function generateImageVideo(imageFile) {
+            showGenerationModal();
+            updateGenerationProgress(10, 'Preparando imagem...');
+            
+            try {
+                const canvas = document.getElementById('image-canvas');
+                
+                updateGenerationProgress(30, 'Iniciando gravação...');
+                
+                // Criar animação suave de zoom para a imagem durante 10 segundos
+                const ctx = canvas.getContext('2d');
+                let animationFrame = 0;
+                const totalFrames = 300; // 10 segundos * 30fps
+                
+                const animateImage = () => {
+                    const progress = animationFrame / totalFrames;
+                    
+                    // Zoom suave de 1.0 para 1.1 e volta
+                    const scaleProgress = Math.sin(progress * Math.PI * 2) * 0.05; // Oscila entre -0.05 e +0.05
+                    const scale = 1.0 + Math.abs(scaleProgress);
+                    
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.translate((canvas.width * (1 - scale)) / (2 * scale), (canvas.height * (1 - scale)) / (2 * scale));
+                    renderImageCanvas(imageFile);
+                    ctx.restore();
+                    
+                    animationFrame++;
+                    
+                    if (animationFrame < totalFrames) {
+                        requestAnimationFrame(animateImage);
+                    }
+                };
+                
+                updateGenerationProgress(50, 'Gravando vídeo...');
+                
+                // Iniciar animação e gravação
+                animateImage();
+                const videoBlob = await generateVideoFromCanvas(canvas, 10000);
+                
+                updateGenerationProgress(90, 'Finalizando...');
+                
+                // Resetar canvas
+                renderImageCanvas(imageFile);
+                
+                updateGenerationProgress(100, 'Concluído!');
+                
+                setTimeout(() => {
+                    hideGenerationModal();
+                    Toast.show('Vídeo gerado com sucesso!', 'success');
+                }, 1000);
+                
+                return videoBlob;
+                
+            } catch (error) {
+                console.error('Erro ao gerar vídeo de imagem:', error);
+                hideGenerationModal();
+                Toast.show('Erro ao gerar vídeo', 'error');
+                return null;
+            }
+        }
+
+        // Controles do modal de geração
+        function showGenerationModal() {
+            document.getElementById('video-generation-modal').classList.remove('hidden');
+        }
+
+        function hideGenerationModal() {
+            document.getElementById('video-generation-modal').classList.add('hidden');
+            updateGenerationProgress(0, 'Iniciando...');
+        }
+
+        function updateGenerationProgress(percent, status) {
+            document.getElementById('generation-progress').style.width = `${percent}%`;
+            document.getElementById('generation-status').textContent = status;
+        }
 
         // Detectar tipo de gestor e configurar interface
         async function detectarTipoGestor() {
@@ -746,6 +1272,43 @@
             }
         }
 
+        // Event listeners para tipos de story
+        document.querySelectorAll('.story-type-card').forEach(card => {
+            card.addEventListener('click', () => {
+                alternarTipoStory(card.dataset.type);
+            });
+        });
+
+        // Event listeners para editor de texto
+        document.getElementById('story-text-input').addEventListener('input', (e) => {
+            formState.textConfig.text = e.target.value;
+            renderTextCanvas();
+        });
+
+        document.getElementById('font-size-slider').addEventListener('input', (e) => {
+            formState.textConfig.fontSize = parseInt(e.target.value);
+            document.getElementById('font-size-value').textContent = e.target.value + 'px';
+            renderTextCanvas();
+        });
+
+        document.getElementById('text-color').addEventListener('change', (e) => {
+            formState.textConfig.color = e.target.value;
+            renderTextCanvas();
+        });
+
+        // Event listeners para gradientes de fundo
+        document.querySelectorAll('[data-bg]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remover seleção anterior
+                document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('ring-2', 'ring-primary'));
+                // Adicionar seleção atual
+                btn.classList.add('ring-2', 'ring-primary');
+                
+                formState.textConfig.background = btn.dataset.bg;
+                renderTextCanvas();
+            });
+        });
+
         // Preview de vídeo carregado
         const uploadVideoFile = document.querySelector('#upload-video-file');
         uploadVideoFile.addEventListener('click', () => {
@@ -776,11 +1339,55 @@
             videoElem.src = URL.createObjectURL(file);
         });
 
+        // Upload de imagem
+        const uploadImageFile = document.querySelector('#upload-image-file');
+        uploadImageFile.addEventListener('click', () => {
+            document.getElementById('image-file-input').click();
+        });
+
+        document.getElementById('image-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validar tipo de arquivo
+            if (!file.type.startsWith('image/')) {
+                Toast.show('O arquivo deve ser uma imagem', 'error');
+                return;
+            }
+            
+            // Validar tamanho (10MB)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                Toast.show('A imagem deve ter no máximo 10MB', 'error');
+                return;
+            }
+            
+            // Mostrar preview da imagem
+            document.getElementById('image-file-placeholder').classList.add('hidden');
+            const preview = document.getElementById('image-file-preview');
+            preview.classList.remove('hidden');
+            const imgElem = preview.querySelector('img');
+            imgElem.src = URL.createObjectURL(file);
+            
+            // Renderizar no canvas
+            renderImageCanvas(file);
+        });
+
         // Upload de vídeo simplificado
         async function uploadVideo(file) {
             const supabase = createSupabaseClient();
             const timestamp = new Date().getTime();
-            const fileName = `videos/${timestamp}_${file.name}`;
+            
+            // Detectar extensão correta baseada no tipo do arquivo
+            let extension = 'webm';
+            if (file.type.includes('mp4')) {
+                extension = 'mp4';
+            }
+            
+            const fileName = `videos/${timestamp}_story.${extension}`;
+            
+            console.log('Fazendo upload do vídeo:', fileName, 'Tipo:', file.type, 'Tamanho:', file.size);
+            
             const { data, error } = await supabase.storage.from('videos').upload(fileName, file);
             if (error) {
                 console.error('Erro ao fazer upload de vídeo:', error);
@@ -817,15 +1424,9 @@
 
         // Enviar Story (notificação)
         async function enviarStory() {
-            const titulo = document.getElementById('titulo-story').value.trim();
-            const descricao = document.getElementById('descricao-story').value.trim();
-            
-            if (!titulo || !descricao) {
-                Toast.show('Preencha todos os campos obrigatórios', 'error');
-                document.querySelector('button[type="submit"]').disabled = false;
-                document.getElementById('submit-status').classList.add('hidden');
-                return;
-            }
+            // Stories não precisam de título/descrição - gerar automaticamente
+            const titulo = `Story ${new Date().toLocaleDateString()}`;
+            const descricao = `Story criado em ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}`;
             
             const supabase = createSupabaseClient();
             
@@ -840,16 +1441,55 @@
             if (errorUsuario) throw errorUsuario;
             
             let mediaUrl = '';
+            let videoFile = null;
             
-            // Para stories, sempre é vídeo carregado
+            // Processar baseado no tipo de story
+            if (formState.tipoStory === 'video') {
+                // Vídeo carregado
             if (!formState.arquivo) {
                 Toast.show('Selecione um vídeo', 'error');
                 document.querySelector('button[type="submit"]').disabled = false;
                 document.getElementById('submit-status').classList.add('hidden');
                 return;
             }
+                videoFile = formState.arquivo;
+                
+            } else if (formState.tipoStory === 'text') {
+                // Gerar vídeo do texto
+                if (!formState.textConfig.text.trim()) {
+                    Toast.show('Digite um texto para o story', 'error');
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('submit-status').classList.add('hidden');
+                    return;
+                }
+                
+                videoFile = await generateTextVideo();
+                if (!videoFile) {
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('submit-status').classList.add('hidden');
+                    return;
+                }
+                
+            } else if (formState.tipoStory === 'image') {
+                // Gerar vídeo da imagem
+                const imageInput = document.getElementById('image-file-input');
+                if (!imageInput.files[0]) {
+                    Toast.show('Selecione uma imagem', 'error');
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('submit-status').classList.add('hidden');
+                    return;
+                }
+                
+                videoFile = await generateImageVideo(imageInput.files[0]);
+                if (!videoFile) {
+                    document.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('submit-status').classList.add('hidden');
+                    return;
+                }
+            }
             
-            mediaUrl = await uploadVideo(formState.arquivo);
+            // Upload do vídeo
+            mediaUrl = await uploadVideo(videoFile);
             if (!mediaUrl) {
                 document.querySelector('button[type="submit"]').disabled = false;
                 document.getElementById('submit-status').classList.add('hidden');
@@ -861,7 +1501,7 @@
                 titulo,
                 descricao,
                 cidade_id: usuario.cidade,
-                tipo_midia: 'video_upload',
+                tipo_midia: `${formState.tipoStory}_upload`,
                 imagem_url: null,
                 video_url: null,
                 video_file_url: mediaUrl
@@ -1030,6 +1670,17 @@
             };
             
             tentarInicializar();
+        });
+
+        // Inicializar canvas de texto quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Selecionar primeiro gradiente por padrão
+            document.querySelector('[data-bg="gradient-1"]').classList.add('ring-2', 'ring-primary');
+            
+            // Renderizar canvas inicial se estiver na aba de texto
+            if (formState.tipoStory === 'text') {
+                setTimeout(renderTextCanvas, 100);
+            }
         });
     </script>
 </body>

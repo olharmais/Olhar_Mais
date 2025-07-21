@@ -1403,8 +1403,11 @@
 
                     if (error) throw error;
 
+                    // Buscar alunos associados aos usuários (para responsáveis)
+                    const usuariosComAlunos = await this.buscarAlunosAssociados(usuarios || []);
+
                     // Armazenar todos os usuários para busca
-                    this.todosUsuarios = usuarios || [];
+                    this.todosUsuarios = usuariosComAlunos;
                     this.renderizarUsuarios(this.todosUsuarios);
 
                 } catch (error) {
@@ -1419,6 +1422,72 @@
                             <p class="text-gray-600">Erro ao carregar usuários</p>
                         </div>
                     `;
+                }
+            }
+
+            async buscarAlunosAssociados(usuarios) {
+                try {
+                    // Buscar alunos para todos os usuários (não só responsáveis)
+                    // Coordenadores e outros profissionais também podem ter alunos associados
+                    if (usuarios.length === 0) {
+                        return usuarios;
+                    }
+
+                    const usuariosIds = usuarios.map(u => u.id);
+                    console.log('👨‍👩‍👧‍👦 Buscando alunos para usuários:', usuariosIds);
+
+                    // Buscar permissões de alunos para todos os usuários
+                    const { data: permissoesAlunos, error: errorPermissoes } = await this.supabase
+                        .from('permissoes_aluno')
+                        .select('usuario_id, aluno_id')
+                        .in('usuario_id', usuariosIds);
+
+                    if (errorPermissoes) {
+                        console.error('❌ Erro ao buscar permissões de alunos:', errorPermissoes);
+                        return usuarios; // Em caso de erro, retornar sem alunos
+                    }
+
+                    if (!permissoesAlunos || permissoesAlunos.length === 0) {
+                        return usuarios; // Nenhuma permissão encontrada
+                    }
+
+                    // Buscar dados dos alunos
+                    const alunosIds = permissoesAlunos.map(p => p.aluno_id);
+                    const { data: alunos, error: errorAlunos } = await this.supabase
+                        .from('alunos')
+                        .select('id, nome_completo')
+                        .in('id', alunosIds)
+                        .is('soft_delete', null);
+
+                    if (errorAlunos) {
+                        console.error('❌ Erro ao buscar dados dos alunos:', errorAlunos);
+                        return usuarios;
+                    }
+
+                    // Criar mapa de alunos por usuário
+                    const alunosPorUsuario = {};
+                    permissoesAlunos.forEach(permissao => {
+                        if (!alunosPorUsuario[permissao.usuario_id]) {
+                            alunosPorUsuario[permissao.usuario_id] = [];
+                        }
+                        
+                        const aluno = alunos?.find(a => a.id === permissao.aluno_id);
+                        if (aluno) {
+                            alunosPorUsuario[permissao.usuario_id].push(aluno.nome_completo);
+                        }
+                    });
+
+                    console.log('👶 Alunos por usuário:', alunosPorUsuario);
+
+                    // Adicionar informações dos alunos aos usuários
+                    return usuarios.map(usuario => ({
+                        ...usuario,
+                        alunos: alunosPorUsuario[usuario.id] || []
+                    }));
+
+                } catch (error) {
+                    console.error('❌ Erro ao buscar alunos associados:', error);
+                    return usuarios; // Em caso de erro, retornar usuários sem alunos
                 }
             }
 
@@ -1439,6 +1508,16 @@
                     // Determinar foto do usuário
                     const fotoUrl = usuario.foto_url || '/assets/img/avatar-placeholder.png';
                     
+                    // Construir informações do aluno (se houver)
+                    let infoAluno = '';
+                    if (usuario.alunos && usuario.alunos.length > 0) {
+                        if (usuario.alunos.length === 1) {
+                            infoAluno = `<div class="text-xs text-blue-600">Aluno: ${usuario.alunos[0]}</div>`;
+                        } else {
+                            infoAluno = `<div class="text-xs text-blue-600">Alunos: ${usuario.alunos.join(', ')}</div>`;
+                        }
+                    }
+                    
                     div.innerHTML = `
                         <input type="checkbox" id="user-${usuario.id}" value="${usuario.id}" class="checkbox-usuario mr-3">
                         <div class="flex items-center flex-1">
@@ -1446,6 +1525,7 @@
                             <label for="user-${usuario.id}" class="flex-1 cursor-pointer">
                                 <div class="font-medium text-gray-800">${usuario.nome}</div>
                                 <div class="text-sm text-gray-500">${usuario.profissao}</div>
+                                ${infoAluno}
                             </label>
                         </div>
                     `;
@@ -1466,10 +1546,21 @@
                             // Mostrar todos os usuários
                             this.renderizarUsuarios(this.todosUsuarios);
                         } else {
-                            // Filtrar usuários
-                            const usuariosFiltrados = this.todosUsuarios.filter(usuario => 
-                                usuario.nome.toLowerCase().includes(termo)
-                            );
+                            // Filtrar usuários pelo nome do usuário, profissão ou nome dos alunos
+                            const usuariosFiltrados = this.todosUsuarios.filter(usuario => {
+                                // Buscar no nome do usuário
+                                const nomeMatch = usuario.nome.toLowerCase().includes(termo);
+                                
+                                // Buscar na profissão
+                                const profissaoMatch = usuario.profissao.toLowerCase().includes(termo);
+                                
+                                // Buscar nos nomes dos alunos (se houver)
+                                const alunosMatch = usuario.alunos && usuario.alunos.some(aluno => 
+                                    aluno.toLowerCase().includes(termo)
+                                );
+                                
+                                return nomeMatch || profissaoMatch || alunosMatch;
+                            });
                             this.renderizarUsuarios(usuariosFiltrados);
                         }
                     });
