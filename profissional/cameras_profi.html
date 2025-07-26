@@ -161,6 +161,10 @@
     <!-- HLS.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
     
+    <!-- Leaflet CSS e JS para mapa de veículos -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         body {
             background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
@@ -260,6 +264,295 @@
                 padding-bottom: env(safe-area-inset-bottom);
             }
         }
+        
+        /* Estilos para a seção de veículos */
+        .vehicles-section {
+            display: none;
+        }
+        
+        .vehicles-section.active {
+            display: block;
+        }
+        
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .vehicle-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .vehicle-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: #005ae2;
+        }
+        
+        .vehicle-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .vehicle-status-dot.online {
+            background-color: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .vehicle-status-dot.offline {
+            background-color: #ef4444;
+        }
+        
+        .vehicle-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #005ae2 0%, #3988ff 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        /* Modal de veículo */
+        .vehicle-modal {
+            position: fixed;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 80px); /* Deixar espaço para navbar */
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 10000; /* Z-index maior que a navbar */
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        .vehicle-modal.active {
+            display: flex;
+        }
+        
+        .vehicle-modal-content {
+            background: white;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: calc(100vh - 120px); /* Altura responsiva */
+            overflow-y: auto;
+            position: relative;
+            margin-top: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Modal específico para câmera de veículo */
+        #vehicle-camera-modal {
+            backdrop-filter: blur(4px);
+            top: 10px;
+            height: calc(100vh - 80px);
+            z-index: 10001; /* Z-index ainda maior para modal de câmera */
+        }
+        
+        #vehicle-camera-modal .vehicle-modal-content {
+            max-height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-width: 90vw;
+        }
+        
+        /* Customização do ícone de veículo no mapa */
+        .vehicle-marker {
+            background: #005ae2;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 16px !important;
+            height: 16px !important;
+            margin-left: -8px !important;
+            margin-top: -8px !important;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .vehicle-marker:hover {
+            transform: scale(1.2);
+        }
+        
+        /* Responsividade para telas pequenas */
+        @media (max-width: 480px) {
+            #map {
+                height: 300px;
+            }
+            
+            .vehicle-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            .vehicle-modal {
+                height: calc(100vh - 60px) !important; /* Menos espaço para navbar mobile */
+                padding: 5px !important;
+            }
+            
+            .vehicle-modal-content {
+                width: 95%;
+                margin: 5px;
+                max-height: calc(100vh - 80px) !important;
+            }
+            
+            /* Modal da câmera responsivo */
+            #vehicle-camera-modal {
+                height: calc(100vh - 60px) !important;
+            }
+            
+            #vehicle-camera-modal .vehicle-modal-content {
+                max-width: 98% !important;
+                width: 98% !important;
+                margin: 5px;
+                max-height: calc(100vh - 80px) !important;
+            }
+            
+            #vehicle-camera-modal .camera-preview {
+                max-height: 300px !important;
+            }
+            
+            /* Botões de controle responsivos */
+            #center-map-btn, #reload-vehicles-btn {
+                padding: 0.5rem 0.75rem !important;
+                font-size: 0.8rem !important;
+                min-width: auto !important;
+                white-space: nowrap !important;
+            }
+            
+            #center-map-btn i, #reload-vehicles-btn i {
+                margin-right: 0.25rem !important;
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        @media (max-width: 320px) {
+            .container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            
+            #map {
+                height: 250px;
+            }
+            
+            .vehicle-card {
+                padding: 0.75rem;
+            }
+            
+            .vehicle-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            
+            .grid.grid-cols-3 {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .vehicle-modal {
+                height: calc(100vh - 50px) !important; /* Ainda menos espaço */
+                padding: 2px !important;
+            }
+            
+            .vehicle-modal-content {
+                width: 98%;
+                margin: 2px;
+                max-height: calc(100vh - 60px) !important;
+                font-size: 0.9rem;
+            }
+            
+            #vehicle-camera-modal {
+                height: calc(100vh - 50px) !important;
+            }
+            
+            #vehicle-camera-modal .vehicle-modal-content {
+                max-height: calc(100vh - 60px) !important;
+            }
+            
+            /* Botões ainda menores para telas muito pequenas */
+            #center-map-btn, #reload-vehicles-btn {
+                padding: 0.375rem 0.5rem !important;
+                font-size: 0.7rem !important;
+                min-width: auto !important;
+                white-space: nowrap !important;
+                max-width: calc(50% - 0.25rem) !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            
+            #center-map-btn i, #reload-vehicles-btn i {
+                font-size: 0.8rem !important;
+                margin-right: 0.125rem !important;
+            }
+            
+            /* Container dos botões em telas pequenas */
+            .flex.gap-2.sm\:flex-shrink-0 {
+                justify-content: space-between !important;
+                width: 100% !important;
+            }
+            
+            .flex.gap-2.sm\:flex-shrink-0 button {
+                flex: 1 !important;
+                min-width: 0 !important;
+                max-width: calc(50% - 0.25rem) !important;
+            }
+            
+            .grid.grid-cols-1.sm\:grid-cols-3 {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            h2, h3 {
+                font-size: 1.1rem;
+            }
+            
+            .text-lg {
+                font-size: 1rem;
+            }
+            
+            /* Modal da câmera ultra responsivo */
+            #vehicle-camera-modal .vehicle-modal-content {
+                max-width: 99% !important;
+                width: 99% !important;
+                margin: 2px !important;
+            }
+            
+            #vehicle-camera-modal .camera-preview {
+                max-height: 250px !important;
+            }
+            
+            #vehicle-camera-modal .p-3,
+            #vehicle-camera-modal .sm\:p-4 {
+                padding: 0.5rem !important;
+            }
+            
+            #vehicle-camera-modal h2 {
+                font-size: 0.9rem !important;
+            }
+            
+            #center-map-btn {
+                padding: 0.4rem 0.6rem !important;
+                font-size: 0.75rem !important;
+            }
+        }
     </style>
 </head>
 <body class="font-sans">
@@ -282,31 +575,40 @@
     <main class="container mx-auto px-4 py-6">
         <!-- Cabeçalho e Filtros -->
         <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Câmeras</h2>
-            <p class="text-gray-600 mb-4">Visualize as câmeras das escolas da sua cidade</p>
+            <h2 id="page-title" class="text-2xl font-bold text-gray-800">Câmeras</h2>
+            <p id="page-description" class="text-gray-600 mb-4">Visualize as câmeras das escolas da sua cidade</p>
             
             <!-- Filtros -->
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Câmera</label>
-                        <div class="flex space-x-4">
-                            <div id="tipo-cidade" class="cursor-pointer bg-gray-50 rounded-lg p-6 text-center hover:bg-primary-light transition flex-1 relative border border-gray-200" data-tipo="SITE">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Visualização</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div id="tipo-cidade" class="cursor-pointer bg-gray-50 rounded-lg p-4 text-center hover:bg-primary-light transition relative border border-gray-200" data-tipo="SITE">
                                 <div class="absolute top-2 right-2 text-primary hidden">
                                     <i class="ph ph-check-circle-fill text-lg"></i>
                                 </div>
                                 <div class="flex flex-col items-center justify-center h-full">
-                                    <i class="ph ph-video-camera text-4xl mb-3 text-gray-600"></i>
-                                    <span class="block text-sm font-medium text-gray-700">Câmeras da Cidade</span>
+                                    <i class="ph ph-video-camera text-3xl mb-2 text-gray-600"></i>
+                                    <span class="block text-xs font-medium text-gray-700">Câmeras da Cidade</span>
                                 </div>
                             </div>
-                            <div id="tipo-escola" class="cursor-pointer bg-gray-50 rounded-lg p-6 text-center hover:bg-primary-light transition flex-1 relative border border-gray-200" data-tipo="ESCOLA">
+                            <div id="tipo-escola" class="cursor-pointer bg-gray-50 rounded-lg p-4 text-center hover:bg-primary-light transition relative border border-gray-200" data-tipo="ESCOLA">
                                 <div class="absolute top-2 right-2 text-primary hidden">
                                     <i class="ph ph-check-circle-fill text-lg"></i>
                                 </div>
                                 <div class="flex flex-col items-center justify-center h-full">
-                                    <i class="ph ph-student text-4xl mb-3 text-gray-600"></i>
-                                    <span class="block text-sm font-medium text-gray-700">Câmeras das Escolas</span>
+                                    <i class="ph ph-student text-3xl mb-2 text-gray-600"></i>
+                                    <span class="block text-xs font-medium text-gray-700">Câmeras das Escolas</span>
+                                </div>
+                            </div>
+                            <div id="tipo-veiculo" class="cursor-pointer bg-gray-50 rounded-lg p-4 text-center hover:bg-primary-light transition relative border border-gray-200" data-tipo="VEICULO">
+                                <div class="absolute top-2 right-2 text-primary hidden">
+                                    <i class="ph ph-check-circle-fill text-lg"></i>
+                                </div>
+                                <div class="flex flex-col items-center justify-center h-full">
+                                    <i class="ph ph-bus text-3xl mb-2 text-gray-600"></i>
+                                    <span class="block text-xs font-medium text-gray-700">Veículos Escolares</span>
                                 </div>
                             </div>
                         </div>
@@ -316,6 +618,9 @@
                         <select id="escola-filter" class="w-full h-[54px] rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary">
                             <option value="">Todas as escolas</option>
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <span id="filtro-info">Filtro aplicado apenas a câmeras</span>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -324,6 +629,43 @@
         <!-- Grid de Câmeras -->
         <div id="cameras-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Preenchido via JavaScript -->
+        </div>
+        
+        <!-- Seção de Veículos -->
+        <div id="vehicles-section" class="vehicles-section">
+            <!-- Mapa de Veículos -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-800">Localização dos Veículos</h3>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="ph ph-broadcast mr-1"></i>
+                            Atualização automática a cada 30 segundos
+                        </p>
+                    </div>
+                    <div class="flex gap-2 sm:flex-shrink-0">
+                        <button id="center-map-btn" onclick="centralizarMapa()" class="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium hidden flex-1 sm:flex-none">
+                            <i class="ph ph-crosshairs mr-1"></i>
+                            <span class="hidden sm:inline">Centralizar</span>
+                            <span class="sm:hidden">Centralizar</span>
+                        </button>
+                        <button id="reload-vehicles-btn" onclick="carregarVeiculos()" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm font-medium flex-1 sm:flex-none">
+                            <i class="ph ph-arrows-clockwise mr-1"></i>
+                            <span class="hidden sm:inline">Atualizar</span>
+                            <span class="sm:hidden">Atualizar</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+            
+            <!-- Lista de Veículos -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Lista de Veículos</h3>
+                <div id="vehicles-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
         </div>
         
         <!-- Loading -->
@@ -337,11 +679,70 @@
             <p class="text-xl font-medium text-gray-800">Nenhuma câmera encontrada</p>
             <p class="mt-2 text-gray-600">Não há câmeras disponíveis para visualização no momento</p>
         </div>
+        
+        <!-- Estado Vazio para Veículos -->
+        <div id="empty-vehicles-state" class="hidden text-center py-12">
+            <i class="ph ph-car text-5xl text-gray-400 mb-4"></i>
+            <p class="text-xl font-medium text-gray-800">Nenhum veículo encontrado</p>
+            <p class="mt-2 text-gray-600">Não há veículos disponíveis para suas escolas no momento</p>
+            <div class="mt-4">
+                <button onclick="carregarVeiculos()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                    <i class="ph ph-arrow-clockwise mr-2"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
     </main>
     
     <!-- Toast Component -->
     <div id="toast" class="fixed top-4 right-4 z-[9999] hidden">
         <div class="px-4 py-2 rounded-lg shadow-lg text-white font-medium"></div>
+    </div>
+    
+    <!-- Modal de Veículo -->
+    <div id="vehicle-modal" class="vehicle-modal">
+        <div class="vehicle-modal-content">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Detalhes do Veículo</h2>
+                    <button onclick="closeVehicleModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+                
+                <div id="vehicle-details" class="space-y-4">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Câmera do Veículo -->
+    <div id="vehicle-camera-modal" class="vehicle-modal">
+        <div class="vehicle-modal-content bg-white rounded-lg shadow-xl" style="max-width: 95vw; width: 100%; max-width: 700px;">
+            <div class="p-3 sm:p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-base sm:text-lg font-bold text-gray-800">Câmera do Veículo</h2>
+                    <button onclick="closeVehicleCameraModal()" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+                
+                <div class="camera-preview relative bg-black rounded-lg overflow-hidden" style="width: 100%; aspect-ratio: 16/9; max-height: 400px;">
+                    <div class="placeholder absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                        <i class="ph ph-video text-4xl text-gray-400"></i>
+                        <p class="text-gray-500">Selecione um veículo para visualizar a câmera</p>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <p class="text-xs sm:text-sm text-gray-500">
+                        <i class="ph ph-info mr-1"></i>
+                        Toque duas vezes no vídeo para tela cheia
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -373,13 +774,18 @@
         };
 
         // Estado Global
-        let cameras = [];
+        let camerasSite = [];
+        let camerasEscola = [];
         let escolas = [];
+        let veiculos = [];
         let filtros = {
             escola: '',
             tipo: ''
         };
         let permissoesEscolas = [];
+        let map = null;
+        let vehicleMarkers = [];
+        let currentVehicle = null;
 
         // Obter cidade do usuário logado
         const userSession = JSON.parse(localStorage.getItem('user_session'));
@@ -533,13 +939,14 @@
                 console.log('🏫 Permissões de escolas:', permissoesEscolas);
 
                 const supabase = createSupabaseClient();
-                cameras = [];
+                camerasSite = [];
+                camerasEscola = [];
 
                 // 1. Buscar câmeras SITE (da cidade do usuário)
                 if (cidadeUsuario) {
                     console.log('🌆 Buscando câmeras SITE da cidade:', cidadeUsuario);
                     
-                    const { data: camerasSite, error: errorSite } = await supabase
+                    const { data: dadosCamerasSite, error: errorSite } = await supabase
                         .from('cameras')
                         .select(`
                             *,
@@ -555,22 +962,11 @@
                     if (errorSite) {
                         console.error('❌ Erro ao buscar câmeras SITE:', errorSite);
                     } else {
-                        console.log('✅ Câmeras SITE encontradas:', camerasSite?.length || 0);
-                        if (camerasSite && camerasSite.length > 0) {
+                        camerasSite = dadosCamerasSite || [];
+                        console.log('✅ Câmeras SITE encontradas:', camerasSite.length);
+                        if (camerasSite.length > 0) {
                             console.log('📋 Detalhes das câmeras SITE:', camerasSite);
-                        } else {
-                            console.log('⚠️ Nenhuma câmera SITE encontrada para a cidade:', cidadeUsuario);
-                            
-                            // Debug adicional: verificar se existem câmeras SITE no banco
-                            const { data: todasCamerasSite, error: errorTodasSite } = await supabase
-                                .from('cameras')
-                                .select('id, nome, cidade_id, tipo')
-                                .eq('tipo', 'SITE')
-                                .is('soft_delete', null);
-                            
-                            console.log('🔍 Debug - Todas as câmeras SITE no banco:', todasCamerasSite);
                         }
-                        cameras = cameras.concat(camerasSite || []);
                     }
                 } else {
                     console.log('⚠️ Usuário não tem cidade definida, pulando busca de câmeras SITE');
@@ -579,7 +975,7 @@
                 // 2. Buscar câmeras ESCOLA (das escolas com permissão)
                 if (permissoesEscolas.length > 0) {
                     console.log('🏫 Buscando câmeras ESCOLA das escolas:', permissoesEscolas);
-                    const { data: camerasEscola, error: errorEscola } = await supabase
+                    const { data: dadosCamerasEscola, error: errorEscola } = await supabase
                         .from('cameras')
                         .select(`
                             *,
@@ -595,64 +991,174 @@
                     if (errorEscola) {
                         console.error('❌ Erro ao buscar câmeras ESCOLA:', errorEscola);
                     } else {
-                        console.log('✅ Câmeras ESCOLA encontradas:', camerasEscola?.length || 0);
-                        cameras = cameras.concat(camerasEscola || []);
+                        camerasEscola = dadosCamerasEscola || [];
+                        console.log('✅ Câmeras ESCOLA encontradas:', camerasEscola.length);
                     }
                 }
 
                 document.getElementById('loading').style.display = 'none';
                 
-                console.log('🎯 Total de câmeras carregadas:', cameras.length);
+                console.log(`🎯 Total de câmeras carregadas: ${camerasSite.length + camerasEscola.length}`);
                 
-                if (!cameras.length) {
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    document.getElementById('cameras-grid').style.display = 'none';
-                    return;
-                }
-
+                // Marcar que os dados estão carregados
+                dadosCamerasCarregados = true;
+                console.log('✅ Dados das câmeras marcados como carregados');
+                
                 aplicarFiltros();
 
             } catch (error) {
                 console.error('❌ Erro ao carregar câmeras:', error);
                 Toast.show('Erro ao carregar câmeras. Tente novamente.', 'error');
+                
+                // Resetar flag em caso de erro
+                dadosCamerasCarregados = false;
+                
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('empty-state').classList.remove('hidden');
                 document.getElementById('cameras-grid').style.display = 'none';
             }
         }
 
-        // Aplicar Filtros
+        // Flag para controlar se os dados estão carregados
+        let dadosCamerasCarregados = false;
+
+        // Aplicar Filtros - Refatorado e Corrigido
         function aplicarFiltros() {
             console.log('🔍 Aplicando filtros:', filtros);
-            console.log('📊 Total de câmeras antes do filtro:', cameras.length);
+            console.log('📊 Estado dos dados - Site:', camerasSite?.length || 0, 'Escola:', camerasEscola?.length || 0, 'Carregados:', dadosCamerasCarregados);
             
-            const camerasFiltradas = cameras.filter(camera => {
-                // Se tiver escola selecionada, filtra por ela
-                if (filtros.escola && camera.escola_id !== parseInt(filtros.escola)) return false;
+            // Esconder todas as seções primeiro
+            const vehiclesSection = document.getElementById('vehicles-section');
+            const camerasGrid = document.getElementById('cameras-grid');
+            const emptyState = document.getElementById('empty-state');
+            const emptyVehiclesState = document.getElementById('empty-vehicles-state');
+            const loading = document.getElementById('loading');
+            
+            if (vehiclesSection) vehiclesSection.classList.remove('active');
+            if (emptyState) emptyState.classList.add('hidden');
+            if (emptyVehiclesState) emptyVehiclesState.classList.add('hidden');
+            if (loading) loading.style.display = 'none';
+            
+            // Se o tipo for VEICULO, mostrar veículos
+            if (filtros.tipo === 'VEICULO') {
+                console.log('🚌 Mudando para visualização de veículos');
+                // Atualizar título e descrição da página para veículos
+                const pageTitle = document.querySelector('h1');
+                const pageDescription = document.querySelector('p.text-gray-600');
+                const filtroInfo = document.getElementById('filtro-info');
+                if (pageTitle) pageTitle.textContent = 'Veículos Escolares';
+                if (pageDescription) pageDescription.textContent = 'Monitore todos os veículos em tempo real';
+                if (filtroInfo) filtroInfo.textContent = 'Mostra todos os veículos da API Fulltrack';
+                carregarVeiculos();
+                return;
+            }
+            
+            // Se mudou para câmeras, parar atualização automática de veículos
+            if (vehicleUpdateTimer) {
+                console.log('⏹️ Parando atualização automática de veículos');
+                clearInterval(vehicleUpdateTimer);
+                vehicleUpdateTimer = null;
+            }
+            
+            // Verificar se os dados das câmeras estão prontos
+            if (!dadosCamerasCarregados) {
+                console.log('⏳ Aguardando carregamento dos dados das câmeras...');
+                if (loading) loading.style.display = 'flex';
+                setTimeout(() => aplicarFiltros(), 500); // Tentar novamente em 500ms
+                return;
+            }
+            
+            // Câmeras - usar dados corretos
+            console.log('🎥 Mudando para visualização de câmeras');
+            const pageTitle = document.querySelector('h1');
+            const pageDescription = document.querySelector('p.text-gray-600');
+            const filtroInfo = document.getElementById('filtro-info');
+            if (pageTitle) pageTitle.textContent = 'Câmeras';
+            if (pageDescription) pageDescription.textContent = 'Visualize as câmeras de segurança';
+            if (filtroInfo) filtroInfo.textContent = 'Filtro aplicado apenas a câmeras';
+            
+            // Verificar se há dados disponíveis
+            if (!camerasSite && !camerasEscola) {
+                console.log('⚠️ Nenhum dado de câmera disponível');
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (camerasGrid) camerasGrid.style.display = 'none';
+                return;
+            }
+            
+            // Combinar todas as câmeras disponíveis
+            const todasCameras = [];
+            
+            // Adicionar câmeras SITE
+            if (camerasSite && Array.isArray(camerasSite) && camerasSite.length > 0) {
+                camerasSite.forEach(camera => {
+                    todasCameras.push({...camera, fonte: 'SITE'});
+                });
+            }
+            
+            // Adicionar câmeras ESCOLA
+            if (camerasEscola && Array.isArray(camerasEscola) && camerasEscola.length > 0) {
+                camerasEscola.forEach(camera => {
+                    todasCameras.push({...camera, fonte: 'ESCOLA'});
+                });
+            }
+            
+            console.log('📊 Total de câmeras disponíveis:', todasCameras.length);
+            console.log('📍 Câmeras SITE:', camerasSite?.length || 0);
+            console.log('🏫 Câmeras ESCOLA:', camerasEscola?.length || 0);
+            
+            // Se não há câmeras, mostrar estado vazio
+            if (todasCameras.length === 0) {
+                console.log('📭 Nenhuma câmera encontrada');
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (camerasGrid) camerasGrid.style.display = 'none';
+                return;
+            }
+            
+            // Aplicar filtros
+            let camerasFiltradas = todasCameras.filter(camera => {
+                let passaFiltro = true;
                 
-                // Se tiver tipo selecionado, filtra por ele
-                if (filtros.tipo && camera.tipo !== filtros.tipo) return false;
+                // Filtro por escola
+                if (filtros.escola && filtros.escola !== '') {
+                    passaFiltro = passaFiltro && camera.escola_id && camera.escola_id.toString() === filtros.escola;
+                }
                 
-                return true;
+                // Filtro por tipo
+                if (filtros.tipo && filtros.tipo !== '') {
+                    if (filtros.tipo === 'SITE') {
+                        passaFiltro = passaFiltro && camera.tipo === 'SITE';
+                    } else if (filtros.tipo === 'ESCOLA') {
+                        passaFiltro = passaFiltro && camera.tipo === 'ESCOLA';
+                    }
+                }
+                
+                return passaFiltro;
             });
 
             console.log('📋 Câmeras após filtro:', camerasFiltradas.length);
 
-            const grid = document.getElementById('cameras-grid');
-            const emptyState = document.getElementById('empty-state');
-            
-            grid.innerHTML = '';
-            
-            if (camerasFiltradas.length === 0) {
-                grid.style.display = 'none';
-                emptyState.classList.remove('hidden');
-            } else {
-                grid.style.display = 'grid';
-                emptyState.classList.add('hidden');
+            // Exibir câmeras
+            if (camerasGrid) {
+                camerasGrid.innerHTML = '';
+                camerasGrid.style.display = 'grid';
                 
-                camerasFiltradas.forEach(camera => {
-                    grid.appendChild(criarElementoCamera(camera));
-                });
+                if (camerasFiltradas.length === 0) {
+                    camerasGrid.style.display = 'none';
+                    if (emptyState) emptyState.classList.remove('hidden');
+                } else {
+                    if (emptyState) emptyState.classList.add('hidden');
+                    
+                    camerasFiltradas.forEach(camera => {
+                        try {
+                            const elemento = criarElementoCamera(camera);
+                            if (elemento) {
+                                camerasGrid.appendChild(elemento);
+                            }
+                        } catch (error) {
+                            console.error('❌ Erro ao criar elemento de câmera:', camera, error);
+                        }
+                    });
+                }
             }
         }
 
@@ -738,26 +1244,812 @@
             `;
         }
 
+        // ===== FUNÇÕES DE VEÍCULOS =====
+
+        // Timer para atualização automática (como no exemplo)
+        let vehicleUpdateTimer = null;
+
+        // Carregar Veículos - Simples como no exemplo
+        async function carregarVeiculos() {
+            try {
+                console.log('🚌 Carregando TODOS os veículos da API...');
+
+                // Mostrar loading
+                document.getElementById('loading').style.display = 'flex';
+
+                // Buscar TODOS os veículos da API Fulltrack (exatamente como no exemplo)
+                const dadosFulltrack = await buscarTodosDadosFulltrack();
+                
+                if (dadosFulltrack.length === 0) {
+                    console.log('❌ Nenhum veículo encontrado');
+                    Toast.show('Nenhum veículo encontrado na API de rastreamento', 'error');
+                    veiculos = [];
+                    mostrarVeiculos();
+                    inicializarMapa();
+                    await atualizarMapaVeiculos();
+                    return;
+                }
+
+                // Buscar dados do banco primeiro
+                const supabase = createSupabaseClient();
+                console.log('🔍 Buscando veículos no banco...');
+                const { data: veiculosBanco, error: errorBanco } = await supabase
+                    .from('veiculos')
+                    .select(`
+                        id,
+                        ras_vei_id,
+                        placa,
+                        nome_veiculo,
+                        camera_url,
+                        escola_id,
+                        escolas (
+                            id,
+                            nome
+                        )
+                    `)
+                    .is('soft_delete', null);
+
+                if (errorBanco) {
+                    console.error('❌ Erro ao buscar veículos do banco:', errorBanco);
+                } else {
+                    console.log(`✅ Veículos encontrados no banco: ${veiculosBanco?.length || 0}`);
+                    if (veiculosBanco?.length > 0) {
+                        console.log('📋 Primeiro veículo do banco:', {
+                            id: veiculosBanco[0].id,
+                            ras_vei_id: veiculosBanco[0].ras_vei_id,
+                            placa: veiculosBanco[0].placa
+                        });
+                    }
+                }
+
+                if (errorBanco) {
+                    console.error('❌ Erro ao buscar veículos do banco:', errorBanco);
+                }
+
+                // Processar dados da API Fulltrack
+                console.log('📍 Processando veículos...');
+                
+                veiculos = dadosFulltrack
+                    .filter(apiItem => {
+                        // Filtrar apenas veículos com coordenadas válidas
+                        const lat = parseFloat(apiItem.ras_eve_latitude);
+                        const lng = parseFloat(apiItem.ras_eve_longitude);
+                        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+                    })
+                    .map(apiItem => {
+                        // Tentar encontrar dados do banco usando ras_vei_id (convertendo para número)
+                        const rasVeiId = parseInt(apiItem.ras_vei_id);
+                        console.log(`🔍 Buscando veículo no banco - API ID: ${apiItem.ras_vei_id}, Convertido: ${rasVeiId}`);
+                        const dadosBanco = veiculosBanco?.find(v => v.ras_vei_id === rasVeiId);
+                        if (dadosBanco) {
+                            console.log(`✅ Veículo encontrado no banco:`, dadosBanco);
+                        }
+                        
+                        // Construir objeto do veículo
+                        const veiculo = {
+                            id: dadosBanco?.id || apiItem.ras_vei_id,
+                            ras_vei_id: parseInt(apiItem.ras_vei_id),
+                            placa: dadosBanco?.placa || apiItem.ras_vei_placa || 'Sem placa',
+                            nome_veiculo: dadosBanco?.nome_veiculo || 'Veículo',
+                            camera_url: dadosBanco?.camera_url || null,
+                            escola_id: dadosBanco?.escola_id || null,
+                            escolas: dadosBanco?.escolas || { nome: 'Não cadastrado' },
+                            ...apiItem,
+                            ultima_atualizacao: formatBrazilianDate(apiItem.ras_eve_data_gps),
+                            temLocalizacao: true,
+                            fonte: dadosBanco ? 'banco+api' : 'api'
+                        };
+
+                        // Log detalhado para debug
+                        if (dadosBanco) {
+                            console.log(`🔄 Veículo combinado:`, {
+                                placa: veiculo.placa,
+                                nome: veiculo.nome_veiculo,
+                                ras_vei_id: veiculo.ras_vei_id,
+                                escola: veiculo.escolas?.nome
+                            });
+                        }
+
+                        return veiculo;
+                    });
+
+                console.log(`📊 Total de veículos com GPS: ${veiculos.length}`);
+                console.log(`📍 Todos os veículos têm localização válida`);
+
+                mostrarVeiculos();
+                inicializarMapa();
+                await atualizarMapaVeiculos();
+
+                // Configurar atualização automática (como no exemplo)
+                if (vehicleUpdateTimer) {
+                    clearInterval(vehicleUpdateTimer);
+                }
+                vehicleUpdateTimer = setInterval(() => {
+                    console.log('🔄 Atualização automática dos veículos...');
+                    carregarVeiculos();
+                }, 30000); // Atualizar a cada 30 segundos
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar veículos:', error);
+                Toast.show('Erro ao carregar veículos. Tente novamente.', 'error');
+                
+                // Se houver erro, tentar novamente em 10 segundos
+                if (vehicleUpdateTimer) {
+                    clearInterval(vehicleUpdateTimer);
+                }
+                setTimeout(() => carregarVeiculos(), 10000);
+            } finally {
+                // Esconder loading
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Mostrar Seção de Veículos
+        function mostrarVeiculos() {
+            const vehiclesSection = document.getElementById('vehicles-section');
+            const camerasGrid = document.getElementById('cameras-grid');
+            const emptyState = document.getElementById('empty-state');
+            const emptyVehiclesState = document.getElementById('empty-vehicles-state');
+            const loading = document.getElementById('loading');
+            
+            // Atualizar título e descrição da página
+            document.getElementById('page-title').textContent = 'Veículos';
+            document.getElementById('page-description').textContent = 'Visualize os veículos escolares e suas localizações';
+            
+            // Esconder elementos de câmeras
+            camerasGrid.style.display = 'none';
+            emptyState.classList.add('hidden');
+            loading.style.display = 'none';
+            
+            // Mostrar seção de veículos
+            vehiclesSection.classList.add('active');
+            
+            if (veiculos.length === 0) {
+                emptyVehiclesState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyVehiclesState.classList.add('hidden');
+            renderizarListaVeiculos();
+        }
+
+        // Renderizar Lista de Veículos
+        function renderizarListaVeiculos() {
+            const lista = document.getElementById('vehicles-list');
+            
+            if (veiculos.length === 0) {
+                document.getElementById('empty-vehicles-state').classList.remove('hidden');
+                lista.innerHTML = '';
+                return;
+            }
+            
+            console.log(`📋 Renderizando ${veiculos.length} veículos na lista...`);
+            document.getElementById('empty-vehicles-state').classList.add('hidden');
+            
+            lista.innerHTML = '';
+            
+            // Ordenar veículos: primeiro os com localização, depois os sem
+            const veiculosOrdenados = [...veiculos].sort((a, b) => {
+                if (a.temLocalizacao && !b.temLocalizacao) return -1;
+                if (!a.temLocalizacao && b.temLocalizacao) return 1;
+                return (a.placa || a.ras_vei_placa || '').localeCompare(b.placa || b.ras_vei_placa || '');
+            });
+            
+            veiculosOrdenados.forEach(veiculo => {
+                try {
+                    const card = criarCardVeiculo(veiculo);
+                    lista.appendChild(card);
+                } catch (error) {
+                    console.error('❌ Erro ao criar card do veículo:', veiculo, error);
+                }
+            });
+            
+            console.log(`✅ Lista renderizada com ${lista.children.length} cards`);
+        }
+
+        // Criar Card de Veículo
+        function criarCardVeiculo(veiculo) {
+            const card = document.createElement('div');
+            card.className = 'vehicle-card bg-white rounded-lg shadow-sm p-4 hover:shadow-md';
+            
+            const temCamera = veiculo.camera_url && veiculo.camera_url.trim() !== '';
+            
+            // Determinar status do motor baseado nos dados da API
+            const statusOnline = veiculo.ras_eve_ignicao === '1';
+            const velocidade = Math.abs(veiculo.ras_eve_velocidade || 0);
+            const temLocalizacao = veiculo.temLocalizacao || (veiculo.ras_eve_latitude && veiculo.ras_eve_longitude);
+            
+            card.innerHTML = `
+                                    <div class="flex items-center gap-3 mb-4">
+                        <div class="vehicle-icon">
+                            <i class="ph ph-car"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-semibold text-gray-800 text-sm truncate">
+                                ${veiculo.nome_veiculo || veiculo.ras_vei_veiculo || 'Veículo sem nome'}
+                            </h4>
+                            <p class="text-xs text-gray-500 truncate">
+                                ${veiculo.escolas?.nome || 'Escola não informada'}
+                            </p>
+                            ${veiculo.fonte ? `<p class="text-xs text-blue-600">${veiculo.fonte === 'api' ? '📡 API' : veiculo.fonte === 'banco+api' ? '🔗 Híbrido' : '📊 Local'}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1">
+                            ${temCamera ? '<i class="ph ph-video-camera text-primary text-lg flex-shrink-0"></i>' : ''}
+                            ${temLocalizacao ? '<i class="ph ph-map-pin text-green-600 text-lg flex-shrink-0"></i>' : '<i class="ph ph-map-pin text-gray-400 text-lg flex-shrink-0" title="Sem localização"></i>'}
+                        </div>
+                    </div>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Placa</span>
+                        <span class="text-sm font-medium text-gray-800">${veiculo.placa || veiculo.ras_vei_placa || 'N/A'}</span>
+                    </div>
+                    
+                    ${veiculo.ras_vei_id ? `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-500">Status</span>
+                            ${temLocalizacao ? `
+                                <div class="flex items-center gap-1">
+                                    <span class="vehicle-status-dot ${statusOnline ? 'online' : 'offline'}"></span>
+                                    <span class="text-sm font-medium ${statusOnline ? 'text-green-600' : 'text-red-600'}">
+                                        ${statusOnline ? 'Ligado' : 'Desligado'}
+                                    </span>
+                                </div>
+                            ` : `
+                                <span class="text-sm font-medium text-gray-500">Sem dados GPS</span>
+                            `}
+                        </div>
+                        
+                        ${temLocalizacao && velocidade > 0 ? `
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-500">Velocidade</span>
+                                <span class="text-sm font-medium text-blue-600">${velocidade} km/h</span>
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-500">Status</span>
+                            <span class="text-sm font-medium text-orange-600">Sem rastreador</span>
+                        </div>
+                    `}
+                </div>
+                
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                    <button onclick="abrirModalVeiculo('${veiculo.id || `api_${veiculo.ras_vei_id}`}')" class="w-full text-primary hover:bg-primary-light px-3 py-2 rounded-lg transition-colors text-sm font-medium">
+                        <i class="ph ph-info mr-1"></i>
+                        Ver Detalhes
+                    </button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Inicializar Mapa
+        function inicializarMapa() {
+            if (map) {
+                map.remove();
+            }
+
+            // Coordenadas padrão (centro do Brasil)
+            const defaultLat = -15.7942;
+            const defaultLng = -47.8822;
+            
+            map = L.map('map').setView([defaultLat, defaultLng], 5);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                minZoom: 3,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Buscar TODOS os Dados da API Fulltrack (como no exemplo que funciona)
+        async function buscarTodosDadosFulltrack() {
+            try {
+                console.log('🔍 Buscando TODOS os dados...');
+                
+                const apiUrl = 'https://ws.fulltrack2.com/events/all/apiKey/cba5c3af94d710158d4e1164cc5eaa643f036a60/secretKey/f0be80e68ea47f4b4c5a4cf4a78d1f2d5c756e3d';
+                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(apiUrl);
+                
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status && data.data) {
+                    console.log(`📍 Total de veículos na API: ${data.data.length}`);
+                    
+                    // Log dos primeiros 5 para debug
+                    console.log('📋 Primeiros 5 veículos da API:');
+                    data.data.slice(0, 5).forEach((v, i) => {
+                        console.log(`   ${i+1}. ID: ${v.ras_vei_id}, Placa: ${v.ras_vei_placa || 'sem placa'}, Lat: ${v.ras_eve_latitude}, Lng: ${v.ras_eve_longitude}`);
+                    });
+                    
+                    return data.data;
+                } else {
+                    throw new Error(data.message || 'Erro ao carregar dados da API Fulltrack');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao buscar dados:', error);
+                return [];
+            }
+        }
+
+        // Formatar Data Brasileira
+        function formatBrazilianDate(dateStr) {
+            if (!dateStr) return '-';
+            
+            try {
+                // A API retorna em UTC no formato DD/MM/YYYY HH:mm:ss
+                // Precisamos converter para GMT-3 (horário brasileiro)
+                const [datePart, timePart] = dateStr.split(' ');
+                if (!datePart || !timePart) return dateStr;
+                
+                const [day, month, year] = datePart.split('/').map(Number);
+                const [hour, minute, second] = timePart.split(':').map(Number);
+                
+                // Criar Date em UTC
+                const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+                
+                // Converter para horário brasileiro (GMT-3)
+                const brazilTime = new Date(utcDate.getTime() - (3 * 60 * 60 * 1000));
+                
+                // Formatar manualmente para evitar problemas de timezone do navegador
+                const d = brazilTime.getUTCDate().toString().padStart(2, '0');
+                const m = (brazilTime.getUTCMonth() + 1).toString().padStart(2, '0');
+                const y = brazilTime.getUTCFullYear();
+                const h = brazilTime.getUTCHours().toString().padStart(2, '0');
+                const min = brazilTime.getUTCMinutes().toString().padStart(2, '0');
+                const s = brazilTime.getUTCSeconds().toString().padStart(2, '0');
+                
+                const formatted = `${d}/${m}/${y}, ${h}:${min}:${s}`;
+                
+                return formatted;
+                
+            } catch (error) {
+                return dateStr;
+            }
+        }
+
+        // Atualizar Mapa com Veículos (Otimizado para nova estratégia)
+        async function atualizarMapaVeiculos() {
+            if (!map) {
+                console.log('❌ Mapa não inicializado');
+                return;
+            }
+
+            // Limpar marcadores existentes
+            vehicleMarkers.forEach(marker => map.removeLayer(marker));
+            vehicleMarkers = [];
+
+            if (veiculos.length === 0) {
+                document.getElementById('center-map-btn').classList.add('hidden');
+                console.log('📍 Nenhum veículo para mostrar no mapa');
+                return;
+            }
+
+            console.log(`🗺️ Atualizando mapa com ${veiculos.length} veículos...`);
+
+            // Filtrar veículos com localização válida
+            const veiculosComLocalizacao = veiculos.filter(veiculo => {
+                if (!veiculo.temLocalizacao) return false;
+                
+                const lat = parseFloat(veiculo.ras_eve_latitude);
+                const lng = parseFloat(veiculo.ras_eve_longitude);
+                
+                return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+            });
+
+            console.log(`📍 Veículos com localização válida: ${veiculosComLocalizacao.length}`);
+
+            if (veiculosComLocalizacao.length === 0) {
+                document.getElementById('center-map-btn').classList.add('hidden');
+                const semLocalizacao = veiculos.filter(v => !v.temLocalizacao).length;
+                
+                if (semLocalizacao > 0) {
+                    Toast.show(`${semLocalizacao} veículo(s) encontrado(s), mas nenhum possui localização GPS válida`, 'warning');
+                } else {
+                    Toast.show('Nenhum veículo com localização encontrado', 'warning');
+                }
+                return;
+            }
+
+            // Mostrar botão de centralizar
+            document.getElementById('center-map-btn').classList.remove('hidden');
+
+            // Adicionar marcadores no mapa
+            veiculosComLocalizacao.forEach((veiculo) => {
+                const lat = parseFloat(veiculo.ras_eve_latitude);
+                const lng = parseFloat(veiculo.ras_eve_longitude);
+
+                console.log(`📍 Adicionando ao mapa: ${veiculo.placa} (${lat}, ${lng}) [${veiculo.fonte}]`);
+
+                const vanIcon = L.icon({
+                    iconUrl: 'data:image/svg+xml;utf8,<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="12" width="28" height="10" rx="2" fill="%23005ae2"/><rect x="5" y="15" width="6" height="3" rx="1" fill="white"/><rect x="21" y="15" width="6" height="3" rx="1" fill="white"/><circle cx="8" cy="24" r="2" fill="black"/><circle cx="24" cy="24" r="2" fill="black"/></svg>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 24],
+                    popupAnchor: [0, -24]
+                });
+
+                const marker = L.marker([lat, lng], { icon: vanIcon }).addTo(map);
+                
+                // Criar popup com informações básicas
+                const popupContent = `
+                    <div style="text-align: center; min-width: 150px;">
+                        <strong>${veiculo.placa || 'Sem placa'}</strong><br>
+                        <small>${veiculo.nome_veiculo || 'Veículo'}</small><br>
+                        <small style="color: #666;">${veiculo.escolas?.nome || 'Escola não informada'}</small>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                
+                marker.on('click', () => {
+                    // Usar ras_vei_id para consistência
+                    abrirModalVeiculo(veiculo.ras_vei_id.toString());
+                });
+
+                vehicleMarkers.push(marker);
+            });
+
+            // Ajustar zoom para mostrar todos os veículos
+            if (vehicleMarkers.length > 0) {
+                const group = new L.featureGroup(vehicleMarkers);
+                map.fitBounds(group.getBounds(), { 
+                    padding: [50, 50],
+                    maxZoom: 12  // Limitar zoom máximo
+                });
+                
+                console.log(`✅ ${vehicleMarkers.length} veículos adicionados ao mapa`);
+                
+                const fonteDados = veiculos[0]?.fonte;
+                if (fonteDados === 'api') {
+                    Toast.show(`Dados carregados`, 'success');
+                } else {
+                    Toast.show(`${vehicleMarkers.length} veículos mapeados com sucesso`, 'success');
+                }
+            }
+        }
+
+        // Centralizar Mapa
+        function centralizarMapa() {
+            if (!map || vehicleMarkers.length === 0) return;
+
+            const group = new L.featureGroup(vehicleMarkers);
+            map.fitBounds(group.getBounds(), { 
+                padding: [50, 50],
+                maxZoom: 12
+            });
+            
+            Toast.show('Mapa centralizado nos veículos', 'success');
+        }
+
+
+
+        // Abrir Modal do Veículo (Adaptado para nova estrutura)
+        function abrirModalVeiculo(veiculoId) {
+            console.log('🚗 Abrindo modal para veículo:', veiculoId);
+            
+            const veiculo = veiculos.find(v => {
+                // Tentar encontrar por id do banco ou ras_vei_id
+                const matchId = v.id.toString() === veiculoId.toString();
+                const matchRasVeiId = v.ras_vei_id.toString() === veiculoId.toString();
+                console.log(`🔍 Comparando IDs - Veículo ID: ${v.id}, RAS ID: ${v.ras_vei_id}, Buscando: ${veiculoId}`);
+                return matchId || matchRasVeiId;
+            });
+            if (!veiculo) {
+                console.error('❌ Veículo não encontrado:', veiculoId);
+                return;
+            }
+
+            currentVehicle = veiculo;
+            
+            const detalhes = document.getElementById('vehicle-details');
+            const temCamera = veiculo.camera_url && veiculo.camera_url.trim() !== '';
+            
+            // Calcular status baseado nos dados da API
+            const statusOnline = veiculo.ras_eve_ignicao === '1';
+            const velocidade = Math.abs(veiculo.ras_eve_velocidade || 0);
+            const temLocalizacao = veiculo.temLocalizacao || false;
+            
+            // Determinar fonte dos dados
+            const fonte = veiculo.fonte || 'desconhecido';
+            const corFonte = fonte === 'api' ? 'text-blue-600' : fonte === 'banco+api' ? 'text-green-600' : 'text-gray-600';
+            const textoFonte = fonte === 'api' ? '📡 API' : fonte === 'banco+api' ? '🔗 Banco + API' : '📊 Banco local';
+            
+            detalhes.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Cabeçalho do Veículo -->
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="vehicle-icon">
+                            <i class="ph ph-car"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800 text-lg">${veiculo.nome_veiculo || 'Veículo sem nome'}</h3>
+                            <p class="text-gray-600">${veiculo.escolas?.nome || 'Escola não informada'}</p>
+                            <p class="text-xs ${corFonte} mt-1">${textoFonte}</p>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            ${temCamera ? '<i class="ph ph-video-camera-fill text-primary text-2xl"></i>' : ''}
+                            ${temLocalizacao ? '<i class="ph ph-map-pin-fill text-green-600 text-xl" title="Com localização GPS"></i>' : '<i class="ph ph-map-pin text-gray-400 text-xl" title="Sem localização GPS"></i>'}
+                        </div>
+                    </div>
+
+                    <!-- Câmera do Veículo - PRIMEIRA SEÇÃO -->
+                    ${temCamera ? `
+                        <div class="bg-gradient-to-r from-primary to-blue-600 rounded-lg p-4 text-white">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i class="ph ph-video-camera-fill text-2xl"></i>
+                                <div>
+                                    <h4 class="font-semibold text-lg">Câmera do Veículo</h4>
+                                    <p class="text-blue-100 text-sm">Visualização em tempo real</p>
+                                </div>
+                            </div>
+                            <button onclick="openVehicleCamera()" class="w-full bg-white text-primary px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                                <i class="ph ph-play mr-2"></i>
+                                Assistir Câmera Agora
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="bg-gray-100 rounded-lg p-4 text-center">
+                            <i class="ph ph-video-camera-slash text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-600 font-medium">Câmera não disponível</p>
+                            <p class="text-gray-500 text-sm">Este veículo não possui câmera configurada</p>
+                        </div>
+                    `}
+                    
+                    <!-- Informações Básicas -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-white border border-gray-200 rounded-lg p-3">
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Placa</label>
+                            <p class="text-gray-900 font-semibold text-lg mt-1">${veiculo.placa || 'N/A'}</p>
+                        </div>
+                        
+                        ${temLocalizacao ? `
+                            <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status Motor</label>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="vehicle-status-dot ${statusOnline ? 'online' : 'offline'}"></span>
+                                    <span class="font-semibold ${statusOnline ? 'text-green-600' : 'text-red-600'}">
+                                        ${statusOnline ? 'Ligado' : 'Desligado'}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Velocidade</label>
+                                <p class="text-gray-900 font-semibold text-lg mt-1">${velocidade} km/h</p>
+                            </div>
+                        ` : `
+                            <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+                                <p class="text-gray-500 font-medium mt-1">Sem dados GPS</p>
+                            </div>
+                        `}
+                        
+                        <div class="bg-white border border-gray-200 rounded-lg p-3">
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Sistema</label>
+                            <p class="font-semibold mt-1 ${temCamera ? 'text-green-600' : 'text-gray-500'}">
+                                ${temCamera ? '📹 Com Câmera' : '📱 Apenas GPS'}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Dados GPS -->
+                    ${veiculo.ultima_atualizacao ? `
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <label class="block text-xs font-medium text-blue-700 uppercase tracking-wide">
+                                <i class="ph ph-clock mr-1"></i>
+                                Última Atualização GPS
+                            </label>
+                            <p class="text-blue-900 font-semibold mt-1">${veiculo.ultima_atualizacao}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${temLocalizacao ? `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <label class="block text-xs font-medium text-green-700 uppercase tracking-wide">
+                                <i class="ph ph-map-pin mr-1"></i>
+                                Coordenadas GPS
+                            </label>
+                            <p class="text-green-900 font-medium mt-1">
+                                Lat: ${parseFloat(veiculo.ras_eve_latitude).toFixed(6)}<br>
+                                Lng: ${parseFloat(veiculo.ras_eve_longitude).toFixed(6)}
+                            </p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            document.getElementById('vehicle-modal').classList.add('active');
+        }
+
+        // Fechar Modal do Veículo
+        function closeVehicleModal() {
+            document.getElementById('vehicle-modal').classList.remove('active');
+            currentVehicle = null;
+        }
+
+        // Abrir Câmera do Veículo (usando mesmo padrão das outras telas)
+        function openVehicleCamera() {
+            if (!currentVehicle || !currentVehicle.camera_url) {
+                Toast.show('Câmera não disponível para este veículo', 'warning');
+                return;
+            }
+
+            document.getElementById('vehicle-camera-modal').classList.add('active');
+            
+            const container = document.querySelector('#vehicle-camera-modal .camera-preview');
+            if (!container) return;
+            
+            // Limpar container
+            container.innerHTML = '';
+            
+            // Criar vídeo
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.setAttribute('webkit-playsinline', '');
+            video.setAttribute('preload', 'metadata');
+            
+            container.appendChild(video);
+            
+            // Usar HLS.js como nas outras telas
+            if (Hls.isSupported()) {
+                if (window.currentVehicleHls) {
+                    window.currentVehicleHls.destroy();
+                }
+                
+                window.currentVehicleHls = new Hls({
+                    debug: true, // Ativar debug para ver logs
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90,
+                    xhrSetup: function(xhr, url) {
+                        // Adicionar cabeçalhos CORS
+                        xhr.withCredentials = false;
+                    }
+                });
+                
+                window.currentVehicleHls.loadSource(currentVehicle.camera_url);
+                window.currentVehicleHls.attachMedia(video);
+                
+                window.currentVehicleHls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('❌ Erro HLS:', data);
+                    
+                    if (data.fatal) {
+                        console.error('Erro fatal:', data.type, data.details);
+                        
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('🔄 Tentando reconectar...');
+                                window.currentVehicleHls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('🔄 Tentando recuperar erro de mídia...');
+                                window.currentVehicleHls.recoverMediaError();
+                                break;
+                            default:
+                                console.error('❌ Erro não recuperável:', data);
+                                mostrarErro(container, 'Erro ao carregar o stream. Tente novamente.');
+                                closeVehicleCameraModal();
+                                break;
+                        }
+                    }
+                });
+                
+                // Adicionar mais logs
+                window.currentVehicleHls.on(Hls.Events.MANIFEST_LOADING, () => {
+                    console.log('📡 Carregando manifest...');
+                });
+                
+                window.currentVehicleHls.on(Hls.Events.LEVEL_LOADED, () => {
+                    console.log('✅ Nível carregado');
+                });
+                
+                window.currentVehicleHls.on(Hls.Events.FRAG_LOADED, () => {
+                    console.log('📦 Fragmento carregado');
+                });
+                
+                window.currentVehicleHls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('✅ Stream HLS carregado com sucesso');
+                    video.play().catch(e => {
+                        console.error('Erro ao iniciar vídeo:', e);
+                        mostrarErro(container, 'Erro ao iniciar reprodução do vídeo');
+                    });
+                });
+                
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = currentVehicle.camera_url;
+                video.addEventListener('error', () => {
+                    console.error('Erro de vídeo nativo');
+                    mostrarErro(container, 'Erro ao carregar o stream');
+                });
+            } else {
+                mostrarErro(container, 'Seu navegador não suporta a reprodução deste vídeo');
+            }
+        }
+
+        // Fechar Modal da Câmera do Veículo
+        function closeVehicleCameraModal() {
+            document.getElementById('vehicle-camera-modal').classList.remove('active');
+            
+            // Destruir HLS.js se estiver ativo
+            if (window.currentVehicleHls) {
+                window.currentVehicleHls.destroy();
+                window.currentVehicleHls = null;
+            }
+            
+            // Limpar container
+            const container = document.querySelector('#vehicle-camera-modal .camera-preview');
+            if (container) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <i class="ph ph-video text-4xl text-gray-400"></i>
+                        <p class="text-gray-500">Selecione um veículo para visualizar a câmera</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Fechar modal clicando fora
+        document.addEventListener('click', (e) => {
+            const vehicleCameraModal = document.getElementById('vehicle-camera-modal');
+            const vehicleModal = document.getElementById('vehicle-modal');
+            
+            if (e.target === vehicleCameraModal) {
+                closeVehicleCameraModal();
+            }
+            
+            if (e.target === vehicleModal) {
+                closeVehicleModal();
+            }
+        });
+
+
+
         // Inicialização
         document.addEventListener('DOMContentLoaded', async () => {
-            await buscarCidadeUsuario();
-            await carregarPermissoesEscolas();
-            await carregarEscolas();
-            await carregarCameras();
+            try {
+                await buscarCidadeUsuario();
+                await carregarPermissoesEscolas();
+                await carregarEscolas();
+                await carregarCameras();
+            } catch (error) {
+                console.error('❌ Erro no carregamento inicial:', error);
+                // Resetar flag em caso de erro
+                dadosCamerasCarregados = false;
+            }
             
             // Eventos dos Filtros
             document.getElementById('escola-filter').addEventListener('change', (e) => {
                 filtros.escola = e.target.value;
-                aplicarFiltros();
+                console.log('🏫 Escola alterada para:', filtros.escola);
+                
+                // Aplicar filtros (apenas para câmeras, veículos mostram todos)
+                if (filtros.tipo !== 'VEICULO') {
+                    aplicarFiltros();
+                }
             });
 
-            // Eventos dos cards de tipo de câmera
+            // Eventos dos cards de tipo de visualização
             const cardTipoCidade = document.getElementById('tipo-cidade');
             const cardTipoEscola = document.getElementById('tipo-escola');
+            const cardTipoVeiculo = document.getElementById('tipo-veiculo');
 
             function atualizarSelecaoTipo(card) {
                 // Remover seleção de todos os cards
-                [cardTipoCidade, cardTipoEscola].forEach(c => {
+                [cardTipoCidade, cardTipoEscola, cardTipoVeiculo].forEach(c => {
                     c.classList.remove('bg-blue-50', 'border-primary');
                     c.classList.add('bg-gray-50');
                     c.querySelector('.ph-check-circle-fill').parentElement.classList.add('hidden');
@@ -770,35 +2062,45 @@
                     card.querySelector('.ph-check-circle-fill').parentElement.classList.remove('hidden');
                 }
             }
+            
+
 
             cardTipoCidade.addEventListener('click', () => {
                 const tipoAtual = cardTipoCidade.dataset.tipo; // 'SITE'
-                if (filtros.tipo === tipoAtual) {
-                    filtros.tipo = '';
-                    atualizarSelecaoTipo(null);
-                    console.log('🔘 Filtro de tipo removido');
-                } else {
-                    filtros.tipo = tipoAtual;
-                    atualizarSelecaoTipo(cardTipoCidade);
-                    console.log('🌆 Filtro aplicado: Câmeras da Cidade (SITE)');
-                }
+                // Sempre aplicar filtro SITE (não permite desmarcar)
+                filtros.tipo = tipoAtual;
+                atualizarSelecaoTipo(cardTipoCidade);
+                console.log('🌆 Filtro aplicado: Câmeras da Cidade (SITE)');
                 aplicarFiltros();
             });
 
             cardTipoEscola.addEventListener('click', () => {
                 const tipoAtual = cardTipoEscola.dataset.tipo; // 'ESCOLA'
-                if (filtros.tipo === tipoAtual) {
-                    filtros.tipo = '';
-                    atualizarSelecaoTipo(null);
-                    console.log('🔘 Filtro de tipo removido');
-                } else {
-                    filtros.tipo = tipoAtual;
-                    atualizarSelecaoTipo(cardTipoEscola);
-                    console.log('🏫 Filtro aplicado: Câmeras das Escolas (ESCOLA)');
-                }
+                // Sempre aplicar filtro ESCOLA (não permite desmarcar)
+                filtros.tipo = tipoAtual;
+                atualizarSelecaoTipo(cardTipoEscola);
+                console.log('🏫 Filtro aplicado: Câmeras das Escolas (ESCOLA)');
                 aplicarFiltros();
+            });
+
+            cardTipoVeiculo.addEventListener('click', () => {
+                // Sempre aplicar filtro de veículos (não permite desmarcar)
+                filtros.tipo = 'VEICULO';
+                atualizarSelecaoTipo(cardTipoVeiculo);
+                console.log('🚌 Carregando TODOS os veículos');
+                aplicarFiltros();
+            });
+
+            // Limpar timer quando a página for fechada
+            window.addEventListener('beforeunload', () => {
+                if (vehicleUpdateTimer) {
+                    clearInterval(vehicleUpdateTimer);
+                }
             });
         });
     </script>
+    
+    <!-- Script de navegação mobile -->
+    <script src="botoes_profi.js"></script>
 </body>
 </html>
