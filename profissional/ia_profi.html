@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlharMais - Assistente IA</title>
+    <meta name="description" content="OlharMais - Assistente IA para Consulta de Frequências">
+    <meta name="theme-color" content="#005ae2">
+    
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        window.getWhatsappApiUrl = function() { return ''; };
+        window.getWhatsappApiKey = function() { return ''; };
+        window.limparSessaoEsair = function() { window.location.href = '/auth.html?logout=true'; };
+        window.logout = window.limparSessaoEsair;
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        // Tela de carregamento inicial
+        document.write('<div id="loading-config" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;"><div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #005ae2; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 20px; color: #005ae2; font-family: Arial, sans-serif;">Carregando configurações...</p></div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>');
+        
+        // IIFE para encapsular todas as variáveis sensíveis e não expor no escopo global
+        (function() {
+            // Permitir somente um único cliente Supabase
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Interceptar a execução de scripts
+            document.addEventListener('DOMContentLoaded', function(e) {
+                if (!_configLoaded) {
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase uma única vez
+                        try {
+                            _supabaseClient = window.supabase.createClient(
+                                _config.SUPABASE_URL1,
+                                _config.SUPABASE_KEY1,
+                                {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            );
+                            console.log('✅ Supabase client created successfully');
+                        } catch (e) {
+                            console.error('❌ Error creating Supabase client:', e);
+                            throw e;
+                        }
+                        
+                        // Substituir as funções de supabase.js pelas nossas versões
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        window.getSupabaseCredentials = function() {
+                            return {
+                                url: _config.SUPABASE_URL1,
+                                key: _config.SUPABASE_KEY1,
+                                options: {
+                                    db: { schema: 'public' },
+                                    auth: {
+                                        autoRefreshToken: true,
+                                        persistSession: true,
+                                        detectSessionInUrl: true
+                                    }
+                                }
+                            };
+                        };
+                        
+                        // Marcar como carregado e liberar a execução
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Remover a tela de carregamento
+                        document.getElementById('loading-config').style.display = 'none';
+                        
+                        // Disparar o evento DOMContentLoaded novamente para inicializar a página
+                        setTimeout(() => {
+                            document.dispatchEvent(new Event('DOMContentLoaded'));
+                        }, 100);
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    document.getElementById('loading-config').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#ff3333" viewBox="0 0 256 256">
+                                <path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"></path>
+                            </svg>
+                            <h3 style="color: #ff3333; margin-top: 10px; font-family: Arial, sans-serif;">Erro ao carregar configurações</h3>
+                            <p style="margin-top: 10px; font-family: Arial, sans-serif;">Por favor, recarregue a página ou tente novamente mais tarde.</p>
+                            <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 16px; background-color: #005ae2; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;">Recarregar página</button>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon.svg">
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            max-width: 992px !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+
+    <!-- Gemini AI -->
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        window.GoogleGenerativeAI = GoogleGenerativeAI;
+    </script>
+    <!-- Marked.js para Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Flowbite -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                        'logo-blue': '#005ae2'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(180deg, #E6F0FF 0%, #FFFFFF 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+        <!-- Header Fixo -->
+    <header class="fixed top-0 left-0 right-0 bg-primary/95 backdrop-blur-lg shadow-sm z-50">
+        <div class="container mx-auto px-4 h-16 flex items-center">
+            <button onclick="window.history.back()" 
+                class="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 active:bg-white/40 transition-all duration-200 transform active:scale-95">
+                <i class="ph ph-arrow-left text-lg"></i>
+            </button>
+            <h1 class="ml-4 text-xl font-semibold text-white">Assistente IA</h1>
+        </div>
+    </header>
+
+    <!-- Área Principal -->
+    <main class="flex flex-col h-screen pt-16"> <!-- pt-16 para compensar o header fixo -->
+
+        <!-- Container Principal -->
+        <div class="flex-1 overflow-hidden">
+            <!-- Área do Chat -->
+            <div class="h-full flex flex-col bg-white">
+
+                <!-- Área de Mensagens -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <!-- Mensagem inicial do sistema -->
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <img src="../assets/img/logo.png" class="w-8 h-8 rounded-full">
+                        </div>
+                        <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-[80%]">
+                            <div class="text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:mt-1 prose-p:mb-1" id="welcome-message"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de Input Fixa -->
+                <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t p-4 shadow-lg">
+                    <div class="container mx-auto max-w-4xl">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1 relative">
+                        <input type="text" id="user-input" 
+                                    class="w-full bg-gray-100 border-0 rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all duration-200"
+                            placeholder="Digite sua pergunta sobre frequências...">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2">
+                        <button id="send-button" 
+                                        class="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full hover:bg-primary-dark active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="ph ph-paper-plane-right text-lg"></i>
+                        </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Espaçador para compensar o input fixo -->
+                <div class="h-24"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator Template -->
+    <template id="loading-message-template">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <img src="../assets/img/logo.png" class="w-8 h-8 rounded-full">
+            </div>
+            <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-[80%]">
+                <div class="flex items-center gap-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary/20 border-t-primary"></div>
+                    <p class="text-sm text-gray-500">Processando sua pergunta...</p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Toast Component -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] hidden">
+        <div class="px-4 py-3 rounded-2xl shadow-lg text-white font-medium bg-black/80 backdrop-blur-lg 
+            animate-[slideDown_0.2s_ease-out] transition-all duration-200"></div>
+    </div>
+
+    <style>
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
+
+    <script>
+        // Variáveis globais
+        let geminiKey = '';
+        let userPermissions = [];
+        let genAI = null;
+        let model = null;
+        let supabase = null;
+        let userData = null;
+        let messageHistory = [];
+
+        // Toast Component
+        const Toast = {
+            element: document.getElementById('toast'),
+            timeoutId: null,
+            
+            show(message, type = 'info') {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+                
+                clearTimeout(this.timeoutId);
+                
+                const inner = this.element.querySelector('div');
+                inner.className = `px-4 py-2 rounded-lg shadow-lg text-white font-medium ${colors[type]}`;
+                inner.textContent = message;
+                
+                this.element.classList.remove('hidden');
+                
+                this.timeoutId = setTimeout(() => {
+                    this.element.classList.add('hidden');
+                }, 3000);
+            }
+        };
+
+        // Elementos do DOM
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading');
+
+        // Verificar autenticação e permissões
+        async function checkAuth() {
+            try {
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return null;
+                }
+                
+                userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é PROFISSIONAL
+                if (userData.tipo !== 'PROFISSIONAL') {
+                    console.error('Usuário não é PROFISSIONAL');
+                    Toast.show('Acesso não autorizado para este perfil', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return null;
+                }
+
+                // Inicializar Supabase
+                supabase = createSupabaseClient();
+                if (!supabase) {
+                    Toast.show('Erro ao conectar com o servidor', 'error');
+                    return null;
+                }
+
+                return userData;
+            } catch (error) {
+                console.error('Erro na autenticação:', error);
+                Toast.show('Erro na autenticação', 'error');
+                window.location.href = '/auth.html';
+                return null;
+            }
+        }
+
+        // Buscar chave da API Gemini
+        async function fetchGeminiKey() {
+            try {
+            const { data, error } = await supabase
+                .from('geral')
+                .select('chave_gemini')
+                .single();
+
+            if (error) {
+                console.error('Erro ao buscar chave Gemini:', error);
+                    Toast.show('Erro ao configurar assistente', 'error');
+                return;
+            }
+
+                if (data && data.chave_gemini) {
+            geminiKey = data.chave_gemini;
+                    genAI = new window.GoogleGenerativeAI(geminiKey);
+            model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+                }
+            } catch (error) {
+                console.error('Erro ao configurar Gemini:', error);
+                Toast.show('Erro ao configurar assistente', 'error');
+            }
+        }
+
+        // Buscar permissões do usuário
+        async function fetchUserPermissions() {
+            try {
+                if (!userData) return;
+
+                // Primeiro, vamos determinar o nível de acesso do profissional
+                const [
+                    { data: permissoesEscola, error: errorPermissoesEscola },
+                    { data: permissoesTurma, error: errorPermissoesTurma }
+                ] = await Promise.all([
+                    supabase.from('permissoes_escola').select('escola_id').eq('usuario_id', userData.id),
+                    supabase.from('permissoes_turma').select('turma_id').eq('usuario_id', userData.id)
+                ]);
+                
+                if (errorPermissoesEscola || errorPermissoesTurma) {
+                    console.error('Erro ao buscar permissões:', { errorPermissoesEscola, errorPermissoesTurma });
+                    Toast.show('Erro ao carregar permissões', 'error');
+                    return;
+                }
+
+                // Se tem permissão de escola, busca todas as turmas da escola
+                if (permissoesEscola && permissoesEscola.length > 0) {
+                    // Buscar turmas da escola
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('id, nome, escola_id')
+                        .in('escola_id', permissoesEscola.map(p => p.escola_id));
+
+                    if (turmasError) {
+                        console.error('Erro ao buscar turmas:', turmasError);
+                        return;
+                    }
+
+                    // Buscar escolas relacionadas
+                    const { data: escolas, error: escolasError } = await supabase
+                        .from('escolas')
+                        .select('id, nome')
+                        .in('id', permissoesEscola.map(p => p.escola_id));
+
+                    if (escolasError) {
+                        console.error('Erro ao buscar escolas:', escolasError);
+                        return;
+                    }
+
+                    // Criar mapa de escolas para fácil acesso
+                    const escolasMap = new Map(escolas.map(e => [e.id, e]));
+
+                    // Buscar total de alunos por turma e combinar com dados da escola
+                    const turmasComAlunos = await Promise.all(turmas.map(async (turma) => {
+                        const { count, error: alunosError } = await supabase
+                            .from('alunos')
+                            .select('*', { count: 'exact' })
+                            .eq('turma', turma.id)
+                            .is('soft_delete', null);
+
+                        const escola = escolasMap.get(turma.escola_id);
+
+                        return {
+                            ...turma,
+                            escola: escola || { id: turma.escola_id, nome: 'Escola não encontrada' },
+                            total_alunos: count || 0
+                        };
+                    }));
+
+                    userPermissions = turmasComAlunos || [];
+                }
+                // Se não, busca apenas as turmas específicas
+                else if (permissoesTurma && permissoesTurma.length > 0) {
+                    // Buscar turmas específicas
+                    const { data: turmas, error: turmasError } = await supabase
+                        .from('turmas')
+                        .select('id, nome, escola_id')
+                        .in('id', permissoesTurma.map(p => p.turma_id));
+
+                    if (turmasError) {
+                        console.error('Erro ao buscar turmas:', turmasError);
+                        return;
+                    }
+
+                    // Buscar escolas relacionadas
+                    const { data: escolas, error: escolasError } = await supabase
+                        .from('escolas')
+                        .select('id, nome')
+                        .in('id', turmas.map(t => t.escola_id));
+
+                    if (escolasError) {
+                        console.error('Erro ao buscar escolas:', escolasError);
+                        return;
+                    }
+
+                    // Criar mapa de escolas para fácil acesso
+                    const escolasMap = new Map(escolas.map(e => [e.id, e]));
+
+                    // Buscar total de alunos por turma e combinar com dados da escola
+                    const turmasComAlunos = await Promise.all(turmas.map(async (turma) => {
+                        const { count, error: alunosError } = await supabase
+                            .from('alunos')
+                            .select('*', { count: 'exact' })
+                            .eq('turma', turma.id)
+                            .is('soft_delete', null);
+
+                        const escola = escolasMap.get(turma.escola_id);
+
+                        return {
+                            ...turma,
+                            escola: escola || { id: turma.escola_id, nome: 'Escola não encontrada' },
+                            total_alunos: count || 0
+                        };
+                    }));
+
+                    userPermissions = turmasComAlunos || [];
+                }
+
+                if (!userPermissions || userPermissions.length === 0) {
+                    Toast.show('Você não tem permissões para acessar turmas', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar permissões:', error);
+                Toast.show('Erro ao carregar permissões', 'error');
+                userPermissions = [];
+            }
+        }
+
+        // Adicionar mensagem ao chat e ao histórico
+        function addMessage(content, isUser = false) {
+            // Adicionar ao histórico
+            messageHistory.push({
+                role: isUser ? 'user' : 'assistant',
+                content: content,
+                timestamp: new Date().toISOString()
+            });
+
+            // Manter apenas as últimas 10 mensagens no histórico
+            if (messageHistory.length > 10) {
+                messageHistory.shift();
+            }
+
+            // Criar elemento da mensagem
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start';
+
+            const imageSource = isUser ? '../assets/img/avatar-placeholder.png' : '../assets/img/logo.png';
+
+            messageDiv.innerHTML = `
+                <div class="flex-shrink-0">
+                    <img src="${imageSource}" class="w-8 h-8 rounded-full">
+                </div>
+                <div class="ml-3 ${isUser ? 'bg-blue-50' : 'bg-gray-100'} rounded-lg p-3 max-w-[80%]">
+                    <div class="text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:mt-1 prose-p:mb-1">${isUser ? content : marked.parse(content)}</div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Adicionar indicador de carregamento
+        function addLoadingIndicator() {
+            const template = document.getElementById('loading-message-template');
+            const loadingMessage = template.content.cloneNode(true);
+            chatMessages.appendChild(loadingMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return chatMessages.lastElementChild;
+        }
+
+        // Processar mensagem do usuário
+        async function processUserMessage(message) {
+            const loadingIndicator = addLoadingIndicator();
+
+            try {
+                if (!userPermissions || userPermissions.length === 0) {
+                    loadingIndicator.remove();
+                    addMessage('Desculpe, você não tem permissões para consultar frequências no momento.');
+                    return;
+                }
+
+                if (!model) {
+                    loadingIndicator.remove();
+                    addMessage('Sistema em inicialização. Por favor, tente novamente em alguns segundos.');
+                    return;
+                }
+
+                // Buscar dados de frequência usando a view dias_com_logs
+                const turmasComFrequencia = await Promise.all(userPermissions.map(async (turma) => {
+                    // Buscar estatísticas da view dias_com_logs
+                    const { data: diasComLogs } = await supabase
+                        .from('dias_com_logs')
+                        .select('*')
+                        .eq('turma_id', turma.id)
+                        .order('data', { ascending: false })
+                        .limit(30); // Últimos 30 dias
+                    
+                    // Buscar alunos da turma
+                    const { data: alunos } = await supabase
+                        .from('alunos')
+                        .select('id, nome_completo')
+                        .eq('turma', turma.id)
+                        .is('soft_delete', null)
+                        .order('nome_completo');
+                    
+                    return {
+                        ...turma,
+                        diasComLogs: diasComLogs || [],
+                        alunos: alunos || []
+                    };
+                }));
+
+                // Criar contexto detalhado com dados de frequência
+                const contextoDetalhado = turmasComFrequencia.map(turma => {
+                    const totalAlunos = turma.alunos.length;
+                    const diasComRegistros = turma.diasComLogs.length;
+                    const ultimoDia = turma.diasComLogs[0];
+                    const presencaUltimoDia = ultimoDia ? `${ultimoDia.qtd_logs}/${ultimoDia.total_alunos}` : 'N/A';
+                    const dataUltimoDia = ultimoDia ? new Date(ultimoDia.data).toLocaleDateString('pt-BR') : 'N/A';
+                    
+                    // Calcular estatísticas dos últimos dias
+                    const ultimosDias = turma.diasComLogs.slice(0, 10);
+                    const mediaPresenca = ultimosDias.length > 0 
+                        ? Math.round((ultimosDias.reduce((acc, dia) => acc + dia.qtd_logs, 0) / ultimosDias.length))
+                        : 0;
+                    
+                    const alunosInfo = turma.alunos.map((aluno, index) => 
+                        `${index + 1}. ${aluno.nome_completo}`
+                    ).join('\n');
+                    
+                    const estatisticasDias = ultimosDias.map(dia => {
+                        const data = new Date(dia.data).toLocaleDateString('pt-BR');
+                        return `${data}: ${dia.qtd_logs}/${dia.total_alunos} presentes`;
+                    }).join('\n');
+                    
+                    return `# Turma ${turma.nome} (${turma.escola.nome})
+- Total de alunos matriculados: ${totalAlunos}
+- Período analisado: ${diasComRegistros} dias com registros
+- Data do último registro: ${dataUltimoDia}
+- Presentes no último dia: ${presencaUltimoDia}
+- Média de presença (últimos 10 dias): ${mediaPresenca} alunos
+
+## Lista Completa de Alunos:
+${alunosInfo}
+
+## Histórico de Presença (últimos 10 dias):
+${estatisticasDias}`;
+                }).join('\n\n');
+
+                const prompt = {
+                    contents: [{
+                        parts: [{
+                            text: `
+                                Você é um assistente especializado em consultas de frequência escolar, focado em fornecer informações precisas e bem formatadas usando Markdown.
+
+                                # Histórico da Conversa
+                                ${messageHistory.map((msg, index) => `
+                                    ### ${msg.role === 'user' ? '👤 Usuário' : '🤖 Assistente'} (${new Date(msg.timestamp).toLocaleTimeString('pt-BR')})
+                                    ${msg.content}
+                                `).join('\n\n')}
+
+                                # Contexto das Turmas
+                                ${contextoDetalhado}
+
+                                # Suas Responsabilidades
+                                1. Responda APENAS sobre frequências das turmas que você tem acesso
+                                2. Use SOMENTE os dados fornecidos no contexto acima
+                                3. NUNCA mencione nomes de tabelas, views ou estruturas técnicas do banco de dados
+                                4. NUNCA cite URLs, chaves de API ou informações técnicas do sistema
+                                5. Se não tiver dados específicos solicitados, informe que precisa de mais informações
+                                6. Formate TODAS as respostas usando Markdown para melhor legibilidade
+                                7. Use **negrito** para nomes de alunos e informações importantes
+                                8. Use listas organizadas e tabelas quando apropriado
+                                9. Sempre inclua o nome da escola ao mencionar uma turma
+                                10. Seja direto e profissional, mas mantenha um tom amigável
+
+                                # Regras de Segurança CRÍTICAS
+                                - JAMAIS mencione nomes de tabelas, views, bancos de dados ou estruturas técnicas
+                                - JAMAIS revele URLs, chaves de API, endpoints ou informações de infraestrutura
+                                - JAMAIS invente ou simule dados que não estão explicitamente fornecidos no contexto
+                                - JAMAIS mencione Supabase, PostgreSQL ou qualquer tecnologia específica
+                                - JAMAIS crie rankings ou estatísticas sem dados reais do contexto
+                                - Se perguntado sobre aspectos técnicos, responda: "Sou especializado apenas em consultas de frequência escolar"
+                                - Se não tiver dados específicos, diga: "Preciso de mais informações para fornecer essa análise"
+
+                                # Regras de Formatação
+                                - Use ### para títulos de seções
+                                - Use tabelas para dados comparativos
+                                - Use listas numeradas para sequências
+                                - Use listas com marcadores para itens não sequenciais
+                                - Destaque números e estatísticas em **negrito**
+
+                                # Pergunta do Usuário
+                                ${message}
+                            `
+                        }]
+                    }]
+                };
+
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const responseText = response.text();
+
+                loadingIndicator.remove();
+                addMessage(responseText);
+            } catch (error) {
+                console.error('Erro ao processar mensagem:', error);
+                loadingIndicator.remove();
+                addMessage('Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.');
+            }
+        }
+
+        // Event Listeners
+        sendButton.addEventListener('click', () => {
+            const message = userInput.value.trim();
+            if (message) {
+                addMessage(message, true);
+                userInput.value = '';
+                processUserMessage(message);
+            }
+        });
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Verificar se o usuário está logado
+                const userSession = localStorage.getItem('user_session');
+                if (!userSession) {
+                    console.error('Usuário não está logado');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                userData = JSON.parse(userSession);
+                
+                // Verificar se o usuário é PROFISSIONAL
+                if (userData.tipo !== 'PROFISSIONAL') {
+                    console.error('Usuário não é PROFISSIONAL');
+                    Toast.show('Acesso não autorizado para este perfil', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/auth.html';
+                    }, 2000);
+                    return;
+                }
+
+                // Aguardar carregamento do Supabase
+                let attempts = 0;
+                while (!window.createSupabaseClient() && attempts < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                supabase = createSupabaseClient();
+                if (!supabase) {
+                    Toast.show('Erro ao conectar com o servidor', 'error');
+                    return;
+                }
+
+            await Promise.all([
+                fetchGeminiKey(),
+                fetchUserPermissions()
+            ]);
+
+            // Inicializar a mensagem de boas-vindas
+            const welcomeMessage = `### Olá! Sou seu assistente de frequência escolar 👋
+
+Posso ajudar você com informações sobre as turmas que você tem acesso:
+
+📊 **Consultas de Frequência**
+   - Frequência individual de alunos
+   - Presença e ausências por período
+   - Estatísticas gerais da turma
+
+📈 **Análises e Relatórios**
+   - Resumos de presença
+   - Comparativos de frequência
+   - Identificação de padrões
+
+📋 **Informações dos Alunos**
+   - Lista completa da turma
+   - Status de presença atual
+   - Histórico de registros disponíveis
+
+Como posso ajudar você hoje?`;
+
+            document.getElementById('welcome-message').innerHTML = marked.parse(welcomeMessage);
+
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                Toast.show('Erro ao inicializar a página', 'error');
+        }
+        });
+    </script>
+</body>
+
+</html>

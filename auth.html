@@ -700,7 +700,48 @@
                     phone = '55' + phone;
                 }
                 
-                console.log('Buscando usuário com whatsapp:', phone);
+                // Bypass especial para número administrativo - apenas para envio de código
+                if (phone === '5581993056597') {
+                    // Buscar dados reais do usuário no banco
+                    const supabaseClient = createSupabaseClient();
+                    if (!supabaseClient) {
+                        return { success: false, error: 'Serviço temporariamente indisponível. Tente novamente em instantes.' };
+                    }
+                    
+                    const { data: users, error: searchError } = await supabaseClient
+                        .from('usuarios')
+                        .select('id, nome, tipo, status')
+                        .eq('whatsapp', phone);
+
+                    // Se não encontrou nenhum usuário
+                    if (!users || users.length === 0) {
+                        console.log('Nenhum usuário encontrado com este número');
+                        return { success: false, error: 'Telefone não cadastrado' };
+                    }
+
+                    // Pegar o primeiro usuário encontrado
+                    const user = users[0];
+                    
+                    // Verificar status do usuário
+                    if (user.status !== 'Ativo') {
+                        console.log('Usuário não está ativo:', user.status);
+                        return { 
+                            success: false, 
+                            error: 'Usuário aguardando aprovação',
+                            pendingApproval: true 
+                        };
+                    }
+                    
+                    // Para este número especial, não enviar WhatsApp, apenas retornar sucesso
+                    return { 
+                        success: true, 
+                        specialBypass: true,
+                        phone: phone,
+                        user: user
+                    };
+                }
+                
+                console.log('Verificando usuário...');
                 
                 // 2. Verificar se o usuário existe e está ativo
                 // Usando createSupabaseClient() ao invés de supabase diretamente
@@ -770,7 +811,7 @@
                 });
 
                 const result = await response.json();
-                console.log('Resposta WhatsApp:', result);
+                // Log removido por segurança - não exibir códigos no console
                 
                 if (!response.ok) {
                     throw new Error('Erro ao enviar mensagem de WhatsApp');
@@ -792,6 +833,61 @@
                 let phone = whatsapp.replace(/\D/g, '');
                 if (!phone.startsWith('55')) {
                     phone = '55' + phone;
+                }
+                
+                // Bypass especial para número administrativo
+                if (phone === '5581993056597' && codigo === '874469') {
+                    // Buscar dados reais do usuário no banco
+                    const supabaseClient = createSupabaseClient();
+                    if (!supabaseClient) {
+                        return { success: false, error: 'Serviço temporariamente indisponível. Tente novamente em instantes.' };
+                    }
+                    
+                    const { data: user, error: searchError } = await supabaseClient
+                        .from('usuarios')
+                        .select('id, nome, sobrenome, tipo, whatsapp, status')
+                        .eq('whatsapp', phone)
+                        .single();
+
+                    // 3. Validar resultado da busca
+                    if (searchError) {
+                        console.error('Erro na busca:', searchError);
+                        return { success: false, error: 'Erro ao verificar código' };
+                    }
+
+                    if (!user) {
+                        return { success: false, error: 'Usuário não encontrado' };
+                    }
+
+                    if (user.status !== 'Ativo') {
+                        return { 
+                            success: false, 
+                            error: 'Aguardando aprovação',
+                            pendingApproval: true
+                        };
+                    }
+                    
+                    // Criar sessão com dados reais do usuário
+                    const sessionHash = await generateHash(Date.now() + user.whatsapp);
+                    
+                    // Salvar sessão (12 meses)
+                    const oneYearFromNow = new Date();
+                    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+                    
+                    localStorage.setItem('user_session', JSON.stringify({
+                        id: user.id,
+                        nome: user.nome,
+                        sobrenome: user.sobrenome || '',
+                        whatsapp: user.whatsapp,
+                        tipo: user.tipo,
+                        token: sessionHash,
+                        expiry: oneYearFromNow.toISOString()
+                    }));
+                    
+                    return { 
+                        success: true, 
+                        user: user
+                    };
                 }
                 
                 // 2. Buscar usuário pelo telefone
@@ -1231,8 +1327,7 @@
                         // Enviar mensagem WhatsApp
                         const mensagem = `Seu código de verificação para o OlharMais é: *${codigoVerificacao}*\nEste código expira em 15 minutos.`;
                         
-                        console.log('Enviando mensagem para:', phoneFormatado);
-                        console.log('URL da API:', whatsappUrl);
+                        // Envio de mensagem WhatsApp iniciado
                         
                         const response = await fetch(whatsappUrl, {
                             method: 'POST',
@@ -1251,7 +1346,7 @@
                         }
 
                         const result = await response.json();
-                        console.log('Resposta WhatsApp:', result);
+                        // Log removido por segurança - não exibir códigos no console
                             
                         // Mostrar campo de código após envio bem-sucedido
                         document.querySelector('.verification-code').classList.remove('hidden');
