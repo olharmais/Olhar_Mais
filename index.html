@@ -199,7 +199,7 @@
         <div class="flex-1 flex flex-col md:hidden">
             <!-- Logo Section -->
             <div class="pt-10 px-6 text-center">
-                <h1 class="text-4xl font-extrabold mb-4">OlharMais</h1>
+                <h1 id="logo-click" class="text-4xl font-extrabold mb-4 select-none">OlharMais</h1>
                 <div class="relative w-40 h-40 mx-auto mt-4 mb-4 animate-float">
                     <svg class="w-full h-full" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                         <path fill="rgba(255, 255, 255, 0.1)" d="M44.2,-76.1C58.4,-69.7,71.7,-59.2,79.4,-45.3C87.1,-31.4,89.2,-14.2,87.6,2.3C86,18.8,80.7,34.6,71.5,47.5C62.3,60.4,49.1,70.3,34.7,75.7C20.3,81.1,4.6,81.9,-10.8,79.1C-26.2,76.3,-41.3,69.9,-54.1,60.1C-66.9,50.3,-77.3,37.1,-82.6,21.8C-87.9,6.5,-88,-10.8,-83.1,-26.5C-78.2,-42.2,-68.3,-56.2,-54.8,-62.8C-41.3,-69.4,-24.2,-68.6,-7.8,-67.1C8.7,-65.6,30,-82.5,44.2,-76.1Z" transform="translate(100 100)" />
@@ -237,7 +237,7 @@
         <div class="hidden md:flex flex-1 container mx-auto max-w-6xl px-4 py-12">
             <div class="grid grid-cols-2 gap-12 items-center">
                 <div class="space-y-8">
-                    <h1 class="text-5xl font-bold leading-tight">
+                    <h1 id="logo-click-desktop" class="text-5xl font-bold leading-tight select-none">
                         Facilitando sua<br>Gestão Escolar
                     </h1>
                     <p class="text-xl text-white/80">
@@ -308,6 +308,64 @@
             document.getElementById('cookie-banner').classList.add('hidden');
             showToast('Preferências salvas com sucesso!');
         });
+
+        // Função para detectar 5 cliques no logo
+        function setupLogoClick() {
+            let clickCount = 0;
+            let clickTimeout;
+
+            function handleLogoClick() {
+                clickCount++;
+                
+                // Reset do timeout a cada clique
+                clearTimeout(clickTimeout);
+                
+                // Timeout de 2 segundos para resetar o contador
+                clickTimeout = setTimeout(() => {
+                    clickCount = 0;
+                }, 2000);
+                
+                // Se chegou a 5 cliques, redireciona para vendas
+                if (clickCount === 5) {
+                    window.location.href = '/vendas.html';
+                }
+            }
+
+            // Remover eventos existentes para evitar duplicação
+            const logoMobile = document.getElementById('logo-click');
+            const logoDesktop = document.getElementById('logo-click-desktop');
+            
+            if (logoMobile) {
+                // Clonar e substituir o elemento para remover todos os event listeners
+                const newLogoMobile = logoMobile.cloneNode(true);
+                logoMobile.parentNode.replaceChild(newLogoMobile, logoMobile);
+                newLogoMobile.addEventListener('click', handleLogoClick);
+            }
+
+            if (logoDesktop) {
+                // Clonar e substituir o elemento para remover todos os event listeners
+                const newLogoDesktop = logoDesktop.cloneNode(true);
+                logoDesktop.parentNode.replaceChild(newLogoDesktop, logoDesktop);
+                newLogoDesktop.addEventListener('click', handleLogoClick);
+            }
+        }
+
+        // Inicializar quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLogoClick();
+        });
+
+        // Também inicializar quando a página for carregada (incluindo após logout)
+        window.addEventListener('load', function() {
+            setupLogoClick();
+        });
+
+        // Inicializar imediatamente se o DOM já estiver pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupLogoClick);
+        } else {
+            setupLogoClick();
+        }
     </script>
 </body>
 </html> 
