@@ -95,6 +95,79 @@
     <!-- Verificador de ícones -->
     <script src="/check-icons.js" type="module"></script>
     
+    <!-- Definições preliminares para evitar erros antes do carregamento -->
+    <script>
+        // Definir funções básicas para evitar erros de "is not defined"
+        window.createSupabaseClient = function() { 
+            console.warn("Cliente Supabase ainda não está disponível, aguarde carregamento"); 
+            return null; 
+        };
+        window.getSupabaseCredentials = function() { return { url: '', key: '', options: {} }; };
+        
+        // Sinalizar que estamos carregando
+        window._configLoading = true;
+    </script>
+    
+    <!-- Carregamento de configurações da Lambda -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // IIFE para encapsular todas as variáveis sensíveis
+        (function() {
+            let _supabaseClient = null;
+            let _config = null;
+            let _configLoaded = false;
+            
+            // Função para carregar as configurações
+            async function carregarConfiguracoes() {
+                try {
+                    const response = await fetch('https://vzen6sfiqy2f6hhazz4tcb64ka0stezf.lambda-url.us-east-1.on.aws/');
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        _config = result.data;
+                        
+                        // Criar cliente Supabase
+                        _supabaseClient = supabase.createClient(
+                            _config.SUPABASE_URL1,
+                            _config.SUPABASE_KEY1,
+                            {
+                                db: { schema: 'public' },
+                                auth: {
+                                    autoRefreshToken: true,
+                                    persistSession: true,
+                                    detectSessionInUrl: true
+                                }
+                            }
+                        );
+                        
+                        // Substituir as funções
+                        window.createSupabaseClient = function() {
+                            return _supabaseClient;
+                        };
+                        
+                        // Marcar como carregado
+                        _configLoaded = true;
+                        window._configLoading = false;
+                        
+                        // Disparar evento de configuração carregada
+                        window.dispatchEvent(new CustomEvent('supabaseReady'));
+                        
+                        return true;
+                    } else {
+                        throw new Error('Falha ao carregar configurações');
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar configurações:', error);
+                    window._configLoading = false;
+                    return false;
+                }
+            }
+            
+            // Inicializar imediatamente
+            carregarConfiguracoes();
+        })();
+    </script>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -271,6 +344,14 @@
         </div>
     </div>
 
+    <!-- Botão de Suporte Flutuante -->
+    <div id="support-button" class="fixed bottom-4 right-4 z-50">
+        <a href="https://wa.me/5514997996149" id="support-link" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group">
+            <i class="ph ph-whatsapp-logo text-lg"></i>
+            <span class="ml-2 text-xs font-medium">Suporte</span>
+        </a>
+    </div>
+
     <!-- Banner de Cookies -->
     <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg z-50 hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -350,14 +431,60 @@
             }
         }
 
+        // Função para carregar número de suporte
+        async function carregarSuporte() {
+            try {
+                console.log('Tentando carregar número de suporte da tabela...');
+                
+                // Aguardar carregamento das configurações se necessário
+                while (window._configLoading) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Verificar se o cliente Supabase está disponível
+                if (typeof createSupabaseClient === 'function') {
+                    const supabase = createSupabaseClient();
+                    if (supabase) {
+                        const { data: geral, error } = await supabase
+                            .from('geral')
+                            .select('suporte')
+                            .single();
+
+                        if (!error && geral && geral.suporte) {
+                            const numeroSuporte = geral.suporte;
+                            console.log('Número de suporte carregado da tabela:', numeroSuporte);
+                            
+                            const supportLink = document.getElementById('support-link');
+                            if (supportLink) {
+                                supportLink.href = `https://wa.me/${numeroSuporte}`;
+                                console.log('Link de suporte atualizado!');
+                            }
+                        } else {
+                            console.log('Usando número padrão de suporte');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Erro ao carregar número de suporte, usando padrão:', error);
+            }
+        }
+
+        // Listener para quando o Supabase estiver pronto
+        window.addEventListener('supabaseReady', function() {
+            console.log('Supabase pronto, atualizando número de suporte...');
+            carregarSuporte();
+        });
+
         // Inicializar quando o DOM estiver carregado
         document.addEventListener('DOMContentLoaded', function() {
             setupLogoClick();
+            carregarSuporte();
         });
 
-        // Também inicializar quando a página for carregada (incluindo após logout)
+        // Também inicializar quando a página for carregada
         window.addEventListener('load', function() {
             setupLogoClick();
+            carregarSuporte();
         });
 
         // Inicializar imediatamente se o DOM já estiver pronto
@@ -365,6 +492,7 @@
             document.addEventListener('DOMContentLoaded', setupLogoClick);
         } else {
             setupLogoClick();
+            carregarSuporte();
         }
     </script>
 </body>

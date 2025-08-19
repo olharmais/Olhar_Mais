@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Informações Básicas -->
+    <title>Funcionalidades OlharMais - Documentação Completa</title>
+    <meta name="description" content="Documentação completa de todas as funcionalidades do sistema OlharMais - Gestão escolar e segurança de alunos.">
+    <meta name="keywords" content="olharmais, funcionalidades, gestão escolar, documentação, sistema educacional">
+    <meta name="author" content="OlharMais">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/icons/icon-16x16.png">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://olharmais.com/funcionalidades-olharmais.html">
+    <meta property="og:title" content="Funcionalidades OlharMais - Documentação Completa">
+    <meta property="og:description" content="Documentação completa de todas as funcionalidades do sistema OlharMais - Gestão escolar e segurança de alunos.">
+    <meta property="og:image" content="https://olharmais.com/metatag.png">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://olharmais.com/funcionalidades-olharmais.html">
+    <meta property="twitter:title" content="Funcionalidades OlharMais - Documentação Completa">
+    <meta property="twitter:description" content="Documentação completa de todas as funcionalidades do sistema OlharMais - Gestão escolar e segurança de alunos.">
+    <meta property="twitter:image" content="https://olharmais.com/metatag.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#005ae2',
+                        'primary-light': '#E6F0FF',
+                        'primary-dark': '#004bc9',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Print Styles -->
+    <style>
+        @media print {
+            /* Ocultar elementos da interface web */
+            .no-print, header, nav, footer, .fixed, .sticky { 
+                display: none !important; 
+            }
+            
+            /* Reset completo para documento oficial */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                border-radius: 0 !important;
+                transition: none !important;
+                animation: none !important;
+            }
+            
+            /* Configuração do documento */
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-family: 'Arial', sans-serif !important;
+                font-size: 12px !important;
+                line-height: 1.5 !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            
+            /* Configuração da página */
+            @page {
+                size: A4;
+                margin: 2.5cm 2cm;
+                @top-center {
+                    content: "FUNCIONALIDADES OLHARMAIS - DOCUMENTAÇÃO OFICIAL";
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #666;
+                    border-bottom: 1px solid #ccc;
+                    padding-bottom: 5px;
+                }
+                @bottom-center {
+                    content: "Página " counter(page);
+                    font-size: 10px;
+                    color: #666;
+                }
+            }
+            
+            @page :first {
+                @top-center { content: none; }
+            }
+            
+            /* Container principal */
+            .container, main {
+                max-width: none !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Título principal do documento */
+            body::before {
+                content: "SISTEMA OLHARMAIS\\A DOCUMENTAÇÃO COMPLETA DE FUNCIONALIDADES\\A \\A ";
+                white-space: pre;
+                display: block;
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 30px;
+                padding: 20px 0;
+                border-bottom: 3px solid #000;
+                page-break-after: avoid;
+            }
+            
+            /* Índice automático */
+            body::after {
+                content: "\\A \\A ÍNDICE\\A \\A 1. Sistema Geral - Autenticação e Navegação\\A 2. Perfil Gestor - Prefeitos e Secretários\\A 3. Perfil Nutricionista - Acompanhamento Nutricional\\A 4. Perfil Profissional - Professores e Coordenadores\\A 5. Perfil Responsável - Pais e Responsáveis\\A 6. Perfil Estagiário - Cadastro de Alunos\\A \\A ";
+                white-space: pre;
+                display: block;
+                font-size: 14px;
+                margin: 20px 0;
+                padding: 15px;
+                border: 1px solid #000;
+                page-break-after: always;
+                order: -1;
+            }
+            
+            /* Seções principais */
+            section {
+                page-break-before: always !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            section:first-child {
+                page-break-before: auto !important;
+            }
+            
+            /* Títulos hierárquicos */
+            h1 {
+                font-size: 18px !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                margin: 0 0 20px 0 !important;
+                padding: 15px 0 10px 0 !important;
+                border-bottom: 2px solid #000 !important;
+                page-break-after: avoid !important;
+                color: #000 !important;
+                background: #f0f0f0 !important;
+            }
+            
+            h2 {
+                font-size: 16px !important;
+                font-weight: bold !important;
+                margin: 20px 0 12px 0 !important;
+                padding: 8px 0 5px 0 !important;
+                border-bottom: 1px solid #333 !important;
+                page-break-after: avoid !important;
+                color: #000 !important;
+                background: #f8f8f8 !important;
+            }
+            
+            h3 {
+                font-size: 14px !important;
+                font-weight: bold !important;
+                margin: 15px 0 8px 0 !important;
+                padding: 5px 0 !important;
+                page-break-after: avoid !important;
+                color: #000 !important;
+                text-decoration: underline !important;
+            }
+            
+            h4 {
+                font-size: 13px !important;
+                font-weight: bold !important;
+                margin: 12px 0 6px 0 !important;
+                page-break-after: avoid !important;
+                color: #000 !important;
+                font-style: italic !important;
+            }
+            
+            /* Parágrafos e texto */
+            p {
+                margin: 8px 0 !important;
+                text-align: justify !important;
+                line-height: 1.6 !important;
+                orphans: 3 !important;
+                widows: 3 !important;
+            }
+            
+            /* Listas */
+            ul, ol {
+                margin: 10px 0 10px 25px !important;
+                padding: 0 !important;
+            }
+            
+            li {
+                margin: 4px 0 !important;
+                page-break-inside: avoid !important;
+                line-height: 1.4 !important;
+            }
+            
+            /* Sublistas */
+            li ul, li ol {
+                margin: 5px 0 5px 20px !important;
+            }
+            
+            /* Texto em negrito e itálico */
+            strong, b {
+                font-weight: bold !important;
+                color: #000 !important;
+            }
+            
+            em, i {
+                font-style: italic !important;
+            }
+            
+            /* Código */
+            code {
+                font-family: 'Courier New', monospace !important;
+                font-size: 11px !important;
+                background: #f5f5f5 !important;
+                border: 1px solid #ddd !important;
+                padding: 2px 4px !important;
+                color: #000 !important;
+            }
+            
+            /* Tabelas */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin: 15px 0 !important;
+                font-size: 11px !important;
+                page-break-inside: avoid !important;
+            }
+            
+            th, td {
+                border: 1px solid #000 !important;
+                padding: 6px 8px !important;
+                text-align: left !important;
+                vertical-align: top !important;
+                background: #fff !important;
+                color: #000 !important;
+            }
+            
+            th {
+                background: #e0e0e0 !important;
+                font-weight: bold !important;
+                text-align: center !important;
+            }
+            
+            /* Remover todos os elementos visuais da web */
+            .bg-blue-50, .bg-green-50, .bg-yellow-50, .bg-purple-50,
+            .bg-red-50, .bg-indigo-50, .bg-pink-50, .bg-teal-50,
+            .bg-orange-50, .bg-cyan-50, .bg-gradient-to-r, .bg-white,
+            .profile-card, .rounded-lg, .rounded-xl, .shadow-sm,
+            .shadow-lg, .p-6, .p-8, .px-4, .py-2, .m-4, .mb-4,
+            .space-y-6, .space-y-8, .gap-6, .grid {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+                width: auto !important;
+                height: auto !important;
+            }
+            
+            /* Converter grids em listas */
+            .grid > div {
+                display: block !important;
+                margin: 8px 0 !important;
+                padding: 8px 0 !important;
+                border-bottom: 1px dotted #ccc !important;
+                page-break-inside: avoid !important;
+            }
+            
+            /* Remover ícones e substituir por bullets */
+            i, .ph {
+                display: none !important;
+            }
+            
+            /* Adicionar bullets nas listas que tinham ícones */
+            .flex.items-center:before,
+            .flex.items-start:before {
+                content: "• " !important;
+                font-weight: bold !important;
+                margin-right: 5px !important;
+            }
+            
+            /* Quebras de página inteligentes */
+            .page-break {
+                page-break-before: always !important;
+            }
+            
+            /* Evitar quebras inadequadas */
+            .space-y-8 > div,
+            .space-y-6 > div,
+            .space-y-4 > div,
+            .bg-gradient-to-r {
+                page-break-inside: avoid !important;
+                margin: 10px 0 !important;
+            }
+            
+            /* Links */
+            a {
+                color: #000 !important;
+                text-decoration: underline !important;
+            }
+            
+            /* Ocultar elementos específicos da interface */
+            .fade-in, .profile-card, .transition-all,
+            .hover\\:bg-primary, .hover\\:text-white,
+            .group-hover\\:opacity-100, .opacity-0 {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+            }
+            
+            /* Forçar layout em coluna única */
+            .md\\:grid-cols-2, .md\\:grid-cols-3, .md\\:grid-cols-4,
+            .lg\\:grid-cols-3, .lg\\:grid-cols-4, .flex, .flex-wrap {
+                display: block !important;
+                grid-template-columns: none !important;
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
+            
+            /* Espaçamento entre seções */
+            section + section {
+                margin-top: 0 !important;
+            }
+            
+            /* Numeração de seções */
+            #geral h2:before { content: "1. "; }
+            #gestor h2:before { content: "2. "; }
+            #nutricionista h2:before { content: "3. "; }
+            #profissional h2:before { content: "4. "; }
+            #responsavel h2:before { content: "5. "; }
+            #estagiario h2:before { content: "6. "; }
+        }
+        
+        .logo-olharmais {
+            background: linear-gradient(90deg, #005ae2 0%, #3988ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: #005ae2; /* Fallback color */
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .profile-card {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-primary to-primary-dark text-white py-8 no-print">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">Funcionalidades OlharMais</h1>
+                    <p class="text-xl text-blue-100">Documentação Completa do Sistema</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-4xl font-bold text-white px-6 py-3 rounded-lg ml-auto mr-0 pr-0">OlharMais</div>
+                    <p class="text-sm text-blue-200 mt-2 ml-auto mr-0 pr-0">Gestão Escolar e Segurança</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Botão Flutuante de Download PDF -->
+    <div class="fixed bottom-6 right-6 z-50 no-print">
+        <button id="printBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-full shadow-lg transition-colors duration-200 flex items-center justify-center">
+            <i class="ph ph-download text-xl text-white"></i>
+            <span class="ml-2 text-sm font-medium">Baixar PDF</span>
+        </button>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40 no-print">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-wrap gap-2 py-4">
+                <a href="#geral" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Sistema Geral</a>
+                <a href="#gestor" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Gestor</a>
+                <a href="#nutricionista" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Nutricionista</a>
+                <a href="#profissional" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Profissional</a>
+                <a href="#responsavel" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Responsável</a>
+                <a href="#estagiario" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">Estagiário</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Overview Section -->
+        <section class="mb-12 fade-in">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Visão Geral do Sistema</h2>
+                <p class="text-lg text-gray-600 mb-8">
+                    O <strong>OlharMais</strong> é uma plataforma completa de gestão escolar e segurança de alunos, 
+                    desenvolvida para atender diferentes perfis de usuários no ambiente educacional. 
+                    Cada perfil possui funcionalidades específicas e níveis de acesso adequados às suas necessidades.
+                </p>
+                
+                <!-- Profile Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Sistema Geral -->
+                    <div class="profile-card bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-globe text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Sistema Geral</h3>
+                        </div>
+                        <p class="text-blue-100 mb-4">Autenticação, cadastro e navegação inicial</p>
+                        <div class="flex items-center text-sm text-blue-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Login • Cadastro • PWA</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Gestor -->
+                    <div class="profile-card bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-crown text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Gestor</h3>
+                        </div>
+                        <p class="text-purple-100 mb-4">Prefeitos e Secretários - Acesso completo</p>
+                        <div class="flex items-center text-sm text-purple-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Dashboard • Câmeras • Relatórios</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Nutricionista -->
+                    <div class="profile-card bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-apple text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Nutricionista</h3>
+                        </div>
+                        <p class="text-green-100 mb-4">Acompanhamento nutricional e frequência</p>
+                        <div class="flex items-center text-sm text-green-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Frequência • Notificações • Fichas</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Profissional -->
+                    <div class="profile-card bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-graduation-cap text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Profissional</h3>
+                        </div>
+                        <p class="text-orange-100 mb-4">Professores e coordenadores educacionais</p>
+                        <div class="flex items-center text-sm text-orange-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Dashboard • IA • Câmeras</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Responsável -->
+                    <div class="profile-card bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-heart text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Responsável</h3>
+                        </div>
+                        <p class="text-pink-100 mb-4">Pais e responsáveis pelos alunos</p>
+                        <div class="flex items-center text-sm text-pink-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Frequência • Comunicados • Veículos</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Estagiário -->
+                    <div class="profile-card bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <i class="ph ph-student text-3xl mr-3"></i>
+                            <h3 class="text-xl font-bold">Estagiário</h3>
+                        </div>
+                        <p class="text-teal-100 mb-4">Cadastro e gestão de alunos</p>
+                        <div class="flex items-center text-sm text-teal-200">
+                            <i class="ph ph-check-circle mr-2"></i>
+                            <span>Cadastro • Fotos • Sincronização</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Sections will be added here -->
+        <!-- Sistema Geral Section -->
+        <section id="geral" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-blue-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-globe text-2xl text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Sistema Geral</h2>
+                        <p class="text-gray-600">Ponto de entrada principal do OlharMais</p>
+                    </div>
+                </div>
+                
+                <!-- Sistema Geral Content -->
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">📋 Visão Geral</h3>
+                        <p class="text-gray-600 mb-6">
+                            O <strong>Sistema Geral</strong> é o ponto de entrada principal do OlharMais, responsável pela autenticação, 
+                            cadastro e navegação inicial de todos os usuários. Possui funcionalidades de login, registro e redirecionamento 
+                            para os diferentes perfis do sistema.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">🏠 Página Inicial (Landing Page)</h3>
+                        <p class="text-gray-600 mb-4"><strong>Arquivo:</strong> <code class="bg-gray-100 px-2 py-1 rounded">index.html</code></p>
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-3">Funcionalidades:</h4>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Landing Page Responsiva:</strong> Interface adaptável para mobile e desktop</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Design Moderno:</strong> Gradiente azul com elementos flutuantes animados</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Logo Interativo:</strong> Logo clicável com easter egg (5 cliques redirecionam para vendas)</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Botões de Ação:</strong> "Nova Conta" e "Acessar Conta"</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Elementos Visuais:</strong> Ícone de olho animado, quadrados flutuantes</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Botão de Suporte Flutuante:</strong> WhatsApp com número da tabela "geral"</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>PWA Ready:</strong> Suporte a Progressive Web App</li>
+                                <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><strong>Cookie Consent:</strong> Banner de aceitação de cookies</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">🔐 Sistema de Autenticação</h3>
+                        <p class="text-gray-600 mb-4"><strong>Arquivo:</strong> <code class="bg-gray-100 px-2 py-1 rounded">auth.html</code></p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-blue-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-blue-800 mb-3">Login</h4>
+                                <ul class="space-y-2 text-blue-700">
+                                    <li>• Autenticação por WhatsApp</li>
+                                    <li>• Campo de telefone com máscara</li>
+                                    <li>• Código de verificação (6 dígitos)</li>
+                                    <li>• Redirecionamento inteligente</li>
+                                    <li>• Bypass administrativo</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-green-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-green-800 mb-3">Cadastro</h4>
+                                <ul class="space-y-2 text-green-700">
+                                    <li>• Seleção de perfil (3 tipos)</li>
+                                    <li>• Verificação WhatsApp</li>
+                                    <li>• Upload de foto de perfil</li>
+                                    <li>• Dados pessoais completos</li>
+                                    <li>• Notificação administrativa</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">⏳ Página de Aprovação</h3>
+                        <p class="text-gray-600 mb-4"><strong>Arquivo:</strong> <code class="bg-gray-100 px-2 py-1 rounded">aprovacao.html</code></p>
+                        <div class="bg-yellow-50 p-6 rounded-lg">
+                            <ul class="space-y-2 text-yellow-800">
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">⏳</span>Tela de aguardando aprovação</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">⏳</span>Ícone animado (ampulheta)</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">⏳</span>Mensagem clara sobre status</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">⏳</span>Botão para voltar ao login</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Technical Features -->
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">🔧 Funcionalidades Técnicas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-purple-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-purple-800 mb-3">Configuração</h4>
+                                <ul class="space-y-1 text-purple-700 text-sm">
+                                    <li>• Lambda AWS</li>
+                                    <li>• Cliente Supabase</li>
+                                    <li>• APIs WhatsApp</li>
+                                    <li>• Sistema de fallback</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-indigo-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-indigo-800 mb-3">Sessão</h4>
+                                <ul class="space-y-1 text-indigo-700 text-sm">
+                                    <li>• local.</li>
+                                    <li>• session.</li>
+                                    <li>• Hash de sessão</li>
+                                    <li>• Controle de expiração</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-cyan-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-cyan-800 mb-3">Banco de Dados</h4>
+                                <ul class="space-y-1 text-cyan-700 text-sm">
+                                    <li>• Tabela usuarios</li>
+                                    <li>• Tabela cidades</li>
+                                    <li>• Tabela escolas</li>
+                                    <li>• Tabela geral</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Table -->
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">📊 Resumo das Funcionalidades</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse border border-gray-300">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="border border-gray-300 px-4 py-2 text-left font-semibold">Funcionalidade</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left font-semibold">Descrição</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-center font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Landing Page</strong></td><td class="border border-gray-300 px-4 py-2">Página inicial com design moderno</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Login</strong></td><td class="border border-gray-300 px-4 py-2">Autenticação por WhatsApp</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Cadastro</strong></td><td class="border border-gray-300 px-4 py-2">Registro de novos usuários</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Verificação</strong></td><td class="border border-gray-300 px-4 py-2">Sistema de códigos</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Aprovação</strong></td><td class="border border-gray-300 px-4 py-2">Tela de aguardando aprovação</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                    <tr><td class="border border-gray-300 px-4 py-2"><strong>Suporte</strong></td><td class="border border-gray-300 px-4 py-2">Botão flutuante com WhatsApp</td><td class="border border-gray-300 px-4 py-2 text-center"><span class="text-green-600">✅ Completo</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gestor Section -->
+        <section id="gestor" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-purple-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-crown text-2xl text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Perfil Gestor</h2>
+                        <p class="text-gray-600">Prefeitos e Secretários - Acesso completo ao sistema</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">📋 Visão Geral</h3>
+                        <p class="text-gray-600 mb-6">
+                            O perfil <strong>Gestor</strong> é destinado a <strong>Prefeitos</strong> e <strong>Secretários</strong> 
+                            que gerenciam o sistema educacional de uma cidade. Possui acesso completo aos dados das escolas, 
+                            alunos e funcionalidades administrativas.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Home -->
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
+                                <i class="ph ph-house mr-2"></i>Home (Dashboard)
+                            </h4>
+                            <ul class="space-y-1 text-blue-700 text-sm">
+                                <li>• Métricas gerais da cidade</li>
+                                <li>• Cards de escolas/turmas/alunos</li>
+                                <li>• Stories/Notificações</li>
+                                <li>• Percentual de presença</li>
+                            </ul>
+                        </div>
+
+                        <!-- Câmeras -->
+                        <div class="bg-green-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-green-800 mb-3 flex items-center">
+                                <i class="ph ph-camera mr-2"></i>Câmeras
+                            </h4>
+                            <ul class="space-y-1 text-green-700 text-sm">
+                                <li>• Todas as escolas</li>
+                                <li>• Streaming em tempo real</li>
+                                <li>• Controles de captura</li>
+                                <li>• Status online/offline</li>
+                            </ul>
+                        </div>
+
+                        <!-- Frequência -->
+                        <div class="bg-yellow-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-yellow-800 mb-3 flex items-center">
+                                <i class="ph ph-calendar-check mr-2"></i>Frequência
+                            </h4>
+                            <ul class="space-y-1 text-yellow-700 text-sm">
+                                <li>• Filtros por escola/turma</li>
+                                <li>• Tabela detalhada</li>
+                                <li>• Estatísticas de presença</li>
+                                <li>• Exportação de dados</li>
+                            </ul>
+                        </div>
+
+                        <!-- Métricas -->
+                        <div class="bg-purple-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-purple-800 mb-3 flex items-center">
+                                <i class="ph ph-chart-line mr-2"></i>Métricas
+                            </h4>
+                            <ul class="space-y-1 text-purple-700 text-sm">
+                                <li>• Indicadores educacionais</li>
+                                <li>• Gráficos interativos</li>
+                                <li>• Comparativos entre escolas</li>
+                                <li>• Filtros temporais</li>
+                            </ul>
+                        </div>
+
+                        <!-- Relatórios -->
+                        <div class="bg-red-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-red-800 mb-3 flex items-center">
+                                <i class="ph ph-file-text mr-2"></i>Relatórios
+                            </h4>
+                            <ul class="space-y-1 text-red-700 text-sm">
+                                <li>• Relatórios personalizados</li>
+                                <li>• Múltiplos formatos (PDF, Excel)</li>
+                                <li>• Agendamento automático</li>
+                                <li>• Histórico de relatórios</li>
+                            </ul>
+                        </div>
+
+                        <!-- Notificações -->
+                        <div class="bg-indigo-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-indigo-800 mb-3 flex items-center">
+                                <i class="ph ph-bell mr-2"></i>Notificações
+                            </h4>
+                            <ul class="space-y-1 text-indigo-700 text-sm">
+                                <li>• Criar notificações</li>
+                                <li>• Filtros avançados</li>
+                                <li>• Agendamento de envio</li>
+                                <li>• Status de leitura</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nutricionista Section -->
+        <section id="nutricionista" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-green-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-apple text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Perfil Nutricionista</h2>
+                        <p class="text-gray-600">Acompanhamento nutricional e frequência escolar</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-green-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-3 flex items-center">
+                            <i class="ph ph-house mr-2"></i>Dashboard
+                        </h4>
+                        <ul class="space-y-1 text-green-700 text-sm">
+                            <li>• Métricas das escolas</li>
+                            <li>• Stories/Notificações</li>
+                            <li>• Resumo por escola</li>
+                            <li>• Ações rápidas</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
+                            <i class="ph ph-calendar-check mr-2"></i>Frequência
+                        </h4>
+                        <ul class="space-y-1 text-blue-700 text-sm">
+                            <li>• Calendário de dias</li>
+                            <li>• Métricas detalhadas</li>
+                            <li>• Gráfico circular</li>
+                            <li>• Navegação por etapas</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-yellow-800 mb-3 flex items-center">
+                            <i class="ph ph-bell mr-2"></i>Notificações
+                        </h4>
+                        <ul class="space-y-1 text-yellow-700 text-sm">
+                            <li>• Receber/Enviar</li>
+                            <li>• Filtros por tipo</li>
+                            <li>• Status de leitura</li>
+                            <li>• Tempo real</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-purple-800 mb-3 flex items-center">
+                            <i class="ph ph-user mr-2"></i>Perfil
+                        </h4>
+                        <ul class="space-y-1 text-purple-700 text-sm">
+                            <li>• Dados pessoais</li>
+                            <li>• Verificação WhatsApp</li>
+                            <li>• Upload de foto</li>
+                            <li>• Configurações</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profissional Section -->
+        <section id="profissional" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-orange-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-graduation-cap text-2xl text-orange-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Perfil Profissional</h2>
+                        <p class="text-gray-600">Professores e coordenadores educacionais</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="bg-orange-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-orange-800 mb-3 flex items-center">
+                                <i class="ph ph-chart-line mr-2"></i>Dashboard Avançado
+                            </h4>
+                            <ul class="space-y-1 text-orange-700 text-sm">
+                                <li>• 3 views rotativas</li>
+                                <li>• Métricas em tempo real</li>
+                                <li>• Alunos críticos</li>
+                                <li>• Rotação automática</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
+                                <i class="ph ph-robot mr-2"></i>Assistente IA
+                            </h4>
+                            <ul class="space-y-1 text-blue-700 text-sm">
+                                <li>• Chat inteligente</li>
+                                <li>• Consultas de frequência</li>
+                                <li>• Análises automáticas</li>
+                                <li>• Contexto personalizado</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-green-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-green-800 mb-3 flex items-center">
+                                <i class="ph ph-camera mr-2"></i>Câmeras
+                            </h4>
+                            <ul class="space-y-1 text-green-700 text-sm">
+                                <li>• Escolas permitidas</li>
+                                <li>• Filtros por turma</li>
+                                <li>• Layout responsivo</li>
+                                <li>• Controles intuitivos</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-orange-50 to-blue-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-gray-800 mb-4">🎯 Funcionalidades Exclusivas</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start"><span class="text-orange-500 mr-2">🎓</span>Dashboard com 3 views rotativas</li>
+                                <li class="flex items-start"><span class="text-orange-500 mr-2">🎓</span>Assistente IA para consultas</li>
+                                <li class="flex items-start"><span class="text-orange-500 mr-2">🎓</span>Acesso às câmeras das escolas</li>
+                            </ul>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">📊</span>Ficha completa dos alunos</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">📊</span>Sistema de notificações</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">📊</span>Navegação mobile otimizada</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Responsável Section -->
+        <section id="responsavel" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-pink-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-heart text-2xl text-pink-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Perfil Responsável</h2>
+                        <p class="text-gray-600">Pais e responsáveis pelos alunos</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-pink-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-pink-800 mb-3 flex items-center">
+                                <i class="ph ph-house mr-2"></i>Dashboard
+                            </h4>
+                            <ul class="space-y-1 text-pink-700 text-sm">
+                                <li>• Métricas dos filhos</li>
+                                <li>• Lista de alunos</li>
+                                <li>• Frequência mensal</li>
+                                <li>• Ações rápidas</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-blue-800 mb-3 flex items-center">
+                                <i class="ph ph-camera mr-2"></i>Câmeras & Veículos
+                            </h4>
+                            <ul class="space-y-1 text-blue-700 text-sm">
+                                <li>• Câmeras das escolas</li>
+                                <li>• Veículos em tempo real</li>
+                                <li>• Mapa interativo</li>
+                                <li>• Atualização automática</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-green-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-green-800 mb-3 flex items-center">
+                                <i class="ph ph-calendar-check mr-2"></i>Frequência
+                            </h4>
+                            <ul class="space-y-1 text-green-700 text-sm">
+                                <li>• Por aluno</li>
+                                <li>• Entrada e saída</li>
+                                <li>• Registros detalhados</li>
+                                <li>• Navegação direta</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-yellow-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-yellow-800 mb-3 flex items-center">
+                                <i class="ph ph-megaphone mr-2"></i>Comunicados
+                            </h4>
+                            <ul class="space-y-1 text-yellow-700 text-sm">
+                                <li>• Apenas recebe</li>
+                                <li>• Filtros por importância</li>
+                                <li>• Status de leitura</li>
+                                <li>• Por turma dos filhos</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-gray-800 mb-4">💝 Características Específicas</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h5 class="font-semibold text-pink-800 mb-3">Acesso Limitado</h5>
+                                <ul class="space-y-2 text-pink-700">
+                                    <li class="flex items-start"><span class="text-pink-500 mr-2">👨‍👩‍👧‍👦</span>Apenas aos filhos sob responsabilidade</li>
+                                    <li class="flex items-start"><span class="text-pink-500 mr-2">👨‍👩‍👧‍👦</span>Comunicação unidirecional (só recebe)</li>
+                                    <li class="flex items-start"><span class="text-pink-500 mr-2">👨‍👩‍👧‍👦</span>Relatórios personalizados por aluno</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-semibold text-purple-800 mb-3">Monitoramento</h5>
+                                <ul class="space-y-2 text-purple-700">
+                                    <li class="flex items-start"><span class="text-purple-500 mr-2">📱</span>Veículos escolares em tempo real</li>
+                                    <li class="flex items-start"><span class="text-purple-500 mr-2">📱</span>Câmeras das escolas dos filhos</li>
+                                    <li class="flex items-start"><span class="text-purple-500 mr-2">📱</span>Histórico completo de frequência</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Estagiário Section -->
+        <section id="estagiario" class="mb-12 page-break">
+            <div class="bg-white rounded-xl shadow-sm p-8">
+                <div class="flex items-center mb-8">
+                    <div class="bg-teal-100 p-3 rounded-lg mr-4">
+                        <i class="ph ph-student text-2xl text-teal-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Perfil Estagiário</h2>
+                        <p class="text-gray-600">Cadastro e gestão de alunos</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-teal-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-teal-800 mb-4 flex items-center">
+                                <i class="ph ph-key mr-2"></i>Autenticação Especial
+                            </h4>
+                            <ul class="space-y-2 text-teal-700">
+                                <li class="flex items-start"><span class="text-teal-500 mr-2">🔐</span>Login por código de acesso único</li>
+                                <li class="flex items-start"><span class="text-teal-500 mr-2">🔐</span>Controle de período (início e fim)</li>
+                                <li class="flex items-start"><span class="text-teal-500 mr-2">🔐</span>Status ativo verificado</li>
+                                <li class="flex items-start"><span class="text-teal-500 mr-2">🔐</span>Sessão segura temporária</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <h4 class="font-semibold text-blue-800 mb-4 flex items-center">
+                                <i class="ph ph-users mr-2"></i>Gestão de Alunos
+                            </h4>
+                            <ul class="space-y-2 text-blue-700">
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">👥</span>CRUD completo de alunos</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">👥</span>Upload e gestão de fotos</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">👥</span>Filtros avançados de busca</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2">👥</span>Sincronização com dispositivos</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-teal-50 to-cyan-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-gray-800 mb-4">🎯 Funcionalidades Principais</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <h5 class="font-semibold text-teal-800 mb-3">Cadastro</h5>
+                                <ul class="space-y-1 text-teal-700 text-sm">
+                                    <li>• Modal completo de cadastro</li>
+                                    <li>• Dados pessoais e escolares</li>
+                                    <li>• Upload de foto com preview</li>
+                                    <li>• Validações em tempo real</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-semibold text-blue-800 mb-3">Edição</h5>
+                                <ul class="space-y-1 text-blue-700 text-sm">
+                                    <li>• Alteração de dados</li>
+                                    <li>• Troca de turma/série</li>
+                                    <li>• Atualização de foto</li>
+                                    <li>• Marcação para dispositivo</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-semibold text-cyan-800 mb-3">Sincronização</h5>
+                                <ul class="space-y-1 text-cyan-700 text-sm">
+                                    <li>• Vinculação automática</li>
+                                    <li>• Dispositivos ativos</li>
+                                    <li>• Flag de atualização</li>
+                                    <li>• Auditoria de cadastros</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-6 rounded-lg">
+                        <h4 class="font-semibold text-yellow-800 mb-4">⚡ Características Técnicas</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ul class="space-y-2 text-yellow-700">
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Interface responsiva mobile-first</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Grid adaptativo (2-5 colunas)</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Sistema de filtros avançados</li>
+                            </ul>
+                            <ul class="space-y-2 text-yellow-700">
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Integração com Supabase .</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Toast notifications</li>
+                                <li class="flex items-start"><span class="text-yellow-500 mr-2">🔧</span>Estados de loading e validação</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resumo Final -->
+        <section class="mb-12 no-print">
+            <div class="bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold mb-4">Resumo Executivo</h2>
+                    <p class="text-xl text-blue-100">Sistema completo com 6 perfis distintos</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white/10 backdrop-blur rounded-lg p-6">
+                        <h3 class="font-bold text-lg mb-3">📊 Estatísticas</h3>
+                        <ul class="space-y-2 text-blue-100">
+                            <li>• 6 perfis de usuário</li>
+                            <li>• 25+ funcionalidades principais</li>
+                            <li>• Interface 100% responsiva</li>
+                            <li>• PWA com suporte offline</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-white/10 backdrop-blur rounded-lg p-6">
+                        <h3 class="font-bold text-lg mb-3">🔧 Tecnologias</h3>
+                        <ul class="space-y-2 text-blue-100">
+                            <li>• Supabase (Backend)</li>
+                            <li>• Tailwind CSS (UI)</li>
+                            <li>• WhatsApp API (Auth)</li>
+                            <li>• AWS Lambda (Config)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-white/10 backdrop-blur rounded-lg p-6">
+                        <h3 class="font-bold text-lg mb-3">🎯 Objetivos</h3>
+                        <ul class="space-y-2 text-blue-100">
+                            <li>• Gestão escolar completa</li>
+                            <li>• Segurança de alunos</li>
+                            <li>• Comunicação eficiente</li>
+                            <li>• Monitoramento em tempo real</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-8">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-6 inline-block">
+                        <h3 class="font-bold text-xl mb-2">OlharMais</h3>
+                        <p class="text-blue-100">Transformando a gestão educacional com tecnologia e segurança</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16 no-print">
+        <div class="container mx-auto px-6">
+            <div class="text-center">
+                <div class="text-4xl font-bold text-white px-6 py-3 rounded-lg inline-block mb-4 text-center">OlharMais</div>
+                <p class="text-gray-300 mb-2 text-center">Sistema de Gestão Escolar e Segurança de Alunos</p>
+                <p class="text-gray-400 text-sm" id="generation-date">Documentação gerada em</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Set generation date
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateElement = document.getElementById('generation-date');
+            if (dateElement) {
+                const now = new Date();
+                const options = { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                dateElement.textContent = `Documentação gerada em ${now.toLocaleDateString('pt-BR', options)}`;
+            }
+        });
+
+        // Download PDF functionality
+        document.getElementById('printBtn').addEventListener('click', function() {
+            // Show loading state
+            const btn = this;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin text-xl"></i><span class="ml-2 text-sm font-medium">Baixando...</span>';
+            btn.disabled = true;
+            
+            // Create download link for the PDF file
+            const link = document.createElement('a');
+            link.href = 'Documentação OlharMais V 0.0.1.pdf';
+            link.download = 'Documentação OlharMais V 0.0.1.pdf';
+            link.style.display = 'none';
+            
+            // Add to DOM and trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Reset button after download
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 2000);
+        });
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    // Add active state to clicked nav item
+                    document.querySelectorAll('nav a').forEach(link => {
+                        link.classList.remove('bg-primary', 'text-white');
+                        link.classList.add('text-gray-600');
+                    });
+                    this.classList.add('bg-primary', 'text-white');
+                    this.classList.remove('text-gray-600');
+                    
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Update active navigation based on scroll position
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('nav a[href^="#"]');
+            
+            let currentSection = '';
+            sections.forEach(section => {
+                const sectionTop = section.getBoundingClientRect().top;
+                if (sectionTop <= 100) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('bg-primary', 'text-white');
+                link.classList.add('text-gray-600');
+                
+                if (link.getAttribute('href') === `#${currentSection}`) {
+                    link.classList.add('bg-primary', 'text-white');
+                    link.classList.remove('text-gray-600');
+                }
+            });
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + Home to scroll to top
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Home') {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // Add tooltips for better UX
+        document.getElementById('printBtn').setAttribute('title', 'Baixar documentação em PDF');
+        
+        console.log('📄 Funcionalidades OlharMais - Documentação carregada com sucesso!');
+        console.log('📥 Clique no botão flutuante para baixar o PDF da documentação');
+        console.log('🧭 Use a navegação superior para pular entre seções');
+    </script>
+</body>
+</html>
