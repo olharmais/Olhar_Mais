@@ -1919,11 +1919,13 @@
             
             // Criar vídeo
             const video = document.createElement('video');
-            video.controls = true;
             video.autoplay = true;
             video.playsInline = true;
+            video.muted = true; // Desabilitar áudio
             video.setAttribute('webkit-playsinline', '');
             video.setAttribute('preload', 'metadata');
+            // Remover controles para não mostrar o player de áudio
+            video.controls = false;
             
             container.appendChild(video);
             
