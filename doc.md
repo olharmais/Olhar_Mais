@@ -1719,7 +1719,7 @@ O perfil Responsável foi projetado para permitir que pais e responsáveis acomp
 
 **⏰ Horário de Atendimento:** Segunda a Sexta, das 8h às 18h
 
-**📧 Email:** suporte@olharmais.com.br
+**📧 Email:** olharmais@servicesecurity.com.br
 
 **🌐 Website:** www.olharmais.com.br
 
