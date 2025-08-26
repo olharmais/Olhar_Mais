@@ -209,6 +209,11 @@
             cursor: pointer;
             flex-shrink: 0;
             position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .story-circle.visto {
+            background: linear-gradient(45deg, #9ca3af, #6b7280);
         }
         
         .story-circle .inner {
@@ -236,6 +241,25 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+        
+        /* Tag de "Novo" para stories não vistos */
+        .story-novo-tag {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #005ae2, #3988ff);
+            color: white;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Modal de Stories */
@@ -915,6 +939,44 @@
         let currentStoryIndex = 0;
         let storiesData = [];
         let storyProgressInterval;
+        
+        // Função para gerenciar stories vistos no localStorage
+        const StoriesManager = {
+            getViewedStories() {
+                try {
+                    const viewed = localStorage.getItem('stories_vistos');
+                    return viewed ? JSON.parse(viewed) : [];
+                } catch (error) {
+                    console.error('Erro ao ler stories vistos:', error);
+                    return [];
+                }
+            },
+            
+            markStoryAsViewed(storyId) {
+                try {
+                    const viewed = this.getViewedStories();
+                    if (!viewed.includes(storyId)) {
+                        viewed.push(storyId);
+                        localStorage.setItem('stories_vistos', JSON.stringify(viewed));
+                    }
+                } catch (error) {
+                    console.error('Erro ao marcar story como visto:', error);
+                }
+            },
+            
+            isStoryViewed(storyId) {
+                const viewed = this.getViewedStories();
+                return viewed.includes(storyId);
+            },
+            
+            clearViewedStories() {
+                try {
+                    localStorage.removeItem('stories_vistos');
+                } catch (error) {
+                    console.error('Erro ao limpar stories vistos:', error);
+                }
+            }
+        };
 
         // Função para carregar os stories
         async function carregarStories() {
@@ -1010,10 +1072,31 @@
             const container = document.getElementById('stories-list');
             container.innerHTML = '';
             
+            // Encontrar o primeiro story não visto
+            let primeiroNaoVistoIndex = -1;
+            for (let i = 0; i < storiesData.length; i++) {
+                if (!StoriesManager.isStoryViewed(storiesData[i].id)) {
+                    primeiroNaoVistoIndex = i;
+                    break;
+                }
+            }
+            
             storiesData.forEach((story, index) => {
+                const storyId = story.id; // Usar o ID do story como identificador único
+                const isViewed = StoriesManager.isStoryViewed(storyId);
+                
                 const storyElement = document.createElement('div');
-                storyElement.className = 'story-circle';
+                storyElement.className = `story-circle ${isViewed ? 'visto' : ''}`;
+                storyElement.dataset.storyId = storyId;
+                
+                let novoTag = '';
+                // Mostrar tag "Novo" apenas no primeiro story não visto
+                if (!isViewed && index === primeiroNaoVistoIndex) {
+                    novoTag = '<div class="story-novo-tag">Novo</div>';
+                }
+                
                 storyElement.innerHTML = `
+                    ${novoTag}
                     <div class="inner">
                         <video muted playsinline>
                             <source src="${story.video_file_url}" type="video/mp4">
@@ -1041,6 +1124,19 @@
             const story = storiesData[index];
             const modal = document.querySelector('.stories-modal');
             const video = modal.querySelector('.stories-video');
+            
+            // Marcar story como visto
+            StoriesManager.markStoryAsViewed(story.id);
+            
+            // Atualizar visual do story na lista
+            const storyElement = document.querySelector(`[data-story-id="${story.id}"]`);
+            if (storyElement) {
+                storyElement.classList.add('visto');
+                const novoTag = storyElement.querySelector('.story-novo-tag');
+                if (novoTag) {
+                    novoTag.remove();
+                }
+            }
             
             // Atualizar informações do story
             modal.querySelector('.story-escola-nome').textContent = story.cidades?.nome || 'Cidade';
@@ -1209,6 +1305,16 @@
             // Carregar stories
             carregarStories();
         });
+        
+        // Função para limpar stories vistos (útil para testes)
+        window.limparStoriesVistos = function() {
+            StoriesManager.clearViewedStories();
+            carregarStories(); // Recarregar para atualizar visual
+            Toast.show('Stories vistos foram limpos', 'info');
+        };
+        
+        // Expor StoriesManager globalmente para debug (remover em produção)
+        window.StoriesManager = StoriesManager;
 
         // Carregar Permissões do Usuário
         async function carregarPermissoes() {
